@@ -19,11 +19,17 @@ From this directory (`e2e/`):
 ```bash
 make dev        # proxy + stub for manual verification
 make dev-down   # stop the stack
-make test       # build images and run Playwright flows
+make test       # build images and run Playwright flows (headless by default)
 make test-down  # tear down containers and volumes from make test
 ```
 
 `make test` mounts `e2e/tmp` and `e2e/test-results` so OTPs and Playwright reports remain on the host for inspection. Clean up artifacts with `make clean-e2e` if required.
+
+To observe the browser while running tests, pass `HEADLESS=false` (or `PLAYWRIGHT_HEADLESS=false`) when invoking `make test`:
+
+```bash
+make test HEADLESS=false
+```
 
 ### ポート割り当て
 

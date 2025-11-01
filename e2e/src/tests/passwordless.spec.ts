@@ -1,26 +1,21 @@
 import { test, expect } from '@playwright/test';
 import { clearOtpFile, waitForOtp } from '../support/otp-reader';
+import { routeStubAuthRequests } from '../support/stub-auth-route';
 
 const TEST_EMAIL = 'someone@example.com';
 
 test.describe('Passwordless email flow', () => {
-  test.beforeEach(async () => {
+  test.beforeEach(async ({ page }) => {
     await clearOtpFile();
+    await routeStubAuthRequests(page);
   });
 
   test('user can log in with OTP and cannot reuse it', async ({ page }) => {
-    await page.route('http://localhost:3001/**', (route) => {
-      const url = route.request().url().replace('http://localhost:3001', 'http://stub-auth:3001');
-      route.continue({ url });
-    });
-
     await page.goto('/');
     await expect(page).toHaveURL(/\/_auth\/login$/);
 
-    await page.getByRole('link', { name: 'Or login with Email' }).click();
-
-    await expect(page).toHaveURL(/\/_auth\/email$/);
-
+    // The login page shows both OAuth2 and Email login options on the same page
+    // Fill in the email address directly
     await page.getByLabel('Email Address').fill(TEST_EMAIL);
 
     await Promise.all([
