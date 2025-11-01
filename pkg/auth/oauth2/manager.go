@@ -13,6 +13,8 @@ import (
 var (
 	// ErrProviderNotFound is returned when a provider is not found
 	ErrProviderNotFound = errors.New("OAuth2 provider not found")
+	// ErrEmailNotAvailable is returned when the OAuth2 provider does not provide an email address
+	ErrEmailNotAvailable = errors.New("OAuth2 provider did not provide an email address")
 )
 
 // Manager manages OAuth2 providers and authentication flow

@@ -436,19 +436,31 @@ func (m *Middleware) handleOAuth2Callback(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	// Get user email
-	email, err := m.oauthManager.GetUserEmail(r.Context(), providerName, token)
-	if err != nil {
-		m.logger.Error("Failed to get user email", "error", err)
-		http.Error(w, "Failed to get user information", http.StatusInternalServerError)
-		return
-	}
+	var email string
 
-	// Check authorization
-	if !m.authzChecker.IsAllowed(email) {
-		m.logger.Warn("User not authorized", "email", email)
-		m.handleForbidden(w, r)
-		return
+	// Check if email-based authorization is required
+	if m.authzChecker.RequiresEmail() {
+		// Whitelist configured - email is required
+		var err error
+		email, err = m.oauthManager.GetUserEmail(r.Context(), providerName, token)
+		if err != nil {
+			m.logger.Error("Failed to get user email", "error", err, "provider", providerName)
+			m.handleEmailFetchError(w, r)
+			return
+		}
+
+		// Check authorization
+		if !m.authzChecker.IsAllowed(email) {
+			m.logger.Warn("User not authorized", "email", email, "provider", providerName)
+			m.handleForbidden(w, r)
+			return
+		}
+
+		m.logger.Info("User authorized", "email", email, "provider", providerName)
+	} else {
+		// No whitelist configured - authentication alone is sufficient
+		// Email address is not required
+		m.logger.Info("No whitelist configured, skipping email fetch and authorization check", "provider", providerName)
 	}
 
 	// Create session
@@ -643,6 +655,18 @@ func (m *Middleware) handleEmailVerify(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Check authorization if whitelist is configured
+	if m.authzChecker.RequiresEmail() {
+		if !m.authzChecker.IsAllowed(email) {
+			m.logger.Warn("User not authorized for email login", "email", email)
+			m.handleForbidden(w, r)
+			return
+		}
+		m.logger.Info("User authorized via email", "email", email)
+	} else {
+		m.logger.Info("No whitelist configured, skipping authorization check for email login", "email", email)
+	}
+
 	// Create session
 	sessionID, err := generateSessionID()
 	if err != nil {
@@ -729,5 +753,47 @@ func (m *Middleware) handleForbidden(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(http.StatusForbidden)
+	w.Write([]byte(html))
+}
+
+// handleEmailFetchError displays an error page when OAuth2 provider fails to provide email
+func (m *Middleware) handleEmailFetchError(w http.ResponseWriter, r *http.Request) {
+	lang := i18n.DetectLanguage(r)
+	theme := i18n.DetectTheme(r)
+	t := func(key string) string { return m.translator.T(lang, key) }
+
+	prefix := normalizeAuthPrefix(m.config.Server.GetAuthPathPrefix())
+	cssPath := joinAuthPath(prefix, "/assets/styles.css")
+	loginPath := joinAuthPath(prefix, "/login")
+
+	themeClass := ""
+	if theme == i18n.ThemeDark {
+		themeClass = "dark"
+	} else if theme == i18n.ThemeLight {
+		themeClass = "light"
+	}
+
+	html := `<!DOCTYPE html>
+<html lang="` + string(lang) + `" class="` + themeClass + `">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>` + t("error.email_required.title") + ` - ` + m.config.Service.Name + `</title>
+<link rel="stylesheet" href="` + cssPath + `">
+</head>
+<body>
+<div class="auth-container">
+  <div class="card auth-card">
+    ` + m.buildAuthHeader(prefix) + `
+    ` + m.buildAuthSubtitle(t("error.email_required.heading")) + `
+    <div class="alert alert-error" style="text-align: left; margin-bottom: var(--spacing-md);">` + t("error.email_required.message") + `</div>
+    <a href="` + loginPath + `" class="btn btn-ghost" style="width: 100%; margin-top: var(--spacing-md);">` + t("login.back") + `</a>
+  </div>
+</div>
+</body>
+</html>`
+
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.WriteHeader(http.StatusBadRequest)
 	w.Write([]byte(html))
 }

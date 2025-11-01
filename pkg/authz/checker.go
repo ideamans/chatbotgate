@@ -8,6 +8,12 @@ import (
 
 // Checker is an interface for authorization checking
 type Checker interface {
+	// RequiresEmail returns true if email-based authorization is required
+	// If false, authentication alone is sufficient (no whitelist configured)
+	RequiresEmail() bool
+
+	// IsAllowed checks if an email address is authorized
+	// If RequiresEmail() is false, this always returns true
 	IsAllowed(email string) bool
 }
 
@@ -37,8 +43,20 @@ func NewEmailChecker(cfg config.AuthorizationConfig) *EmailChecker {
 	}
 }
 
+// RequiresEmail returns true if email-based authorization is required
+// Returns false if no whitelist is configured (authentication alone is sufficient)
+func (c *EmailChecker) RequiresEmail() bool {
+	return len(c.allowedEmails) > 0 || len(c.allowedDomains) > 0
+}
+
 // IsAllowed checks if an email address is authorized
+// If no whitelist is configured, always returns true
 func (c *EmailChecker) IsAllowed(email string) bool {
+	// If no whitelist is configured, allow all authenticated users
+	if !c.RequiresEmail() {
+		return true
+	}
+
 	email = strings.ToLower(strings.TrimSpace(email))
 
 	// Check if email is in the allowed list
