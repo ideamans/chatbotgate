@@ -186,14 +186,17 @@ var defaultTranslations = Translations{
 		"logout.login":   "Login again",
 
 		// Errors
-		"error.unauthorized":      "Unauthorized",
-		"error.forbidden":         "Access Denied",
-		"error.forbidden.title":   "Access Denied",
-		"error.forbidden.heading": "Access Denied",
-		"error.forbidden.message": "This service is only available to pre-authorized email addresses. Please contact the administrator.",
-		"error.internal":          "Internal Server Error",
-		"error.invalid_request":   "Invalid Request",
-		"error.invalid_email":     "Email is required",
+		"error.unauthorized":           "Unauthorized",
+		"error.forbidden":              "Access Denied",
+		"error.forbidden.title":        "Access Denied",
+		"error.forbidden.heading":      "Access Denied",
+		"error.forbidden.message":      "This service is only available to pre-authorized email addresses. Please contact the administrator.",
+		"error.email_required.title":   "Email Required",
+		"error.email_required.heading": "Email Address Required",
+		"error.email_required.message": "Your authentication provider did not provide an email address. Please use a different provider or contact the administrator.",
+		"error.internal":               "Internal Server Error",
+		"error.invalid_request":        "Invalid Request",
+		"error.invalid_email":          "Email is required",
 
 		// Theme and Language
 		"ui.theme":         "Theme",
@@ -241,14 +244,17 @@ var defaultTranslations = Translations{
 		"logout.login":   "再度ログイン",
 
 		// Errors
-		"error.unauthorized":      "未認証",
-		"error.forbidden":         "アクセス拒否",
-		"error.forbidden.title":   "アクセス拒否",
-		"error.forbidden.heading": "アクセス拒否",
-		"error.forbidden.message": "このサービスは事前に許可されたメールアドレスでのみご利用いただけます。運営者にお問い合わせください。",
-		"error.internal":          "内部サーバーエラー",
-		"error.invalid_request":   "不正なリクエスト",
-		"error.invalid_email":     "メールアドレスが必要です",
+		"error.unauthorized":           "未認証",
+		"error.forbidden":              "アクセス拒否",
+		"error.forbidden.title":        "アクセス拒否",
+		"error.forbidden.heading":      "アクセス拒否",
+		"error.forbidden.message":      "このサービスは事前に許可されたメールアドレスでのみご利用いただけます。運営者にお問い合わせください。",
+		"error.email_required.title":   "メールアドレスが必要です",
+		"error.email_required.heading": "メールアドレスが必要です",
+		"error.email_required.message": "認証プロバイダーからメールアドレスを取得できませんでした。別のプロバイダーをお試しいただくか、運営者にお問い合わせください。",
+		"error.internal":               "内部サーバーエラー",
+		"error.invalid_request":        "不正なリクエスト",
+		"error.invalid_email":          "メールアドレスが必要です",
 
 		// Theme and Language
 		"ui.theme":         "テーマ",

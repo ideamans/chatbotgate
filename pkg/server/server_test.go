@@ -10,6 +10,7 @@ import (
 
 	"github.com/ideamans/multi-oauth2-proxy/pkg/auth/email"
 	"github.com/ideamans/multi-oauth2-proxy/pkg/auth/oauth2"
+	"github.com/ideamans/multi-oauth2-proxy/pkg/authz"
 	"github.com/ideamans/multi-oauth2-proxy/pkg/config"
 	"github.com/ideamans/multi-oauth2-proxy/pkg/logging"
 	"github.com/ideamans/multi-oauth2-proxy/pkg/proxy"
@@ -19,7 +20,12 @@ import (
 
 // MockAuthzChecker is a mock authorization checker
 type MockAuthzChecker struct {
-	allowed bool
+	allowed       bool
+	requiresEmail bool
+}
+
+func (m *MockAuthzChecker) RequiresEmail() bool {
+	return m.requiresEmail
 }
 
 func (m *MockAuthzChecker) IsAllowed(email string) bool {
@@ -30,6 +36,7 @@ func (m *MockAuthzChecker) IsAllowed(email string) bool {
 type MockOAuth2Provider struct {
 	name      string
 	userEmail string
+	emailErr  error // If set, GetUserEmail will return this error
 }
 
 func (m *MockOAuth2Provider) Name() string {
@@ -49,6 +56,9 @@ func (m *MockOAuth2Provider) Config() *oauth2lib.Config {
 }
 
 func (m *MockOAuth2Provider) GetUserEmail(ctx context.Context, token *oauth2lib.Token) (string, error) {
+	if m.emailErr != nil {
+		return "", m.emailErr
+	}
 	return m.userEmail, nil
 }
 
@@ -568,4 +578,137 @@ func setupTestServerWithEmail(t *testing.T) (*Server, *session.MemoryStore) {
 	server := New(cfg, sessionStore, oauthManager, emailHandler, authzChecker, proxyHandler, logger)
 
 	return server, sessionStore
+}
+
+// TestServer_Authorization_NoWhitelist_SessionWithoutEmail tests that sessions without email work when no whitelist is configured
+func TestServer_Authorization_NoWhitelist_SessionWithoutEmail(t *testing.T) {
+	server, sessionStore, cleanup := setupTestServer(t)
+	defer cleanup()
+
+	// Create a session WITHOUT email (simulating OAuth2 without email requirement)
+	sessionID := "test-session-no-email"
+	sess := &session.Session{
+		ID:            sessionID,
+		Email:         "", // No email when whitelist not configured
+		Provider:      "google",
+		CreatedAt:     time.Now(),
+		ExpiresAt:     time.Now().Add(24 * time.Hour),
+		Authenticated: true,
+	}
+
+	err := sessionStore.Set(sessionID, sess)
+	if err != nil {
+		t.Fatalf("Failed to create session: %v", err)
+	}
+
+	// Make a request with this session
+	req := httptest.NewRequest("GET", "/test", nil)
+	req.AddCookie(&http.Cookie{
+		Name:  "_test_session", // Use the same cookie name as setupTestServer
+		Value: sessionID,
+	})
+
+	w := httptest.NewRecorder()
+	server.Handler().ServeHTTP(w, req)
+
+	// Should succeed even without email
+	if w.Code != http.StatusOK {
+		t.Errorf("Expected status 200, got %d", w.Code)
+		t.Logf("Response body: %s", w.Body.String())
+	}
+
+	// Verify auth headers were NOT set (no email)
+	resp := w.Result()
+	if resp.Header.Get("X-Test-Email") != "" {
+		t.Logf("Email header: %s (can be empty when no whitelist)", resp.Header.Get("X-Test-Email"))
+	}
+}
+
+// TestServer_Authorization_WithWhitelist_AuthorizedEmail tests authorized email with whitelist
+func TestServer_Authorization_WithWhitelist_AuthorizedEmail(t *testing.T) {
+	// Create a test backend server
+	backend := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("X-Test-Email", r.Header.Get("X-Forwarded-Email"))
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("backend response"))
+	}))
+	defer backend.Close()
+
+	cfg := &config.Config{
+		Service: config.ServiceConfig{
+			Name:        "Test Service",
+			Description: "Test Description",
+		},
+		Server: config.ServerConfig{
+			Host: "localhost",
+			Port: 4180,
+		},
+		Proxy: config.ProxyConfig{
+			Upstream: backend.URL,
+		},
+		Session: config.SessionConfig{
+			CookieName:     "_oauth2_proxy",
+			CookieSecret:   "test-secret-key-for-testing-purposes-only",
+			CookieExpire:   "168h",
+			CookieSecure:   false,
+			CookieHTTPOnly: true,
+			CookieSameSite: "lax",
+		},
+		Authorization: config.AuthorizationConfig{
+			AllowedEmails: []string{"authorized@example.com"}, // Whitelist configured
+		},
+	}
+
+	sessionStore := session.NewMemoryStore(1 * time.Minute)
+	defer sessionStore.Close()
+
+	oauthManager := oauth2.NewManager()
+	authzChecker := authz.NewEmailChecker(cfg.Authorization)
+
+	proxyHandler, err := proxy.NewHandler(cfg.Proxy.Upstream)
+	if err != nil {
+		t.Fatalf("Failed to create proxy handler: %v", err)
+	}
+
+	logger := logging.NewSimpleLogger("test", logging.LevelInfo, false)
+
+	server := New(cfg, sessionStore, oauthManager, nil, authzChecker, proxyHandler, logger)
+
+	// Create a session with authorized email
+	sessionID := "test-session-authorized"
+	sess := &session.Session{
+		ID:            sessionID,
+		Email:         "authorized@example.com",
+		Provider:      "google",
+		CreatedAt:     time.Now(),
+		ExpiresAt:     time.Now().Add(24 * time.Hour),
+		Authenticated: true,
+	}
+
+	err = sessionStore.Set(sessionID, sess)
+	if err != nil {
+		t.Fatalf("Failed to create session: %v", err)
+	}
+
+	// Make a request
+	req := httptest.NewRequest("GET", "/test", nil)
+	req.AddCookie(&http.Cookie{
+		Name:  "_oauth2_proxy",
+		Value: sessionID,
+	})
+
+	w := httptest.NewRecorder()
+	server.Handler().ServeHTTP(w, req)
+
+	// Should succeed with authorized email
+	if w.Code != http.StatusOK {
+		t.Errorf("Expected status 200, got %d", w.Code)
+		t.Logf("Response body: %s", w.Body.String())
+	}
+
+	// Verify email header was set
+	resp := w.Result()
+	if email := resp.Header.Get("X-Test-Email"); email != "authorized@example.com" {
+		t.Errorf("Expected email header 'authorized@example.com', got '%s'", email)
+	}
 }

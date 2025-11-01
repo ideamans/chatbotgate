@@ -37,11 +37,12 @@ app.get('/health', (_req, res) => {
 });
 
 app.get('/', (req, res) => {
-  const forwardedEmail = req.header('x-forwarded-email');
+  const isAuthenticated = req.header('x-authenticated') === 'true';
+  const forwardedEmail = req.header('x-forwarded-email') || '';
   const forwardedProvider = req.header('x-auth-provider') ?? 'unknown';
   const forwardedUser = req.header('x-forwarded-user') ?? forwardedEmail ?? 'guest';
 
-  if (!forwardedEmail) {
+  if (!isAuthenticated) {
     const body = `
       <header>
         <h1>${APP_NAME}</h1>
@@ -58,13 +59,16 @@ app.get('/', (req, res) => {
     return;
   }
 
+  // Email might be empty for OAuth2 providers that don't provide email
+  const emailDisplay = forwardedEmail || '(email not provided)';
+
   const body = `
     <header>
       <h1>${APP_NAME}</h1>
-      <div class="meta">認証済みユーザー: <strong data-test="app-user-email">${forwardedEmail}</strong></div>
+      <div class="meta">認証済みユーザー: <strong data-test="app-user-email">${emailDisplay}</strong></div>
     </header>
     <main>
-      <div class="card">
+      <div class="card" data-test="app-content">
         <p data-test="app-user-name">Welcome, ${forwardedUser}!</p>
         <p data-test="app-auth-provider">Provider: ${forwardedProvider}</p>
         <form method="post" action="/_auth/logout">

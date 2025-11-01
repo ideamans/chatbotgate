@@ -1,6 +1,6 @@
 service:
-  name: "multi-oauth2-proxy e2e"
-  description: "E2E verification environment"
+  name: "multi-oauth2-proxy e2e (no whitelist)"
+  description: "E2E verification environment without whitelist"
 
 server:
   host: 0.0.0.0

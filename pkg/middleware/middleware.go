@@ -167,6 +167,7 @@ func addAuthHeaders(r *http.Request, email, provider string) {
 	r.Header.Set("X-Forwarded-User", email)
 	r.Header.Set("X-Forwarded-Email", email)
 	r.Header.Set("X-Auth-Provider", provider)
+	r.Header.Set("X-Authenticated", "true")
 }
 
 // matchPath checks if the request path matches the auth endpoint

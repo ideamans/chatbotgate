@@ -105,8 +105,23 @@ func TestEmailChecker_EmptyConfig(t *testing.T) {
 
 	checker := NewEmailChecker(cfg)
 
-	if checker.IsAllowed("user@example.com") {
-		t.Error("expected no emails to be allowed with empty config")
+	// When no whitelist is configured, RequiresEmail should return false
+	if checker.RequiresEmail() {
+		t.Error("RequiresEmail() should return false with empty config")
+	}
+
+	// When no whitelist is configured, all emails should be allowed
+	if !checker.IsAllowed("user@example.com") {
+		t.Error("expected all emails to be allowed with empty config (no whitelist)")
+	}
+
+	if !checker.IsAllowed("any@domain.com") {
+		t.Error("expected all emails to be allowed with empty config (no whitelist)")
+	}
+
+	// Even empty email should be allowed when no whitelist is configured
+	if !checker.IsAllowed("") {
+		t.Error("expected even empty email to be allowed with empty config (no whitelist)")
 	}
 }
 
@@ -130,5 +145,54 @@ func TestNewEmailChecker(t *testing.T) {
 	// Verify that domains are stored in lowercase
 	if !checker.IsAllowed("test@ideamans.com") {
 		t.Error("domain should be case-insensitive")
+	}
+}
+
+func TestEmailChecker_RequiresEmail(t *testing.T) {
+	tests := []struct {
+		name   string
+		config config.AuthorizationConfig
+		want   bool
+	}{
+		{
+			name: "no whitelist - email not required",
+			config: config.AuthorizationConfig{
+				AllowedEmails:  []string{},
+				AllowedDomains: []string{},
+			},
+			want: false,
+		},
+		{
+			name: "only allowed emails - email required",
+			config: config.AuthorizationConfig{
+				AllowedEmails: []string{"user@example.com"},
+			},
+			want: true,
+		},
+		{
+			name: "only allowed domains - email required",
+			config: config.AuthorizationConfig{
+				AllowedDomains: []string{"@example.com"},
+			},
+			want: true,
+		},
+		{
+			name: "both emails and domains - email required",
+			config: config.AuthorizationConfig{
+				AllowedEmails:  []string{"user@example.com"},
+				AllowedDomains: []string{"@company.com"},
+			},
+			want: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			checker := NewEmailChecker(tt.config)
+			got := checker.RequiresEmail()
+			if got != tt.want {
+				t.Errorf("RequiresEmail() = %v, want %v", got, tt.want)
+			}
+		})
 	}
 }
