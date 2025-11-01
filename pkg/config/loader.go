@@ -1,8 +1,11 @@
 package config
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 )
@@ -12,7 +15,7 @@ type Loader interface {
 	Load() (*Config, error)
 }
 
-// FileLoader loads configuration from a YAML file
+// FileLoader loads configuration from a YAML or JSON file
 type FileLoader struct {
 	path string
 }
@@ -23,6 +26,8 @@ func NewFileLoader(path string) *FileLoader {
 }
 
 // Load reads and parses the configuration file
+// Supports both YAML (.yaml, .yml) and JSON (.json) formats
+// Format is automatically detected from file extension
 func (l *FileLoader) Load() (*Config, error) {
 	data, err := os.ReadFile(l.path)
 	if err != nil {
@@ -33,8 +38,19 @@ func (l *FileLoader) Load() (*Config, error) {
 	}
 
 	var cfg Config
-	if err := yaml.Unmarshal(data, &cfg); err != nil {
-		return nil, fmt.Errorf("failed to parse config file: %w", err)
+	ext := strings.ToLower(filepath.Ext(l.path))
+
+	switch ext {
+	case ".json":
+		if err := json.Unmarshal(data, &cfg); err != nil {
+			return nil, fmt.Errorf("failed to parse JSON config file: %w", err)
+		}
+	case ".yaml", ".yml":
+		if err := yaml.Unmarshal(data, &cfg); err != nil {
+			return nil, fmt.Errorf("failed to parse YAML config file: %w", err)
+		}
+	default:
+		return nil, fmt.Errorf("unsupported config file format: %s (supported: .yaml, .yml, .json)", ext)
 	}
 
 	// Apply defaults

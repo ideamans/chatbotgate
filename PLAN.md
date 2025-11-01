@@ -256,64 +256,95 @@ server:
 
 ## アーキテクチャ設計
 
-### 全体構成
+### 設計コンセプト
 
+multi-oauth2-proxyは**ミドルウェア中心の設計**を採用しています。
+これにより、以下の3つの使用モードをサポートします：
+
+#### モード1: ライブラリとして使用（Middleware-Only）
 ```
-┌─────────────┐
-│   Client    │
-└──────┬──────┘
-       │ HTTPS (将来)
-       │ HTTP
-┌──────▼───────────────────────────────┐
-│   multi-oauth2-proxy                 │
-│                                      │
-│  ┌────────────────────────────────┐ │
-│  │  HTTP Server (Chi Router)     │ │
-│  └───────────┬────────────────────┘ │
-│              │                       │
-│  ┌───────────▼────────────────────┐ │
-│  │  Authentication Middleware    │ │
-│  └───────────┬────────────────────┘ │
-│              │                       │
-│     ┌────────┴────────┐             │
-│     │                 │             │
-│  ┌──▼──────┐   ┌──────▼─────┐      │
-│  │ OAuth2  │   │   Email    │      │
-│  │ Handler │   │   Handler  │      │
-│  └──┬──────┘   └──────┬─────┘      │
-│     │                 │             │
-│  ┌──▼─────────────────▼─────┐      │
-│  │  Authorization Check     │      │
-│  │  (Email Whitelist)       │      │
-│  └──┬───────────────────────┘      │
-│     │                               │
-│  ┌──▼───────────────────────┐      │
-│  │  Reverse Proxy           │      │
-│  └──────────────────────────┘      │
-│                                      │
-│  ┌────────────────────────────────┐ │
-│  │  Config Manager (YAML Watch)  │ │
-│  └────────────────────────────────┘ │
-│                                      │
-│  ┌────────────────────────────────┐ │
-│  │  Session Store                 │ │
-│  └────────────────────────────────┘ │
-└──────────┬───────────────────────────┘
-           │
-   ┌───────▼────────┐
-   │  Backend App   │
-   └────────────────┘
+Your Go Application
+  ↓
+import "github.com/ideamans/multi-oauth2-proxy/pkg/middleware"
+  ↓
+authMiddleware := middleware.New(config)
+http.ListenAndServe(":8080", authMiddleware.Wrap(yourHandler))
 ```
 
-### モジュール構成
+#### モード2: 認証サーバーとして使用（Auth Server + Upstream Proxy）
+```
+┌─────────┐      ┌────────────────────┐      ┌──────────┐
+│ Client  │─────▶│ Caddy/nginx/etc   │─────▶│ Backend  │
+└─────────┘      │ + multi-oauth2     │      └──────────┘
+                 │   (middleware)     │
+                 └────────────────────┘
+```
+- Caddy, nginx, Traefikなどの高機能Webサーバーのupstreamとして動作
+- 認証機能のみを提供（プロキシ機能はWebサーバー側）
+- 軽量で安定性が高い
+
+#### モード3: スタンドアロンプロキシとして使用（All-in-One）
+```
+┌─────────┐      ┌────────────────────────┐      ┌──────────┐
+│ Client  │─────▶│ multi-oauth2-proxy     │─────▶│ Backend  │
+└─────────┘      │ (middleware + proxy)   │      └──────────┘
+                 └────────────────────────┘
+```
+- 認証とリバースプロキシの両方を提供
+- 簡単デプロイ（単一バイナリ）
+
+### 全体構成（ミドルウェア中心）
+
+```
+┌──────────────────────────────────────────────────────┐
+│         pkg/middleware (認証コア)                     │
+│  ┌────────────────────────────────────────────────┐  │
+│  │  Middleware: http.Handler準拠                  │  │
+│  │  - 認証チェック                                 │  │
+│  │  - セッション管理                               │  │
+│  │  - ログイン/ログアウトUI                        │  │
+│  │  - OAuth2/Email認証ハンドラー                   │  │
+│  └────────────────────────────────────────────────┘  │
+│                                                       │
+│  Dependencies:                                        │
+│  - pkg/auth/oauth2  (OAuth2認証)                     │
+│  - pkg/auth/email   (メール認証)                     │
+│  - pkg/authz        (認可チェック)                   │
+│  - pkg/session      (セッションストア)               │
+│  - pkg/config       (設定管理)                       │
+│  - pkg/i18n         (国際化)                         │
+└──────────────────────────────────────────────────────┘
+                          ↓ 使用
+┌──────────────────────────────────────────────────────┐
+│         使用モード                                     │
+│  ┌─────────────────┬─────────────────┬─────────────┐ │
+│  │ ライブラリ       │ 認証サーバー     │ プロキシ    │ │
+│  │ (Middleware)    │ (Server)        │ (Server+Proxy)│
+│  │                 │                 │             │ │
+│  │ アプリに        │ Caddy等の       │ 単独で      │ │
+│  │ 組み込み        │ upstreamとして  │ 動作        │ │
+│  └─────────────────┴─────────────────┴─────────────┘ │
+└──────────────────────────────────────────────────────┘
+```
+
+### モジュール構成（ミドルウェア中心）
 
 ```
 multi-oauth2-proxy/
 ├── cmd/
 │   └── multi-oauth2-proxy/     # メインエントリポイント
-│       └── main.go
+│       └── main.go             # モード選択（library/server/proxy）
 │
 ├── pkg/
+│   ├── middleware/             # **認証ミドルウェア（コア）**
+│   │   ├── middleware.go       # http.Handler準拠のミドルウェア
+│   │   ├── auth.go             # 認証チェックロジック
+│   │   ├── handlers.go         # ログイン/ログアウトハンドラー
+│   │   ├── oauth2_handlers.go  # OAuth2フローハンドラー
+│   │   ├── email_handlers.go   # メール認証ハンドラー
+│   │   ├── ui.go               # HTMLレンダリング
+│   │   └── middleware_test.go  # ミドルウェアテスト
+│   │
 │   ├── config/                 # 設定管理
 │   │   ├── config.go           # 設定構造体
 │   │   ├── loader.go           # YAML読み込み
@@ -321,78 +352,72 @@ multi-oauth2-proxy/
 │   │   └── validator.go        # 設定バリデーション
 │   │
 │   ├── auth/                   # 認証モジュール
-│   │   ├── manager.go          # 認証マネージャー
 │   │   ├── oauth2/             # OAuth2認証
 │   │   │   ├── provider.go    # プロバイダー抽象化
 │   │   │   ├── google.go      # Google実装
 │   │   │   ├── github.go      # GitHub実装
 │   │   │   ├── microsoft.go   # Microsoft実装
-│   │   │   ├── custom.go      # カスタムプロバイダー実装（Phase 3.5）
-│   │   │   ├── manager.go     # プロバイダー管理
-│   │   │   └── oidc.go        # 汎用OIDC実装
+│   │   │   ├── custom.go      # カスタムOIDC実装
+│   │   │   └── manager.go     # プロバイダー管理
 │   │   │
 │   │   └── email/              # メール認証
 │   │       ├── handler.go     # メール認証ハンドラー
 │   │       ├── token.go       # トークン生成・検証
 │   │       ├── sender.go      # メール送信（SMTP/SendGrid）
-│   │       └── file_writer.go # OTPファイル出力（Phase 3.5）
+│   │       └── file_writer.go # OTPファイル出力
 │   │
 │   ├── authz/                  # 認可モジュール
-│   │   ├── checker.go          # メールベース認可
-│   │   └── rules.go            # 認可ルール
+│   │   └── checker.go          # メールベース認可
 │   │
 │   ├── session/                # セッション管理
 │   │   ├── store.go            # セッションストア抽象化
 │   │   ├── memory.go           # インメモリ実装
-│   │   └── redis.go            # Redis実装（将来）
+│   │   └── redis.go            # Redis実装
 │   │
-│   ├── proxy/                  # プロキシ機能
-│   │   ├── handler.go          # リバースプロキシハンドラー
-│   │   ├── router.go           # Hostベースルーティング
-│   │   └── headers.go          # ヘッダー付与
+│   ├── proxy/                  # プロキシ機能（Mode 3専用）
+│   │   └── handler.go          # リバースプロキシハンドラー
 │   │
-│   ├── server/                 # HTTPサーバー
-│   │   ├── server.go           # サーバー起動
-│   │   ├── middleware.go       # 認証ミドルウェア
-│   │   └── routes.go           # ルート定義
+│   ├── server/                 # HTTPサーバー（Mode 2/3用）
+│   │   ├── server.go           # 軽量HTTPサーバー
+│   │   └── server_test.go      # サーバーテスト
 │   │
-│   ├── ui/                     # UI関連
-│   │   ├── templates/          # HTMLテンプレート
-│   │   │   ├── login.html
-│   │   │   ├── email.html
-│   │   │   ├── success.html
-│   │   │   └── error.html
-│   │   └── handler.go          # UIハンドラー
+│   ├── i18n/                   # 国際化
+│   │   ├── translator.go       # 翻訳機能
+│   │   ├── language.go         # 言語検出
+│   │   └── theme.go            # テーマ検出
 │   │
 │   ├── logging/                # ロギング
-│   │   ├── logger.go           # ロガーインターフェース
-│   │   ├── color.go            # カラー出力実装
-│   │   └── translations.go     # 翻訳定義（go-l10n）
+│   │   └── logger.go           # ロガーインターフェース
 │   │
-│   ├── testutil/               # テストユーティリティ
-│   │   ├── helpers.go          # テストヘルパー関数
-│   │   ├── mocks.go            # 共通モック
-│   │   └── config.go           # テスト用設定
+│   ├── ratelimit/              # レート制限
+│   │   └── limiter.go          # トークンバケット実装
 │   │
-│   └── tls/                    # TLS管理（将来実装）
-│       ├── manager.go          # 証明書管理
-│       └── lego.go             # lego統合
+│   └── testutil/               # テストユーティリティ
+│       ├── helpers.go          # テストヘルパー関数
+│       └── mocks.go            # 共通モック
 │
 ├── web/
-│   └── static/
-│       └── water.css           # CSSファイル
+│   ├── public/                 # 静的ファイル
+│   │   └── icons/              # SVGアイコン
+│   ├── src/                    # Viteソース
+│   │   ├── index.html          # デザインカタログ
+│   │   └── styles/main.css     # デザインシステムCSS
+│   └── dist/                   # ビルド成果物（→pkg/server/static）
 │
-├── config.yaml                 # デフォルト設定ファイル
+├── config.yaml                 # デフォルト設定ファイル（gitignore）
 ├── config.example.yaml         # 設定例
-├── .github/
-│   └── workflows/
-│       └── test.yml            # CI/CDテストワークフロー
 ├── go.mod
 ├── go.sum
-├── LICENSE                     # MITライセンス
+├── LICENSE
 ├── README.md
-└── SPEC.md                     # 本ドキュメント
+└── PLAN.md                     # 本ドキュメント
 ```
+
+**主な変更点:**
+1. **pkg/middleware** を新設 - 認証ロジックの中心
+2. **pkg/server** を簡略化 - ミドルウェアをラップするだけの軽量サーバー
+3. **pkg/proxy** はMode 3専用として明確化
+4. **pkg/ui** を削除 - UIレンダリングはmiddlewareに統合
 
 **注記:**
 - 各パッケージには対応する `*_test.go` ファイルが含まれます

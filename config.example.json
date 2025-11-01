@@ -1,0 +1,157 @@
+{
+  "_comment1": "multi-oauth2-proxy configuration example (JSON format)",
+  "_comment2": "Copy this file to config.json and customize for your environment",
+
+  "service": {
+    "name": "Multi OAuth2 Proxy",
+    "description": "Authentication proxy for multiple OAuth2 providers",
+    "_comment_icon": "Optional: Icon URL for auth header (48px icon, appears to the left of title)",
+    "icon_url": "",
+    "_comment_logo": "Optional: Logo URL for auth header (larger logo image, appears above title)",
+    "logo_url": "",
+    "_comment_logo_width": "Optional: Logo width (default: 200px, examples: 100px, 150px, 300px)",
+    "logo_width": "200px"
+  },
+
+  "server": {
+    "host": "0.0.0.0",
+    "port": 4180,
+    "_comment_auth_path": "Optional: Authentication endpoints prefix (default: /_auth)",
+    "auth_path_prefix": "/_auth"
+  },
+
+  "proxy": {
+    "_comment_upstream": "Main upstream backend (required)",
+    "upstream": "http://localhost:8080",
+
+    "_comment_routes": "Host-based routing (optional) - Route different hosts to different upstreams",
+    "routes": [
+      {
+        "host": "app1.example.com",
+        "upstream": "http://backend1:8080"
+      },
+      {
+        "host": "app2.example.com",
+        "upstream": "http://backend2:8080"
+      }
+    ]
+  },
+
+  "session": {
+    "cookie_name": "_oauth2_proxy",
+    "_comment_secret": "Generate a random secret: openssl rand -base64 32",
+    "cookie_secret": "CHANGE-THIS-TO-A-RANDOM-SECRET-AT-LEAST-32-CHARACTERS-LONG",
+    "cookie_expire": "168h",
+    "_comment_expire": "Cookie expiration time (168h = 7 days)",
+    "cookie_secure": false,
+    "_comment_secure": "Set to true when using HTTPS",
+    "cookie_httponly": true,
+    "cookie_samesite": "lax",
+
+    "_comment_store": "Session store type: memory or redis",
+    "store_type": "memory",
+
+    "_comment_redis": "Redis configuration (when store_type: redis)",
+    "redis": {
+      "address": "localhost:6379",
+      "password": "",
+      "db": 0,
+      "key_prefix": "oauth2_proxy:"
+    }
+  },
+
+  "oauth2": {
+    "providers": [
+      {
+        "_comment": "Google OAuth2",
+        "name": "google",
+        "display_name": "Google",
+        "client_id": "YOUR-GOOGLE-CLIENT-ID",
+        "client_secret": "YOUR-GOOGLE-CLIENT-SECRET",
+        "enabled": true
+      },
+      {
+        "_comment": "GitHub OAuth2",
+        "name": "github",
+        "display_name": "GitHub",
+        "client_id": "YOUR-GITHUB-CLIENT-ID",
+        "client_secret": "YOUR-GITHUB-CLIENT-SECRET",
+        "enabled": false
+      },
+      {
+        "_comment": "Microsoft OAuth2 (Azure AD)",
+        "name": "microsoft",
+        "display_name": "Microsoft",
+        "client_id": "YOUR-MICROSOFT-CLIENT-ID",
+        "client_secret": "YOUR-MICROSOFT-CLIENT-SECRET",
+        "enabled": false
+      },
+      {
+        "_comment": "Custom OIDC provider",
+        "name": "custom",
+        "display_name": "Custom OIDC",
+        "client_id": "YOUR-CLIENT-ID",
+        "client_secret": "YOUR-CLIENT-SECRET",
+        "auth_url": "https://provider.example.com/oauth2/authorize",
+        "token_url": "https://provider.example.com/oauth2/token",
+        "userinfo_url": "https://provider.example.com/oauth2/userinfo",
+        "enabled": false
+      }
+    ]
+  },
+
+  "email_auth": {
+    "enabled": true,
+
+    "_comment_sender": "Sender type: smtp, sendgrid, or file",
+    "sender_type": "smtp",
+
+    "_comment_smtp": "SMTP configuration (when sender_type: smtp)",
+    "smtp": {
+      "host": "smtp.gmail.com",
+      "port": 587,
+      "username": "your-email@gmail.com",
+      "password": "your-app-password",
+      "tls": false,
+      "starttls": true
+    },
+
+    "_comment_sendgrid": "SendGrid configuration (when sender_type: sendgrid)",
+    "sendgrid": {
+      "api_key": "SG.xxxxxxxxxxxxxxxxxxxx"
+    },
+
+    "from_email": "noreply@example.com",
+    "from_name": "Multi OAuth2 Proxy",
+
+    "_comment_token": "Token expiration time",
+    "token": {
+      "expire": "15m"
+    }
+  },
+
+  "authorization": {
+    "_comment_emails": "Individual email addresses",
+    "allowed_emails": [
+      "user@example.com",
+      "admin@company.com"
+    ],
+
+    "_comment_domains": "Allow all users from these domains",
+    "allowed_domains": [
+      "@example.org",
+      "@company.com"
+    ]
+  },
+
+  "logging": {
+    "_comment_level": "Log level: debug, info, warn, error",
+    "level": "info",
+    "module_level": "debug",
+    "_comment_module": "Log level for sub-modules",
+    "format": "text",
+    "_comment_format": "Log format: text or json",
+    "color": true,
+    "_comment_color": "Enable colored output (auto-detects TTY)"
+  }
+}
