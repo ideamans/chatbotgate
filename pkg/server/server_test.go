@@ -384,9 +384,12 @@ func TestServer_HandleLogin_WithEmailAuth(t *testing.T) {
 	}
 
 	body := rec.Body.String()
-	// Check for email login form (in English or Japanese)
-	if !contains(body, "Login with Email") && !contains(body, "メールでログイン") {
-		t.Error("handleLogin() should contain email login heading when email auth is enabled")
+	// Check for email login elements (label or button in English or Japanese)
+	hasEmailLabel := contains(body, "Email Address") || contains(body, "メールアドレス")
+	hasEmailButton := contains(body, "Send Login Link") || contains(body, "ログインリンクを送信")
+
+	if !hasEmailLabel && !hasEmailButton {
+		t.Error("handleLogin() should contain email login form when email auth is enabled")
 	}
 
 	// Check that the form is present

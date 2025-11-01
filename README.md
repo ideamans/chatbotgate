@@ -151,11 +151,51 @@ multi-oauth2-proxy/
 │   ├── proxy/                # Reverse proxy with host-based routing
 │   ├── ratelimit/            # Rate limiting (token bucket)
 │   ├── server/               # HTTP server & routing
+│   │   └── static/           # Embedded CSS and assets
 │   └── session/              # Session management (in-memory)
+├── web/                      # Frontend design system (Tailwind CSS 4)
+│   ├── src/                  # Source files
+│   │   ├── styles/           # CSS with design tokens
+│   │   └── index.html        # Design system catalog
+│   ├── dist/                 # Built assets (committed for Go embed)
+│   └── package.json          # Node.js dependencies
 ├── config.example.yaml       # Example configuration
+├── Makefile                  # Build automation
 ├── PLAN.md                   # Detailed design document
 └── README.md
 ```
+
+### Design System
+
+This project includes a modern design system built with Tailwind CSS 4, providing:
+- **Light/Dark theme support** with automatic detection
+- **Responsive components** optimized for authentication UI
+- **CSS custom properties** for easy customization
+- **Component catalog** for development
+
+#### Viewing the Design System
+
+```bash
+# Install web dependencies
+make install-web
+
+# Start the design system catalog
+make dev-web
+```
+
+Visit `http://localhost:3000` to see all available components, colors, and page examples.
+
+#### Building the Design System
+
+```bash
+# Build CSS and copy to Go embed directory
+make build-web
+
+# Or build everything (web + go)
+make build
+```
+
+The built CSS is embedded in the Go binary via `//go:embed`, so no external assets are needed at runtime.
 
 ### Running Tests
 

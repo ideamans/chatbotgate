@@ -5,6 +5,12 @@
 service:
   name: "Multi OAuth2 Proxy"
   description: "Authentication proxy for multiple OAuth2 providers"
+  # Optional: Icon URL for auth header (48px icon, appears to the left of title)
+  # icon_url: "https://example.com/icon.svg"
+  # Optional: Logo URL for auth header (larger logo image, appears above title)
+  # logo_url: "https://example.com/logo.svg"
+  # Optional: Logo width (default: "200px", examples: "100px", "150px", "300px")
+  # logo_width: "200px"
 
 # HTTP server configuration
 server:

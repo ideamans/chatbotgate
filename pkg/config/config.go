@@ -18,6 +18,9 @@ type Config struct {
 type ServiceConfig struct {
 	Name        string `yaml:"name"`
 	Description string `yaml:"description"`
+	IconURL     string `yaml:"icon_url"`     // Icon URL for auth header (48px icon)
+	LogoURL     string `yaml:"logo_url"`     // Logo URL for auth header (larger logo image)
+	LogoWidth   string `yaml:"logo_width"`   // Logo width (e.g., "100px", "150px", "200px", default: "200px")
 }
 
 // ServerConfig contains HTTP server settings

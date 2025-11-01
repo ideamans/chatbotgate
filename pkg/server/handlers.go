@@ -26,73 +26,195 @@ func (s *Server) handleReady(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("READY"))
 }
 
+// handleStylesCSS serves the embedded CSS
+func (s *Server) handleStylesCSS(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/css; charset=utf-8")
+	w.Header().Set("Cache-Control", "public, max-age=31536000") // Cache for 1 year
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(GetEmbeddedCSS()))
+}
+
+// handleIcon serves the embedded SVG icons
+func (s *Server) handleIcon(w http.ResponseWriter, r *http.Request) {
+	iconName := chi.URLParam(r, "icon")
+	iconPath := "static/icons/" + iconName
+
+	// Read the icon file from embedded filesystem
+	data, err := GetEmbeddedIcons().ReadFile(iconPath)
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+
+	w.Header().Set("Content-Type", "image/svg+xml")
+	w.Header().Set("Cache-Control", "public, max-age=31536000") // Cache for 1 year
+	w.WriteHeader(http.StatusOK)
+	w.Write(data)
+}
+
+// buildAuthHeader generates the auth header HTML based on configuration
+func (s *Server) buildAuthHeader(prefix string) string {
+	serviceName := s.config.Service.Name
+	iconURL := s.config.Service.IconURL
+	logoURL := s.config.Service.LogoURL
+	logoWidth := s.config.Service.LogoWidth
+	if logoWidth == "" {
+		logoWidth = "200px"
+	}
+
+	// Pattern 3: Logo image (if configured)
+	if logoURL != "" {
+		return `<img src="` + logoURL + `" alt="Logo" class="auth-logo" style="--auth-logo-width: ` + logoWidth + `;">
+<h1 class="auth-title">` + serviceName + `</h1>`
+	}
+
+	// Pattern 2: Icon + System name (if configured)
+	if iconURL != "" {
+		return `<div class="auth-header">
+<img src="` + iconURL + `" alt="Icon" class="auth-icon">
+<h1 class="auth-title">` + serviceName + `</h1>
+</div>`
+	}
+
+	// Pattern 1: Text only (default)
+	return `<h1 class="auth-title">` + serviceName + `</h1>`
+}
+
+// buildAuthSubtitle generates subtitle HTML if subtitle is provided
+func (s *Server) buildAuthSubtitle(subtitle string) string {
+	if subtitle == "" {
+		return ""
+	}
+	return `<h2 class="auth-subtitle">` + subtitle + `</h2>`
+}
+
 // handleLogin displays the login page
 func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 	lang := i18n.DetectLanguage(r)
 	theme := i18n.DetectTheme(r)
 	t := func(key string) string { return s.translator.T(lang, key) }
 
-	// Determine CSS file based on theme
-	cssFile := "https://cdn.jsdelivr.net/npm/water.css@2/out/water.css"
-	if theme == i18n.ThemeLight {
-		cssFile = "https://cdn.jsdelivr.net/npm/water.css@2/out/light.css"
-	} else if theme == i18n.ThemeDark {
-		cssFile = "https://cdn.jsdelivr.net/npm/water.css@2/out/dark.css"
+	// Use embedded CSS
+	cssPath := joinAuthPath(s.config.Server.GetAuthPathPrefix(), "/assets/styles.css")
+	themeClass := ""
+	if theme == i18n.ThemeDark {
+		themeClass = "dark"
+	} else if theme == i18n.ThemeLight {
+		themeClass = "light"
 	}
+	// ThemeAuto: no class, let CSS media query handle it
 
 	html := `<!DOCTYPE html>
-<html lang="` + string(lang) + `">
+<html lang="` + string(lang) + `" class="` + themeClass + `">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>` + t("login.title") + ` - ` + s.config.Service.Name + `</title>
-<link rel="stylesheet" href="` + cssFile + `">
+<link rel="stylesheet" href="` + cssPath + `">
 <style>
-.ui-controls { margin: 20px 0; padding: 15px; background: rgba(0,0,0,0.05); border-radius: 5px; }
-.ui-controls label { margin-right: 10px; }
-.ui-controls select { margin-right: 15px; }
+.settings-toggle {
+	position: fixed;
+	top: var(--spacing-md);
+	right: var(--spacing-md);
+	display: flex;
+	flex-direction: row;
+	gap: var(--spacing-md);
+	align-items: center;
+	z-index: 100;
+	background-color: var(--color-bg-elevated);
+	padding: var(--spacing-xs) var(--spacing-md);
+	border-radius: var(--radius-md);
+	border: 1px solid var(--color-border-default);
+}
+.settings-toggle select {
+	padding: var(--spacing-xs) var(--spacing-sm);
+	border: none;
+	background: transparent;
+	color: var(--color-text-secondary);
+	font-size: 0.875rem;
+	cursor: pointer;
+	appearance: none;
+	-webkit-appearance: none;
+	-moz-appearance: none;
+}
+.settings-toggle select:hover {
+	color: var(--color-text-primary);
+}
+.settings-toggle select:focus {
+	outline: none;
+	color: var(--color-text-primary);
+}
 </style>
 </head>
 <body>
-<div class="ui-controls">
-	<label>` + t("ui.theme") + `: <select id="theme-select" onchange="changeTheme(this.value)">
+<div class="settings-toggle">
+	<select id="theme-select" onchange="changeTheme(this.value)">
 		<option value="auto" ` + map[bool]string{true: `selected`, false: ``}[theme == i18n.ThemeAuto] + `>` + t("ui.theme.auto") + `</option>
 		<option value="light" ` + map[bool]string{true: `selected`, false: ``}[theme == i18n.ThemeLight] + `>` + t("ui.theme.light") + `</option>
 		<option value="dark" ` + map[bool]string{true: `selected`, false: ``}[theme == i18n.ThemeDark] + `>` + t("ui.theme.dark") + `</option>
-	</select></label>
-
-	<label>` + t("ui.language") + `: <select id="lang-select" onchange="changeLanguage(this.value)">
+	</select>
+	<select id="lang-select" onchange="changeLanguage(this.value)">
 		<option value="en" ` + map[bool]string{true: `selected`, false: ``}[lang == i18n.English] + `>` + t("ui.language.en") + `</option>
 		<option value="ja" ` + map[bool]string{true: `selected`, false: ``}[lang == i18n.Japanese] + `>` + t("ui.language.ja") + `</option>
-	</select></label>
+	</select>
 </div>
 
-<h1>` + s.config.Service.Name + `</h1>
-<p>` + s.config.Service.Description + `</p>
-<h2>` + t("login.oauth2.heading") + `</h2>
-<ul>`
+<div class="auth-container">
+	<div class="card auth-card">
+		` + s.buildAuthHeader(s.config.Server.GetAuthPathPrefix()) + `
+		<p class="auth-description">` + s.config.Service.Description + `</p>`
 
 	prefix := s.config.Server.GetAuthPathPrefix()
 	providers := s.oauthManager.GetProviders()
-	for _, p := range providers {
-		html += fmt.Sprintf(`<li><a href="%s/oauth2/start/%s">%s</a></li>`, prefix, p.Name(), p.Name())
-	}
 
-	html += `</ul>`
+	if len(providers) > 0 {
+		html += `<div style="margin-bottom: var(--spacing-lg);">`
+		for _, p := range providers {
+			providerName := p.Name()
+			// Map provider names to icon files
+			iconName := providerName
+			knownIcons := map[string]bool{
+				"google":    true,
+				"github":    true,
+				"microsoft": true,
+				"facebook":  true,
+			}
+			if !knownIcons[providerName] {
+				iconName = "oidc" // Default to OIDC icon for custom providers
+			}
+			iconPath := joinAuthPath(prefix, "/assets/icons/"+iconName+".svg")
+			html += `<a href="` + prefix + `/oauth2/start/` + providerName + `" class="btn btn-secondary provider-btn">`
+			html += `<img src="` + iconPath + `" alt="` + providerName + `">`
+			html += fmt.Sprintf(t("login.oauth2.continue"), providerName) + `</a>`
+		}
+		html += `</div>`
+	}
 
 	// Add email authentication form if enabled
 	if s.emailHandler != nil {
 		emailSendPath := joinAuthPath(s.config.Server.GetAuthPathPrefix(), "/email/send")
+		emailIconPath := joinAuthPath(prefix, "/assets/icons/email.svg")
+
+		if len(providers) > 0 {
+			html += `<div class="auth-divider"><span>` + t("login.or") + `</span></div>`
+		}
+
 		html += `
-<h2>` + t("login.email.heading") + `</h2>
-<form method="POST" action="` + emailSendPath + `">
-  <label for="email">` + t("login.email.label") + `:</label><br>
-  <input type="email" id="email" name="email" required><br><br>
-  <button type="submit">` + t("login.email.submit") + `</button>
-</form>`
+		<form method="POST" action="` + emailSendPath + `">
+			<div class="form-group">
+				<label class="label" for="email">` + t("login.email.label") + `</label>
+				<input type="email" id="email" name="email" class="input" placeholder="you@example.com" required>
+			</div>
+			<button type="submit" class="btn btn-primary provider-btn">
+				<img src="` + emailIconPath + `" alt="Email">
+				` + t("login.email.submit") + `
+			</button>
+		</form>`
 	}
 
 	html += `
+	</div>
+</div>
 <script>
 function setCookie(name, value, days) {
 	var expires = "";
@@ -106,12 +228,47 @@ function setCookie(name, value, days) {
 
 function changeTheme(theme) {
 	setCookie("theme", theme, 365);
-	window.location.reload();
+
+	// Apply theme immediately without reload
+	var html = document.documentElement;
+	if (theme === "dark") {
+		html.classList.add("dark");
+	} else if (theme === "light") {
+		html.classList.remove("dark");
+	} else {
+		// Auto - check system preference
+		if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+			html.classList.add("dark");
+		} else {
+			html.classList.remove("dark");
+		}
+	}
 }
 
 function changeLanguage(lang) {
 	setCookie("lang", lang, 365);
 	window.location.reload();
+}
+
+// Listen for system theme changes
+if (window.matchMedia) {
+	window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function(e) {
+		var savedTheme = getCookie("theme");
+		if (!savedTheme || savedTheme === "auto") {
+			document.documentElement.classList.toggle("dark", e.matches);
+		}
+	});
+}
+
+function getCookie(name) {
+	var nameEQ = name + "=";
+	var ca = document.cookie.split(';');
+	for(var i=0; i < ca.length; i++) {
+		var c = ca[i];
+		while (c.charAt(0) == ' ') c = c.substring(1, c.length);
+		if (c.indexOf(nameEQ) == 0) return c.substring(nameEQ.length, c.length);
+	}
+	return null;
 }
 </script>
 </body>
@@ -127,14 +284,6 @@ func (s *Server) handleLogout(w http.ResponseWriter, r *http.Request) {
 	lang := i18n.DetectLanguage(r)
 	theme := i18n.DetectTheme(r)
 	t := func(key string) string { return s.translator.T(lang, key) }
-
-	// Determine CSS file based on theme
-	cssFile := "https://cdn.jsdelivr.net/npm/water.css@2/out/water.css"
-	if theme == i18n.ThemeLight {
-		cssFile = "https://cdn.jsdelivr.net/npm/water.css@2/out/light.css"
-	} else if theme == i18n.ThemeDark {
-		cssFile = "https://cdn.jsdelivr.net/npm/water.css@2/out/dark.css"
-	}
 
 	// Get session cookie
 	cookie, err := r.Cookie(s.config.Session.CookieName)
@@ -152,21 +301,35 @@ func (s *Server) handleLogout(w http.ResponseWriter, r *http.Request) {
 		HttpOnly: true,
 	})
 
-	// Show logout page
-	loginPath := joinAuthPath(s.config.Server.GetAuthPathPrefix(), "/login")
+	// Use embedded CSS
+	prefix := s.config.Server.GetAuthPathPrefix()
+	cssPath := joinAuthPath(prefix, "/assets/styles.css")
+	loginPath := joinAuthPath(prefix, "/login")
+
+	themeClass := ""
+	if theme == i18n.ThemeDark {
+		themeClass = "dark"
+	} else if theme == i18n.ThemeLight {
+		themeClass = "light"
+	}
 
 	html := `<!DOCTYPE html>
-<html lang="` + string(lang) + `">
+<html lang="` + string(lang) + `" class="` + themeClass + `">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>` + t("logout.title") + ` - ` + s.config.Service.Name + `</title>
-<link rel="stylesheet" href="` + cssFile + `">
+<link rel="stylesheet" href="` + cssPath + `">
 </head>
 <body>
-<h1>` + t("logout.heading") + `</h1>
-<p>` + t("logout.message") + `</p>
-<p><a href="` + loginPath + `">` + t("logout.login") + `</a></p>
+<div class="auth-container">
+	<div class="card auth-card">
+		` + s.buildAuthHeader(prefix) + `
+		` + s.buildAuthSubtitle(t("logout.heading")) + `
+		<div class="alert alert-success" style="text-align: left; margin-bottom: var(--spacing-md);">` + t("logout.message") + `</div>
+		<a href="` + loginPath + `" class="btn btn-primary" style="width: 100%; margin-top: var(--spacing-md);">` + t("logout.login") + `</a>
+	</div>
+</div>
 </body>
 </html>`
 
@@ -279,7 +442,7 @@ func (s *Server) handleOAuth2Callback(w http.ResponseWriter, r *http.Request) {
 	// Check authorization
 	if !s.authzChecker.IsAllowed(email) {
 		s.logger.Warn("User not authorized", "email", email)
-		http.Error(w, "Access denied", http.StatusForbidden)
+		s.handleForbidden(w, r)
 		return
 	}
 
@@ -381,14 +544,6 @@ func (s *Server) handleEmailSend(w http.ResponseWriter, r *http.Request) {
 	theme := i18n.DetectTheme(r)
 	t := func(key string) string { return s.translator.T(lang, key) }
 
-	// Determine CSS file based on theme
-	cssFile := "https://cdn.jsdelivr.net/npm/water.css@2/out/water.css"
-	if theme == i18n.ThemeLight {
-		cssFile = "https://cdn.jsdelivr.net/npm/water.css@2/out/light.css"
-	} else if theme == i18n.ThemeDark {
-		cssFile = "https://cdn.jsdelivr.net/npm/water.css@2/out/dark.css"
-	}
-
 	if err := r.ParseForm(); err != nil {
 		http.Error(w, t("error.invalid_request"), http.StatusBadRequest)
 		return
@@ -400,30 +555,50 @@ func (s *Server) handleEmailSend(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Check authorization before sending
+	if !s.authzChecker.IsAllowed(email) {
+		s.logger.Warn("User not authorized for email login", "email", email)
+		s.handleForbidden(w, r)
+		return
+	}
+
 	// Send login link
 	err := s.emailHandler.SendLoginLink(email)
 	if err != nil {
 		s.logger.Error("Failed to send login link", "email", email, "error", err)
-		// Don't reveal whether the email is authorized or not
-		// Always show success message
+		http.Error(w, t("error.internal"), http.StatusInternalServerError)
+		return
 	}
 
-	// Show success message
-	loginPath := joinAuthPath(s.config.Server.GetAuthPathPrefix(), "/login")
+	// Use embedded CSS
+	prefix := s.config.Server.GetAuthPathPrefix()
+	cssPath := joinAuthPath(prefix, "/assets/styles.css")
+	loginPath := joinAuthPath(prefix, "/login")
+
+	themeClass := ""
+	if theme == i18n.ThemeDark {
+		themeClass = "dark"
+	} else if theme == i18n.ThemeLight {
+		themeClass = "light"
+	}
 
 	html := `<!DOCTYPE html>
-<html lang="` + string(lang) + `">
+<html lang="` + string(lang) + `" class="` + themeClass + `">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>` + t("email.sent.title") + ` - ` + s.config.Service.Name + `</title>
-<link rel="stylesheet" href="` + cssFile + `">
+<link rel="stylesheet" href="` + cssPath + `">
 </head>
 <body>
-<h1>` + t("email.sent.heading") + `</h1>
-<p>` + t("email.sent.message") + `</p>
-<p>` + t("email.sent.detail") + `</p>
-<p><a href="` + loginPath + `">` + t("email.sent.back") + `</a></p>
+<div class="auth-container">
+	<div class="card auth-card">
+		` + s.buildAuthHeader(prefix) + `
+		` + s.buildAuthSubtitle(t("email.sent.heading")) + `
+		<div class="alert alert-success" style="text-align: left; margin-bottom: var(--spacing-md);">` + t("email.sent.message") + ` ` + t("email.sent.detail") + `</div>
+		<a href="` + loginPath + `" class="btn btn-ghost" style="width: 100%; margin-top: var(--spacing-md);">` + t("email.sent.back") + `</a>
+	</div>
+</div>
 </body>
 </html>`
 
@@ -449,28 +624,35 @@ func (s *Server) handleEmailVerify(w http.ResponseWriter, r *http.Request) {
 		s.logger.Error("Failed to verify token", "error", err)
 		theme := i18n.DetectTheme(r)
 
-		// Determine CSS file based on theme
-		cssFile := "https://cdn.jsdelivr.net/npm/water.css@2/out/water.css"
-		if theme == i18n.ThemeLight {
-			cssFile = "https://cdn.jsdelivr.net/npm/water.css@2/out/light.css"
-		} else if theme == i18n.ThemeDark {
-			cssFile = "https://cdn.jsdelivr.net/npm/water.css@2/out/dark.css"
+		// Use embedded CSS
+		prefix := s.config.Server.GetAuthPathPrefix()
+		cssPath := joinAuthPath(prefix, "/assets/styles.css")
+		loginPath := joinAuthPath(prefix, "/login")
+
+		themeClass := ""
+		if theme == i18n.ThemeDark {
+			themeClass = "dark"
+		} else if theme == i18n.ThemeLight {
+			themeClass = "light"
 		}
 
-		retryPath := joinAuthPath(s.config.Server.GetAuthPathPrefix(), "/email")
-
 		html := `<!DOCTYPE html>
-<html lang="` + string(lang) + `">
+<html lang="` + string(lang) + `" class="` + themeClass + `">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>` + t("email.invalid.title") + ` - ` + s.config.Service.Name + `</title>
-<link rel="stylesheet" href="` + cssFile + `">
+<link rel="stylesheet" href="` + cssPath + `">
 </head>
 <body>
-<h1>` + t("email.invalid.heading") + `</h1>
-<p>` + t("email.invalid.message") + `</p>
-<p><a href="` + retryPath + `">` + t("email.invalid.retry") + `</a></p>
+<div class="auth-container">
+	<div class="card auth-card">
+		` + s.buildAuthHeader(prefix) + `
+		` + s.buildAuthSubtitle(t("email.invalid.heading")) + `
+		<div class="alert alert-error" style="text-align: left; margin-bottom: var(--spacing-md);"><strong>Error:</strong> ` + t("email.invalid.message") + ` This link cannot be used to authenticate.</div>
+		<a href="` + loginPath + `" class="btn btn-primary" style="width: 100%; margin-top: var(--spacing-md);">` + t("email.invalid.retry") + `</a>
+	</div>
+</div>
 </body>
 </html>`
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -523,4 +705,47 @@ func (s *Server) handleEmailVerify(w http.ResponseWriter, r *http.Request) {
 
 	// Redirect to original URL or home
 	http.Redirect(w, r, s.getRedirectURL(w, r), http.StatusFound)
+}
+
+// handleForbidden displays the access denied page
+func (s *Server) handleForbidden(w http.ResponseWriter, r *http.Request) {
+	lang := i18n.DetectLanguage(r)
+	theme := i18n.DetectTheme(r)
+	t := func(key string) string { return s.translator.T(lang, key) }
+
+	prefix := normalizeAuthPrefix(s.config.Server.GetAuthPathPrefix())
+	cssPath := joinAuthPath(prefix, "/assets/styles.css")
+	loginPath := joinAuthPath(prefix, "/login")
+
+	themeClass := ""
+	if theme == i18n.ThemeDark {
+		themeClass = "dark"
+	} else if theme == i18n.ThemeLight {
+		themeClass = "light"
+	}
+	// ThemeAuto: no class, let CSS media query handle it
+
+	html := `<!DOCTYPE html>
+<html lang="` + string(lang) + `" class="` + themeClass + `">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>` + t("error.forbidden.title") + ` - ` + s.config.Service.Name + `</title>
+<link rel="stylesheet" href="` + cssPath + `">
+</head>
+<body>
+<div class="auth-container">
+  <div class="card auth-card">
+    ` + s.buildAuthHeader(prefix) + `
+    ` + s.buildAuthSubtitle(t("error.forbidden.heading")) + `
+    <div class="alert alert-error" style="text-align: left; margin-bottom: var(--spacing-md);">` + t("error.forbidden.message") + `</div>
+    <a href="` + loginPath + `" class="btn btn-ghost" style="width: 100%; margin-top: var(--spacing-md);">` + t("login.back") + `</a>
+  </div>
+</div>
+</body>
+</html>`
+
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.WriteHeader(http.StatusForbidden)
+	w.Write([]byte(html))
 }

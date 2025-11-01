@@ -39,3 +39,7 @@ config.yaml
 
 # Temporary files
 tmp/
+
+# Web build artifacts
+web/dist/
+web/node_modules/

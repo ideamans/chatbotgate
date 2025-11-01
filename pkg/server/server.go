@@ -87,6 +87,10 @@ func (s *Server) setupRouter() {
 		authRouter.Get("/email/verify", s.handleEmailVerify)
 	}
 
+	// Static assets endpoint
+	authRouter.Get("/assets/styles.css", s.handleStylesCSS)
+	authRouter.Get("/assets/icons/{icon}", s.handleIcon)
+
 	if prefix == "/" {
 		r.Mount("/", authRouter)
 	} else {
