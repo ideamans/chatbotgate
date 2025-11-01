@@ -1,0 +1,103 @@
+# multi-oauth2-proxy configuration example
+# Copy this file to config.yaml and customize for your environment
+
+# Service information
+service:
+  name: "Multi OAuth2 Proxy"
+  description: "Authentication proxy for multiple OAuth2 providers"
+
+# HTTP server configuration
+server:
+  host: "0.0.0.0"
+  port: 4180
+
+# Proxy configuration
+proxy:
+  # Main upstream backend (required)
+  upstream: "http://localhost:8080"
+
+  # Host-based routing (optional)
+  # Route different hosts to different upstreams
+  # hosts:
+  #   "app1.example.com": "http://backend1:8080"
+  #   "app2.example.com": "http://backend2:8080"
+
+# Session configuration
+session:
+  cookie_name: "_oauth2_proxy"
+  # Generate a random secret: openssl rand -base64 32
+  cookie_secret: "CHANGE-THIS-TO-A-RANDOM-SECRET-AT-LEAST-32-CHARACTERS-LONG"
+  cookie_expire: "168h"  # 7 days
+  cookie_secure: false   # Set to true when using HTTPS
+  cookie_httponly: true
+  cookie_samesite: "lax"
+
+# OAuth2 providers configuration
+oauth2:
+  providers:
+    # Google OAuth2
+    - name: "google"
+      display_name: "Google"
+      client_id: "YOUR-GOOGLE-CLIENT-ID"
+      client_secret: "YOUR-GOOGLE-CLIENT-SECRET"
+      enabled: true
+
+    # GitHub OAuth2
+    - name: "github"
+      display_name: "GitHub"
+      client_id: "YOUR-GITHUB-CLIENT-ID"
+      client_secret: "YOUR-GITHUB-CLIENT-SECRET"
+      enabled: false
+
+    # Microsoft OAuth2 (Azure AD)
+    - name: "microsoft"
+      display_name: "Microsoft"
+      client_id: "YOUR-MICROSOFT-CLIENT-ID"
+      client_secret: "YOUR-MICROSOFT-CLIENT-SECRET"
+      enabled: false
+
+# Email authentication configuration (Phase 2)
+email_auth:
+  enabled: true
+
+  # Sender type: "smtp" or "sendgrid"
+  sender_type: "smtp"
+
+  # SMTP configuration (when sender_type: "smtp")
+  smtp:
+    host: "smtp.gmail.com"
+    port: 587
+    username: "your-email@gmail.com"
+    password: "your-app-password"
+    from: "noreply@example.com"
+    from_name: "Multi OAuth2 Proxy"
+    tls: false
+    starttls: true
+
+  # SendGrid configuration (when sender_type: "sendgrid")
+  # sendgrid:
+  #   api_key: "SG.xxxxxxxxxxxxxxxxxxxx"
+  #   from: "noreply@example.com"
+  #   from_name: "Multi OAuth2 Proxy"
+
+  # Token expiration
+  token:
+    expire: "15m"  # 15 minutes
+
+# Authorization configuration
+authorization:
+  # Individual email addresses
+  allowed_emails:
+    - "user@example.com"
+    - "admin@company.com"
+
+  # Allow all users from these domains
+  allowed_domains:
+    - "@example.org"
+    - "@company.com"
+
+# Logging configuration
+logging:
+  level: "info"         # debug, info, warn, error
+  module_level: "debug" # Log level for sub-modules
+  color: true           # Enable colored output (auto-detects TTY)

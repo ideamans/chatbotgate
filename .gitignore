@@ -1,0 +1,41 @@
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool
+*.out
+coverage.out
+
+# Dependency directories
+vendor/
+
+# Go workspace file
+go.work
+
+# IDE-specific files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# Application binary
+multi-oauth2-proxy
+cmd/multi-oauth2-proxy/multi-oauth2-proxy
+
+# Config files with secrets (example files are OK)
+config.yaml
+!config.example.yaml
+
+# Temporary files
+tmp/

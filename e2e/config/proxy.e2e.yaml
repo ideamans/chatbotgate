@@ -1,0 +1,55 @@
+service:
+  name: "multi-oauth2-proxy e2e"
+  description: "E2E verification environment"
+
+server:
+  host: 0.0.0.0
+  port: 4180
+  auth_path_prefix: "/_auth"
+
+proxy:
+  upstream: "http://target-app:3000/"
+
+session:
+  cookie_name: "mop-e2e"
+  cookie_secret: "0123456789abcdef0123456789abcdef"
+  cookie_expire: "24h"
+  cookie_secure: false
+  cookie_httponly: true
+  cookie_samesite: "lax"
+  store_type: "memory"
+
+oauth2:
+  providers:
+    - name: "stub-auth"
+      type: "custom"
+      display_name: "Stub Auth"
+      client_id: "stub-client-id"
+      client_secret: "stub-client-secret"
+      enabled: true
+      auth_url: "http://localhost:3001/oauth/authorize"
+      token_url: "http://stub-auth:3001/oauth/token"
+      userinfo_url: "http://stub-auth:3001/oauth/userinfo"
+      jwks_url: "http://stub-auth:3001/oauth/jwks"
+      insecure_skip_verify: true
+
+email_auth:
+  enabled: true
+  sender_type: "sendgrid"
+  sendgrid:
+    api_key: ""
+    from: "noreply@example.com"
+    from_name: "multi-oauth2-proxy"
+  token:
+    expire: "3m"
+  otp_output_file: "/otp/passwordless-otp.jsonl"
+
+authorization:
+  allowed_emails:
+    - "someone@example.com"
+  allowed_domains: []
+
+logging:
+  level: "debug"
+  module_level: ""
+  color: false

@@ -1,0 +1,61 @@
+services:
+  proxy-app:
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+    container_name: e2e-proxy-app
+    command: ["-config", "/config/proxy.e2e.yaml"]
+    ports:
+      - "4180:4180"
+    depends_on:
+      - target-app
+      - stub-auth
+    volumes:
+      - ../config/proxy.e2e.yaml:/config/proxy.e2e.yaml:ro
+      - otp-files:/otp
+    environment:
+      - LANGUAGE=en
+    networks:
+      - e2e-net
+
+  target-app:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.target-app
+    container_name: e2e-target-app
+    env_file:
+      - ../config/target-app.env
+    ports:
+      - "3000:3000"
+    networks:
+      - e2e-net
+
+  stub-auth:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.stub-auth
+    container_name: e2e-stub-auth
+    env_file:
+      - ../config/stub-auth.env
+    ports:
+      - "3001:3001"
+    networks:
+      - e2e-net
+
+networks:
+  e2e-net:
+    driver: bridge
+
+volumes:
+  otp-files:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ../tmp
+  test-results:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ../test-results

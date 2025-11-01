@@ -1,0 +1,23 @@
+# Build stage
+FROM node:20-alpine AS builder
+WORKDIR /app
+
+COPY src/target-app/package*.json ./
+RUN npm ci
+
+COPY src/target-app/tsconfig.json ./
+COPY src/target-app/src ./src
+RUN npm run build
+
+# Runtime stage
+FROM node:20-alpine
+WORKDIR /app
+ENV NODE_ENV=production
+
+COPY src/target-app/package*.json ./
+RUN npm ci --omit=dev
+
+COPY --from=builder /app/dist ./dist
+
+EXPOSE 3000
+CMD ["node", "--enable-source-maps", "dist/index.js"]

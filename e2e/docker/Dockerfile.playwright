@@ -1,0 +1,15 @@
+FROM mcr.microsoft.com/playwright:v1.42.0-jammy
+
+WORKDIR /workspace
+
+COPY package*.json ./
+COPY tsconfig.json ./
+COPY playwright.config.ts ./
+RUN npm ci
+
+COPY src ./src
+
+ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+ENV BASE_URL=http://proxy-app:4180
+
+ENTRYPOINT ["npx", "playwright", "test"]

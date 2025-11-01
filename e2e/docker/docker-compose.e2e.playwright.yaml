@@ -1,0 +1,20 @@
+services:
+  playwright-runner:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.playwright
+    container_name: e2e-playwright
+    depends_on:
+      proxy-app:
+        condition: service_healthy
+      stub-auth:
+        condition: service_started
+      target-app:
+        condition: service_started
+    environment:
+      - BASE_URL=http://proxy-app:4180
+    networks:
+      - e2e-net
+    volumes:
+      - otp-files:/workspace/tmp
+      - test-results:/workspace/test-results
