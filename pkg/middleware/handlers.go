@@ -436,15 +436,16 @@ func (m *Middleware) handleOAuth2Callback(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	var email string
+	// Try to get user email from OAuth2 provider
+	// We always try to fetch the email for setting in request headers,
+	// regardless of whether authorization check is required
+	email, err := m.oauthManager.GetUserEmail(r.Context(), providerName, token)
 
 	// Check if email-based authorization is required
 	if m.authzChecker.RequiresEmail() {
-		// Whitelist configured - email is required
-		var err error
-		email, err = m.oauthManager.GetUserEmail(r.Context(), providerName, token)
+		// Whitelist configured - email is required for authorization
 		if err != nil {
-			m.logger.Error("Failed to get user email", "error", err, "provider", providerName)
+			m.logger.Error("Failed to get user email (required for authorization)", "error", err, "provider", providerName)
 			m.handleEmailFetchError(w, r)
 			return
 		}
@@ -459,8 +460,13 @@ func (m *Middleware) handleOAuth2Callback(w http.ResponseWriter, r *http.Request
 		m.logger.Info("User authorized", "email", email, "provider", providerName)
 	} else {
 		// No whitelist configured - authentication alone is sufficient
-		// Email address is not required
-		m.logger.Info("No whitelist configured, skipping email fetch and authorization check", "provider", providerName)
+		// Email is not required for authorization, but we still try to get it for headers
+		if err != nil {
+			m.logger.Warn("Failed to get user email (not required, will proceed without it)", "error", err, "provider", providerName)
+			email = "" // Clear email if fetch failed when not required
+		} else {
+			m.logger.Info("User authenticated", "email", email, "provider", providerName)
+		}
 	}
 
 	// Create session

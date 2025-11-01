@@ -18,6 +18,25 @@ services:
     networks:
       - e2e-net
 
+  proxy-app-with-whitelist:
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+    container_name: e2e-proxy-app-with-whitelist
+    command: ["-config", "/config/proxy.e2e.with-whitelist.yaml"]
+    ports:
+      - "4181:4180"  # Map external 4181 to internal 4180
+    depends_on:
+      - target-app
+      - stub-auth
+    volumes:
+      - ../config/proxy.e2e.with-whitelist.yaml:/config/proxy.e2e.with-whitelist.yaml:ro
+      - otp-files:/otp
+    environment:
+      - LANGUAGE=en
+    networks:
+      - e2e-net
+
   target-app:
     build:
       context: ..

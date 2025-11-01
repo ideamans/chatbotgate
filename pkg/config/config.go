@@ -28,6 +28,8 @@ type ServerConfig struct {
 	Host           string `yaml:"host" json:"host"`
 	Port           int    `yaml:"port" json:"port"`
 	AuthPathPrefix string `yaml:"auth_path_prefix" json:"auth_path_prefix"` // Path prefix for authentication endpoints (default: "/_auth")
+	CallbackURL    string `yaml:"callback_url" json:"callback_url"`         // Optional: Override OAuth2 callback URL (useful when behind reverse proxy or different external port)
+	BaseURL        string `yaml:"base_url" json:"base_url"`                 // Optional: Override base URL for email links and redirects (e.g., "http://localhost:4181")
 }
 
 // GetAuthPathPrefix returns the authentication path prefix

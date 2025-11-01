@@ -1,17 +1,19 @@
 service:
-  name: "multi-oauth2-proxy e2e"
-  description: "E2E verification environment"
+  name: "multi-oauth2-proxy e2e (with whitelist)"
+  description: "E2E verification environment with whitelist"
 
 server:
   host: 0.0.0.0
-  port: 4180
+  port: 4180  # Internal port (mapped to 4181 externally)
   auth_path_prefix: "/_auth"
+  callback_url: "http://localhost:4181/_auth/oauth2/callback"  # External callback URL
+  base_url: "http://localhost:4181"  # External base URL for email links
 
 proxy:
   upstream: "http://target-app:3000/"
 
 session:
-  cookie_name: "mop-e2e"
+  cookie_name: "mop-e2e-wl"  # Different cookie name to avoid conflicts
   cookie_secret: "0123456789abcdef0123456789abcdef"
   cookie_expire: "24h"
   cookie_secure: false
@@ -42,12 +44,14 @@ email_auth:
     from_name: "multi-oauth2-proxy"
   token:
     expire: "3m"
-  otp_output_file: "/otp/passwordless-otp.jsonl"
+  otp_output_file: "/otp/passwordless-otp-wl.jsonl"  # Different file to avoid conflicts
 
-# No authorization whitelist configured - all authenticated users are allowed
+# Whitelist configured - only specific emails and domains are allowed
 authorization:
-  allowed_emails: []
-  allowed_domains: []
+  allowed_emails:
+    - "allowed@example.com"
+  allowed_domains:
+    - "@allowed.example.com"
 
 logging:
   level: "debug"
