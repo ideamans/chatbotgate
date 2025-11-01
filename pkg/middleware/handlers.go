@@ -1,4 +1,4 @@
-package server
+package middleware
 
 import (
 	"crypto/rand"
@@ -7,40 +7,42 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/go-chi/chi/v5"
+	"github.com/ideamans/multi-oauth2-proxy/pkg/assets"
 	"github.com/ideamans/multi-oauth2-proxy/pkg/auth/oauth2"
 	"github.com/ideamans/multi-oauth2-proxy/pkg/i18n"
-	proxypkg "github.com/ideamans/multi-oauth2-proxy/pkg/proxy"
 	"github.com/ideamans/multi-oauth2-proxy/pkg/session"
 )
 
 // handleHealth handles the health check endpoint
-func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
+func (m *Middleware) handleHealth(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("OK"))
 }
 
 // handleReady handles the readiness check endpoint
-func (s *Server) handleReady(w http.ResponseWriter, r *http.Request) {
+func (m *Middleware) handleReady(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("READY"))
 }
 
 // handleStylesCSS serves the embedded CSS
-func (s *Server) handleStylesCSS(w http.ResponseWriter, r *http.Request) {
+func (m *Middleware) handleStylesCSS(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/css; charset=utf-8")
 	w.Header().Set("Cache-Control", "public, max-age=31536000") // Cache for 1 year
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(GetEmbeddedCSS()))
+	w.Write([]byte(assets.GetEmbeddedCSS()))
 }
 
 // handleIcon serves the embedded SVG icons
-func (s *Server) handleIcon(w http.ResponseWriter, r *http.Request) {
-	iconName := chi.URLParam(r, "icon")
+func (m *Middleware) handleIcon(w http.ResponseWriter, r *http.Request) {
+	// Extract icon name from URL path
+	prefix := m.config.Server.GetAuthPathPrefix()
+	fullPrefix := joinAuthPath(prefix, "/assets/icons/")
+	iconName := extractPathParam(r.URL.Path, fullPrefix)
 	iconPath := "static/icons/" + iconName
 
 	// Read the icon file from embedded filesystem
-	data, err := GetEmbeddedIcons().ReadFile(iconPath)
+	data, err := assets.GetEmbeddedIcons().ReadFile(iconPath)
 	if err != nil {
 		http.NotFound(w, r)
 		return
@@ -53,11 +55,11 @@ func (s *Server) handleIcon(w http.ResponseWriter, r *http.Request) {
 }
 
 // buildAuthHeader generates the auth header HTML based on configuration
-func (s *Server) buildAuthHeader(prefix string) string {
-	serviceName := s.config.Service.Name
-	iconURL := s.config.Service.IconURL
-	logoURL := s.config.Service.LogoURL
-	logoWidth := s.config.Service.LogoWidth
+func (m *Middleware) buildAuthHeader(prefix string) string {
+	serviceName := m.config.Service.Name
+	iconURL := m.config.Service.IconURL
+	logoURL := m.config.Service.LogoURL
+	logoWidth := m.config.Service.LogoWidth
 	if logoWidth == "" {
 		logoWidth = "200px"
 	}
@@ -81,7 +83,7 @@ func (s *Server) buildAuthHeader(prefix string) string {
 }
 
 // buildAuthSubtitle generates subtitle HTML if subtitle is provided
-func (s *Server) buildAuthSubtitle(subtitle string) string {
+func (m *Middleware) buildAuthSubtitle(subtitle string) string {
 	if subtitle == "" {
 		return ""
 	}
@@ -89,13 +91,13 @@ func (s *Server) buildAuthSubtitle(subtitle string) string {
 }
 
 // handleLogin displays the login page
-func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
+func (m *Middleware) handleLogin(w http.ResponseWriter, r *http.Request) {
 	lang := i18n.DetectLanguage(r)
 	theme := i18n.DetectTheme(r)
-	t := func(key string) string { return s.translator.T(lang, key) }
+	t := func(key string) string { return m.translator.T(lang, key) }
 
 	// Use embedded CSS
-	cssPath := joinAuthPath(s.config.Server.GetAuthPathPrefix(), "/assets/styles.css")
+	cssPath := joinAuthPath(m.config.Server.GetAuthPathPrefix(), "/assets/styles.css")
 	themeClass := ""
 	if theme == i18n.ThemeDark {
 		themeClass = "dark"
@@ -109,7 +111,7 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>` + t("login.title") + ` - ` + s.config.Service.Name + `</title>
+<title>` + t("login.title") + ` - ` + m.config.Service.Name + `</title>
 <link rel="stylesheet" href="` + cssPath + `">
 <style>
 .settings-toggle {
@@ -161,11 +163,11 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 
 <div class="auth-container">
 	<div class="card auth-card">
-		` + s.buildAuthHeader(s.config.Server.GetAuthPathPrefix()) + `
-		<p class="auth-description">` + s.config.Service.Description + `</p>`
+		` + m.buildAuthHeader(m.config.Server.GetAuthPathPrefix()) + `
+		<p class="auth-description">` + m.config.Service.Description + `</p>`
 
-	prefix := s.config.Server.GetAuthPathPrefix()
-	providers := s.oauthManager.GetProviders()
+	prefix := m.config.Server.GetAuthPathPrefix()
+	providers := m.oauthManager.GetProviders()
 
 	if len(providers) > 0 {
 		html += `<div style="margin-bottom: var(--spacing-lg);">`
@@ -191,8 +193,8 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Add email authentication form if enabled
-	if s.emailHandler != nil {
-		emailSendPath := joinAuthPath(s.config.Server.GetAuthPathPrefix(), "/email/send")
+	if m.emailHandler != nil {
+		emailSendPath := joinAuthPath(m.config.Server.GetAuthPathPrefix(), "/email/send")
 		emailIconPath := joinAuthPath(prefix, "/assets/icons/email.svg")
 
 		if len(providers) > 0 {
@@ -280,21 +282,21 @@ function getCookie(name) {
 }
 
 // handleLogout logs out the user
-func (s *Server) handleLogout(w http.ResponseWriter, r *http.Request) {
+func (m *Middleware) handleLogout(w http.ResponseWriter, r *http.Request) {
 	lang := i18n.DetectLanguage(r)
 	theme := i18n.DetectTheme(r)
-	t := func(key string) string { return s.translator.T(lang, key) }
+	t := func(key string) string { return m.translator.T(lang, key) }
 
 	// Get session cookie
-	cookie, err := r.Cookie(s.config.Session.CookieName)
+	cookie, err := r.Cookie(m.config.Session.CookieName)
 	if err == nil {
 		// Delete session
-		s.sessionStore.Delete(cookie.Value)
+		m.sessionStore.Delete(cookie.Value)
 	}
 
 	// Clear cookie
 	http.SetCookie(w, &http.Cookie{
-		Name:     s.config.Session.CookieName,
+		Name:     m.config.Session.CookieName,
 		Value:    "",
 		Path:     "/",
 		MaxAge:   -1,
@@ -302,7 +304,7 @@ func (s *Server) handleLogout(w http.ResponseWriter, r *http.Request) {
 	})
 
 	// Use embedded CSS
-	prefix := s.config.Server.GetAuthPathPrefix()
+	prefix := m.config.Server.GetAuthPathPrefix()
 	cssPath := joinAuthPath(prefix, "/assets/styles.css")
 	loginPath := joinAuthPath(prefix, "/login")
 
@@ -318,14 +320,14 @@ func (s *Server) handleLogout(w http.ResponseWriter, r *http.Request) {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>` + t("logout.title") + ` - ` + s.config.Service.Name + `</title>
+<title>` + t("logout.title") + ` - ` + m.config.Service.Name + `</title>
 <link rel="stylesheet" href="` + cssPath + `">
 </head>
 <body>
 <div class="auth-container">
 	<div class="card auth-card">
-		` + s.buildAuthHeader(prefix) + `
-		` + s.buildAuthSubtitle(t("logout.heading")) + `
+		` + m.buildAuthHeader(prefix) + `
+		` + m.buildAuthSubtitle(t("logout.heading")) + `
 		<div class="alert alert-success" style="text-align: left; margin-bottom: var(--spacing-md);">` + t("logout.message") + `</div>
 		<a href="` + loginPath + `" class="btn btn-primary" style="width: 100%; margin-top: var(--spacing-md);">` + t("logout.login") + `</a>
 	</div>
@@ -339,13 +341,16 @@ func (s *Server) handleLogout(w http.ResponseWriter, r *http.Request) {
 }
 
 // handleOAuth2Start initiates the OAuth2 flow
-func (s *Server) handleOAuth2Start(w http.ResponseWriter, r *http.Request) {
-	providerName := chi.URLParam(r, "provider")
+func (m *Middleware) handleOAuth2Start(w http.ResponseWriter, r *http.Request) {
+	// Extract provider name from URL path
+	prefix := m.config.Server.GetAuthPathPrefix()
+	fullPrefix := joinAuthPath(prefix, "/oauth2/start/")
+	providerName := extractPathParam(r.URL.Path, fullPrefix)
 
 	// Generate state for CSRF protection
 	state, err := oauth2.GenerateState()
 	if err != nil {
-		s.logger.Error("Failed to generate state", "error", err)
+		m.logger.Error("Failed to generate state", "error", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
@@ -354,9 +359,9 @@ func (s *Server) handleOAuth2Start(w http.ResponseWriter, r *http.Request) {
 	// For now, we'll pass it directly and verify in callback
 
 	// Get auth URL
-	authURL, err := s.oauthManager.GetAuthURL(providerName, state)
+	authURL, err := m.oauthManager.GetAuthURL(providerName, state)
 	if err != nil {
-		s.logger.Error("Failed to get auth URL", "provider", providerName, "error", err)
+		m.logger.Error("Failed to get auth URL", "provider", providerName, "error", err)
 		http.Error(w, "Invalid provider", http.StatusBadRequest)
 		return
 	}
@@ -368,7 +373,7 @@ func (s *Server) handleOAuth2Start(w http.ResponseWriter, r *http.Request) {
 		Path:     "/",
 		MaxAge:   600, // 10 minutes
 		HttpOnly: true,
-		Secure:   s.config.Session.CookieSecure,
+		Secure:   m.config.Session.CookieSecure,
 		SameSite: http.SameSiteLaxMode,
 	})
 
@@ -379,7 +384,7 @@ func (s *Server) handleOAuth2Start(w http.ResponseWriter, r *http.Request) {
 		Path:     "/",
 		MaxAge:   600,
 		HttpOnly: true,
-		Secure:   s.config.Session.CookieSecure,
+		Secure:   m.config.Session.CookieSecure,
 		SameSite: http.SameSiteLaxMode,
 	})
 
@@ -388,11 +393,11 @@ func (s *Server) handleOAuth2Start(w http.ResponseWriter, r *http.Request) {
 }
 
 // handleOAuth2Callback handles the OAuth2 callback
-func (s *Server) handleOAuth2Callback(w http.ResponseWriter, r *http.Request) {
+func (m *Middleware) handleOAuth2Callback(w http.ResponseWriter, r *http.Request) {
 	// Get state from cookie
 	stateCookie, err := r.Cookie("oauth_state")
 	if err != nil {
-		s.logger.Error("State cookie not found")
+		m.logger.Error("State cookie not found")
 		http.Error(w, "Invalid state", http.StatusBadRequest)
 		return
 	}
@@ -400,7 +405,7 @@ func (s *Server) handleOAuth2Callback(w http.ResponseWriter, r *http.Request) {
 	// Get provider from cookie
 	providerCookie, err := r.Cookie("oauth_provider")
 	if err != nil {
-		s.logger.Error("Provider cookie not found")
+		m.logger.Error("Provider cookie not found")
 		http.Error(w, "Invalid provider", http.StatusBadRequest)
 		return
 	}
@@ -408,7 +413,7 @@ func (s *Server) handleOAuth2Callback(w http.ResponseWriter, r *http.Request) {
 	// Verify state
 	state := r.URL.Query().Get("state")
 	if state != stateCookie.Value {
-		s.logger.Error("State mismatch")
+		m.logger.Error("State mismatch")
 		http.Error(w, "Invalid state", http.StatusBadRequest)
 		return
 	}
@@ -416,7 +421,7 @@ func (s *Server) handleOAuth2Callback(w http.ResponseWriter, r *http.Request) {
 	// Get authorization code
 	code := r.URL.Query().Get("code")
 	if code == "" {
-		s.logger.Error("Authorization code not found")
+		m.logger.Error("Authorization code not found")
 		http.Error(w, "Authorization code not found", http.StatusBadRequest)
 		return
 	}
@@ -424,37 +429,37 @@ func (s *Server) handleOAuth2Callback(w http.ResponseWriter, r *http.Request) {
 	providerName := providerCookie.Value
 
 	// Exchange code for token
-	token, err := s.oauthManager.Exchange(r.Context(), providerName, code)
+	token, err := m.oauthManager.Exchange(r.Context(), providerName, code)
 	if err != nil {
-		s.logger.Error("Failed to exchange code", "error", err)
+		m.logger.Error("Failed to exchange code", "error", err)
 		http.Error(w, "Failed to authenticate", http.StatusInternalServerError)
 		return
 	}
 
 	// Get user email
-	email, err := s.oauthManager.GetUserEmail(r.Context(), providerName, token)
+	email, err := m.oauthManager.GetUserEmail(r.Context(), providerName, token)
 	if err != nil {
-		s.logger.Error("Failed to get user email", "error", err)
+		m.logger.Error("Failed to get user email", "error", err)
 		http.Error(w, "Failed to get user information", http.StatusInternalServerError)
 		return
 	}
 
 	// Check authorization
-	if !s.authzChecker.IsAllowed(email) {
-		s.logger.Warn("User not authorized", "email", email)
-		s.handleForbidden(w, r)
+	if !m.authzChecker.IsAllowed(email) {
+		m.logger.Warn("User not authorized", "email", email)
+		m.handleForbidden(w, r)
 		return
 	}
 
 	// Create session
 	sessionID, err := generateSessionID()
 	if err != nil {
-		s.logger.Error("Failed to generate session ID", "error", err)
+		m.logger.Error("Failed to generate session ID", "error", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
 
-	duration, err := s.config.Session.GetCookieExpireDuration()
+	duration, err := m.config.Session.GetCookieExpireDuration()
 	if err != nil {
 		duration = 168 * time.Hour // Default 7 days
 	}
@@ -469,20 +474,20 @@ func (s *Server) handleOAuth2Callback(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Store session
-	if err := s.sessionStore.Set(sessionID, sess); err != nil {
-		s.logger.Error("Failed to store session", "error", err)
+	if err := m.sessionStore.Set(sessionID, sess); err != nil {
+		m.logger.Error("Failed to store session", "error", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
 
 	// Set session cookie
 	http.SetCookie(w, &http.Cookie{
-		Name:     s.config.Session.CookieName,
+		Name:     m.config.Session.CookieName,
 		Value:    sessionID,
 		Path:     "/",
 		MaxAge:   int(duration.Seconds()),
-		HttpOnly: s.config.Session.CookieHTTPOnly,
-		Secure:   s.config.Session.CookieSecure,
+		HttpOnly: m.config.Session.CookieHTTPOnly,
+		Secure:   m.config.Session.CookieSecure,
 		SameSite: http.SameSiteLaxMode,
 	})
 
@@ -500,33 +505,10 @@ func (s *Server) handleOAuth2Callback(w http.ResponseWriter, r *http.Request) {
 		MaxAge: -1,
 	})
 
-	s.logger.Info("User authenticated", "email", email, "provider", providerName)
+	m.logger.Info("User authenticated", "email", email, "provider", providerName)
 
 	// Redirect to original URL or home
-	http.Redirect(w, r, s.getRedirectURL(w, r), http.StatusFound)
-}
-
-// handleProxy proxies the request to the backend
-func (s *Server) handleProxy(w http.ResponseWriter, r *http.Request) {
-	// Get session from cookie
-	cookie, err := r.Cookie(s.config.Session.CookieName)
-	if err != nil {
-		// Should not happen due to middleware, but handle it anyway
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-		return
-	}
-
-	sess, err := s.sessionStore.Get(cookie.Value)
-	if err != nil {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-		return
-	}
-
-	// Add authentication headers
-	proxypkg.AddAuthHeaders(r, sess.Email, sess.Provider)
-
-	// Proxy the request
-	s.proxyHandler.ServeHTTP(w, r)
+	http.Redirect(w, r, m.getRedirectURL(w, r), http.StatusFound)
 }
 
 // generateSessionID generates a random session ID
@@ -539,10 +521,10 @@ func generateSessionID() (string, error) {
 }
 
 // handleEmailSend sends a login link to the provided email address
-func (s *Server) handleEmailSend(w http.ResponseWriter, r *http.Request) {
+func (m *Middleware) handleEmailSend(w http.ResponseWriter, r *http.Request) {
 	lang := i18n.DetectLanguage(r)
 	theme := i18n.DetectTheme(r)
-	t := func(key string) string { return s.translator.T(lang, key) }
+	t := func(key string) string { return m.translator.T(lang, key) }
 
 	if err := r.ParseForm(); err != nil {
 		http.Error(w, t("error.invalid_request"), http.StatusBadRequest)
@@ -556,22 +538,22 @@ func (s *Server) handleEmailSend(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check authorization before sending
-	if !s.authzChecker.IsAllowed(email) {
-		s.logger.Warn("User not authorized for email login", "email", email)
-		s.handleForbidden(w, r)
+	if !m.authzChecker.IsAllowed(email) {
+		m.logger.Warn("User not authorized for email login", "email", email)
+		m.handleForbidden(w, r)
 		return
 	}
 
 	// Send login link
-	err := s.emailHandler.SendLoginLink(email)
+	err := m.emailHandler.SendLoginLink(email)
 	if err != nil {
-		s.logger.Error("Failed to send login link", "email", email, "error", err)
+		m.logger.Error("Failed to send login link", "email", email, "error", err)
 		http.Error(w, t("error.internal"), http.StatusInternalServerError)
 		return
 	}
 
 	// Use embedded CSS
-	prefix := s.config.Server.GetAuthPathPrefix()
+	prefix := m.config.Server.GetAuthPathPrefix()
 	cssPath := joinAuthPath(prefix, "/assets/styles.css")
 	loginPath := joinAuthPath(prefix, "/login")
 
@@ -587,14 +569,14 @@ func (s *Server) handleEmailSend(w http.ResponseWriter, r *http.Request) {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>` + t("email.sent.title") + ` - ` + s.config.Service.Name + `</title>
+<title>` + t("email.sent.title") + ` - ` + m.config.Service.Name + `</title>
 <link rel="stylesheet" href="` + cssPath + `">
 </head>
 <body>
 <div class="auth-container">
 	<div class="card auth-card">
-		` + s.buildAuthHeader(prefix) + `
-		` + s.buildAuthSubtitle(t("email.sent.heading")) + `
+		` + m.buildAuthHeader(prefix) + `
+		` + m.buildAuthSubtitle(t("email.sent.heading")) + `
 		<div class="alert alert-success" style="text-align: left; margin-bottom: var(--spacing-md);">` + t("email.sent.message") + ` ` + t("email.sent.detail") + `</div>
 		<a href="` + loginPath + `" class="btn btn-ghost" style="width: 100%; margin-top: var(--spacing-md);">` + t("email.sent.back") + `</a>
 	</div>
@@ -608,9 +590,9 @@ func (s *Server) handleEmailSend(w http.ResponseWriter, r *http.Request) {
 }
 
 // handleEmailVerify verifies the email token and creates a session
-func (s *Server) handleEmailVerify(w http.ResponseWriter, r *http.Request) {
+func (m *Middleware) handleEmailVerify(w http.ResponseWriter, r *http.Request) {
 	lang := i18n.DetectLanguage(r)
-	t := func(key string) string { return s.translator.T(lang, key) }
+	t := func(key string) string { return m.translator.T(lang, key) }
 
 	token := r.URL.Query().Get("token")
 	if token == "" {
@@ -619,13 +601,13 @@ func (s *Server) handleEmailVerify(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Verify token
-	email, err := s.emailHandler.VerifyToken(token)
+	email, err := m.emailHandler.VerifyToken(token)
 	if err != nil {
-		s.logger.Error("Failed to verify token", "error", err)
+		m.logger.Error("Failed to verify token", "error", err)
 		theme := i18n.DetectTheme(r)
 
 		// Use embedded CSS
-		prefix := s.config.Server.GetAuthPathPrefix()
+		prefix := m.config.Server.GetAuthPathPrefix()
 		cssPath := joinAuthPath(prefix, "/assets/styles.css")
 		loginPath := joinAuthPath(prefix, "/login")
 
@@ -641,14 +623,14 @@ func (s *Server) handleEmailVerify(w http.ResponseWriter, r *http.Request) {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>` + t("email.invalid.title") + ` - ` + s.config.Service.Name + `</title>
+<title>` + t("email.invalid.title") + ` - ` + m.config.Service.Name + `</title>
 <link rel="stylesheet" href="` + cssPath + `">
 </head>
 <body>
 <div class="auth-container">
 	<div class="card auth-card">
-		` + s.buildAuthHeader(prefix) + `
-		` + s.buildAuthSubtitle(t("email.invalid.heading")) + `
+		` + m.buildAuthHeader(prefix) + `
+		` + m.buildAuthSubtitle(t("email.invalid.heading")) + `
 		<div class="alert alert-error" style="text-align: left; margin-bottom: var(--spacing-md);"><strong>Error:</strong> ` + t("email.invalid.message") + ` This link cannot be used to authenticate.</div>
 		<a href="` + loginPath + `" class="btn btn-primary" style="width: 100%; margin-top: var(--spacing-md);">` + t("email.invalid.retry") + `</a>
 	</div>
@@ -664,12 +646,12 @@ func (s *Server) handleEmailVerify(w http.ResponseWriter, r *http.Request) {
 	// Create session
 	sessionID, err := generateSessionID()
 	if err != nil {
-		s.logger.Error("Failed to generate session ID", "error", err)
+		m.logger.Error("Failed to generate session ID", "error", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
 
-	duration, err := s.config.Session.GetCookieExpireDuration()
+	duration, err := m.config.Session.GetCookieExpireDuration()
 	if err != nil {
 		duration = 168 * time.Hour // Default 7 days
 	}
@@ -684,36 +666,36 @@ func (s *Server) handleEmailVerify(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Store session
-	if err := s.sessionStore.Set(sessionID, sess); err != nil {
-		s.logger.Error("Failed to store session", "error", err)
+	if err := m.sessionStore.Set(sessionID, sess); err != nil {
+		m.logger.Error("Failed to store session", "error", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
 
 	// Set session cookie
 	http.SetCookie(w, &http.Cookie{
-		Name:     s.config.Session.CookieName,
+		Name:     m.config.Session.CookieName,
 		Value:    sessionID,
 		Path:     "/",
 		MaxAge:   int(duration.Seconds()),
-		HttpOnly: s.config.Session.CookieHTTPOnly,
-		Secure:   s.config.Session.CookieSecure,
+		HttpOnly: m.config.Session.CookieHTTPOnly,
+		Secure:   m.config.Session.CookieSecure,
 		SameSite: http.SameSiteLaxMode,
 	})
 
-	s.logger.Info("User authenticated via email", "email", email)
+	m.logger.Info("User authenticated via email", "email", email)
 
 	// Redirect to original URL or home
-	http.Redirect(w, r, s.getRedirectURL(w, r), http.StatusFound)
+	http.Redirect(w, r, m.getRedirectURL(w, r), http.StatusFound)
 }
 
 // handleForbidden displays the access denied page
-func (s *Server) handleForbidden(w http.ResponseWriter, r *http.Request) {
+func (m *Middleware) handleForbidden(w http.ResponseWriter, r *http.Request) {
 	lang := i18n.DetectLanguage(r)
 	theme := i18n.DetectTheme(r)
-	t := func(key string) string { return s.translator.T(lang, key) }
+	t := func(key string) string { return m.translator.T(lang, key) }
 
-	prefix := normalizeAuthPrefix(s.config.Server.GetAuthPathPrefix())
+	prefix := normalizeAuthPrefix(m.config.Server.GetAuthPathPrefix())
 	cssPath := joinAuthPath(prefix, "/assets/styles.css")
 	loginPath := joinAuthPath(prefix, "/login")
 
@@ -730,14 +712,14 @@ func (s *Server) handleForbidden(w http.ResponseWriter, r *http.Request) {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>` + t("error.forbidden.title") + ` - ` + s.config.Service.Name + `</title>
+<title>` + t("error.forbidden.title") + ` - ` + m.config.Service.Name + `</title>
 <link rel="stylesheet" href="` + cssPath + `">
 </head>
 <body>
 <div class="auth-container">
   <div class="card auth-card">
-    ` + s.buildAuthHeader(prefix) + `
-    ` + s.buildAuthSubtitle(t("error.forbidden.heading")) + `
+    ` + m.buildAuthHeader(prefix) + `
+    ` + m.buildAuthSubtitle(t("error.forbidden.heading")) + `
     <div class="alert alert-error" style="text-align: left; margin-bottom: var(--spacing-md);">` + t("error.forbidden.message") + `</div>
     <a href="` + loginPath + `" class="btn btn-ghost" style="width: 100%; margin-top: var(--spacing-md);">` + t("login.back") + `</a>
   </div>

@@ -4,30 +4,30 @@ import "time"
 
 // Config represents the application configuration
 type Config struct {
-	Service       ServiceConfig       `yaml:"service"`
-	Server        ServerConfig        `yaml:"server"`
-	Proxy         ProxyConfig         `yaml:"proxy"`
-	Session       SessionConfig       `yaml:"session"`
-	OAuth2        OAuth2Config        `yaml:"oauth2"`
-	EmailAuth     EmailAuthConfig     `yaml:"email_auth"`
-	Authorization AuthorizationConfig `yaml:"authorization"`
-	Logging       LoggingConfig       `yaml:"logging"`
+	Service       ServiceConfig       `yaml:"service" json:"service"`
+	Server        ServerConfig        `yaml:"server" json:"server"`
+	Proxy         ProxyConfig         `yaml:"proxy" json:"proxy"`
+	Session       SessionConfig       `yaml:"session" json:"session"`
+	OAuth2        OAuth2Config        `yaml:"oauth2" json:"oauth2"`
+	EmailAuth     EmailAuthConfig     `yaml:"email_auth" json:"email_auth"`
+	Authorization AuthorizationConfig `yaml:"authorization" json:"authorization"`
+	Logging       LoggingConfig       `yaml:"logging" json:"logging"`
 }
 
 // ServiceConfig contains service-level settings
 type ServiceConfig struct {
-	Name        string `yaml:"name"`
-	Description string `yaml:"description"`
-	IconURL     string `yaml:"icon_url"`     // Icon URL for auth header (48px icon)
-	LogoURL     string `yaml:"logo_url"`     // Logo URL for auth header (larger logo image)
-	LogoWidth   string `yaml:"logo_width"`   // Logo width (e.g., "100px", "150px", "200px", default: "200px")
+	Name        string `yaml:"name" json:"name"`
+	Description string `yaml:"description" json:"description"`
+	IconURL     string `yaml:"icon_url" json:"icon_url"`     // Icon URL for auth header (48px icon)
+	LogoURL     string `yaml:"logo_url" json:"logo_url"`     // Logo URL for auth header (larger logo image)
+	LogoWidth   string `yaml:"logo_width" json:"logo_width"`   // Logo width (e.g., "100px", "150px", "200px", default: "200px")
 }
 
 // ServerConfig contains HTTP server settings
 type ServerConfig struct {
-	Host           string `yaml:"host"`
-	Port           int    `yaml:"port"`
-	AuthPathPrefix string `yaml:"auth_path_prefix"` // Path prefix for authentication endpoints (default: "/_auth")
+	Host           string `yaml:"host" json:"host"`
+	Port           int    `yaml:"port" json:"port"`
+	AuthPathPrefix string `yaml:"auth_path_prefix" json:"auth_path_prefix"` // Path prefix for authentication endpoints (default: "/_auth")
 }
 
 // GetAuthPathPrefix returns the authentication path prefix
@@ -41,28 +41,28 @@ func (s ServerConfig) GetAuthPathPrefix() string {
 
 // ProxyConfig contains proxy settings
 type ProxyConfig struct {
-	Upstream string            `yaml:"upstream"` // Default upstream (required)
-	Hosts    map[string]string `yaml:"hosts"`    // Host-based routing (optional)
+	Upstream string            `yaml:"upstream" json:"upstream"` // Default upstream (required)
+	Hosts    map[string]string `yaml:"hosts" json:"hosts"`    // Host-based routing (optional)
 }
 
 // SessionConfig contains session management settings
 type SessionConfig struct {
-	CookieName     string            `yaml:"cookie_name"`
-	CookieSecret   string            `yaml:"cookie_secret"`
-	CookieExpire   string            `yaml:"cookie_expire"`
-	CookieSecure   bool              `yaml:"cookie_secure"`
-	CookieHTTPOnly bool              `yaml:"cookie_httponly"`
-	CookieSameSite string            `yaml:"cookie_samesite"`
-	StoreType      string            `yaml:"store_type"` // "memory" or "redis" (default: "memory")
-	Redis          RedisSessionConfig `yaml:"redis"`      // Redis configuration (used when store_type is "redis")
+	CookieName     string            `yaml:"cookie_name" json:"cookie_name"`
+	CookieSecret   string            `yaml:"cookie_secret" json:"cookie_secret"`
+	CookieExpire   string            `yaml:"cookie_expire" json:"cookie_expire"`
+	CookieSecure   bool              `yaml:"cookie_secure" json:"cookie_secure"`
+	CookieHTTPOnly bool              `yaml:"cookie_httponly" json:"cookie_httponly"`
+	CookieSameSite string            `yaml:"cookie_samesite" json:"cookie_samesite"`
+	StoreType      string            `yaml:"store_type" json:"store_type"` // "memory" or "redis" (default: "memory")
+	Redis          RedisSessionConfig `yaml:"redis" json:"redis"`      // Redis configuration (used when store_type is "redis")
 }
 
 // RedisSessionConfig contains Redis session store settings
 type RedisSessionConfig struct {
-	Addr     string `yaml:"addr"`     // Redis server address (host:port)
-	Password string `yaml:"password"` // Redis password (optional)
-	DB       int    `yaml:"db"`       // Redis database number
-	Prefix   string `yaml:"prefix"`   // Key prefix for sessions (default: "session:")
+	Addr     string `yaml:"addr" json:"addr"`     // Redis server address (host:port)
+	Password string `yaml:"password" json:"password"` // Redis password (optional)
+	DB       int    `yaml:"db" json:"db"`       // Redis database number
+	Prefix   string `yaml:"prefix" json:"prefix"`   // Key prefix for sessions (default: "session:")
 }
 
 // GetCookieExpireDuration returns the cookie expiration as a time.Duration
@@ -72,58 +72,58 @@ func (s SessionConfig) GetCookieExpireDuration() (time.Duration, error) {
 
 // OAuth2Config contains OAuth2 provider settings
 type OAuth2Config struct {
-	Providers []OAuth2Provider `yaml:"providers"`
+	Providers []OAuth2Provider `yaml:"providers" json:"providers"`
 }
 
 // OAuth2Provider represents a single OAuth2 provider configuration
 type OAuth2Provider struct {
-	Name         string `yaml:"name"`
-	Type         string `yaml:"type"` // "google", "github", "microsoft", "custom" (optional, defaults to name)
-	DisplayName  string `yaml:"display_name"`
-	ClientID     string `yaml:"client_id"`
-	ClientSecret string `yaml:"client_secret"`
-	Enabled      bool   `yaml:"enabled"`
+	Name         string `yaml:"name" json:"name"`
+	Type         string `yaml:"type" json:"type"` // "google", "github", "microsoft", "custom" (optional, defaults to name)
+	DisplayName  string `yaml:"display_name" json:"display_name"`
+	ClientID     string `yaml:"client_id" json:"client_id"`
+	ClientSecret string `yaml:"client_secret" json:"client_secret"`
+	Enabled      bool   `yaml:"enabled" json:"enabled"`
 
 	// Custom provider settings (only used when Type is "custom")
-	AuthURL            string `yaml:"auth_url"`              // Custom authorization endpoint
-	TokenURL           string `yaml:"token_url"`             // Custom token endpoint
-	UserInfoURL        string `yaml:"userinfo_url"`          // Custom userinfo endpoint
-	JWKSURL            string `yaml:"jwks_url"`              // Optional OIDC JWKS URL
-	InsecureSkipVerify bool   `yaml:"insecure_skip_verify"` // Allow HTTP for testing (default: false)
+	AuthURL            string `yaml:"auth_url" json:"auth_url"`              // Custom authorization endpoint
+	TokenURL           string `yaml:"token_url" json:"token_url"`             // Custom token endpoint
+	UserInfoURL        string `yaml:"userinfo_url" json:"userinfo_url"`          // Custom userinfo endpoint
+	JWKSURL            string `yaml:"jwks_url" json:"jwks_url"`              // Optional OIDC JWKS URL
+	InsecureSkipVerify bool   `yaml:"insecure_skip_verify" json:"insecure_skip_verify"` // Allow HTTP for testing (default: false)
 }
 
 // EmailAuthConfig contains email authentication settings
 type EmailAuthConfig struct {
-	Enabled       bool             `yaml:"enabled"`
-	SenderType    string           `yaml:"sender_type"`     // "smtp" or "sendgrid"
-	SMTP          SMTPConfig       `yaml:"smtp"`
-	SendGrid      SendGridConfig   `yaml:"sendgrid"`
-	Token         EmailTokenConfig `yaml:"token"`
-	OTPOutputFile string           `yaml:"otp_output_file"` // Optional: output OTP to file instead of sending email (for E2E testing)
+	Enabled       bool             `yaml:"enabled" json:"enabled"`
+	SenderType    string           `yaml:"sender_type" json:"sender_type"`     // "smtp" or "sendgrid"
+	SMTP          SMTPConfig       `yaml:"smtp" json:"smtp"`
+	SendGrid      SendGridConfig   `yaml:"sendgrid" json:"sendgrid"`
+	Token         EmailTokenConfig `yaml:"token" json:"token"`
+	OTPOutputFile string           `yaml:"otp_output_file" json:"otp_output_file"` // Optional: output OTP to file instead of sending email (for E2E testing)
 }
 
 // SMTPConfig contains SMTP server settings
 type SMTPConfig struct {
-	Host      string `yaml:"host"`
-	Port      int    `yaml:"port"`
-	Username  string `yaml:"username"`
-	Password  string `yaml:"password"`
-	From      string `yaml:"from"`
-	FromName  string `yaml:"from_name"`
-	TLS       bool   `yaml:"tls"`
-	StartTLS  bool   `yaml:"starttls"`
+	Host      string `yaml:"host" json:"host"`
+	Port      int    `yaml:"port" json:"port"`
+	Username  string `yaml:"username" json:"username"`
+	Password  string `yaml:"password" json:"password"`
+	From      string `yaml:"from" json:"from"`
+	FromName  string `yaml:"from_name" json:"from_name"`
+	TLS       bool   `yaml:"tls" json:"tls"`
+	StartTLS  bool   `yaml:"starttls" json:"starttls"`
 }
 
 // SendGridConfig contains SendGrid API settings
 type SendGridConfig struct {
-	APIKey   string `yaml:"api_key"`
-	From     string `yaml:"from"`
-	FromName string `yaml:"from_name"`
+	APIKey   string `yaml:"api_key" json:"api_key"`
+	From     string `yaml:"from" json:"from"`
+	FromName string `yaml:"from_name" json:"from_name"`
 }
 
 // EmailTokenConfig contains token expiration settings
 type EmailTokenConfig struct {
-	Expire string `yaml:"expire"`
+	Expire string `yaml:"expire" json:"expire"`
 }
 
 // GetTokenExpireDuration returns the token expiration as a time.Duration
@@ -136,15 +136,15 @@ func (e EmailTokenConfig) GetTokenExpireDuration() (time.Duration, error) {
 
 // AuthorizationConfig contains authorization settings
 type AuthorizationConfig struct {
-	AllowedEmails  []string `yaml:"allowed_emails"`
-	AllowedDomains []string `yaml:"allowed_domains"`
+	AllowedEmails  []string `yaml:"allowed_emails" json:"allowed_emails"`
+	AllowedDomains []string `yaml:"allowed_domains" json:"allowed_domains"`
 }
 
 // LoggingConfig contains logging settings
 type LoggingConfig struct {
-	Level       string `yaml:"level"`
-	ModuleLevel string `yaml:"module_level"`
-	Color       bool   `yaml:"color"`
+	Level       string `yaml:"level" json:"level"`
+	ModuleLevel string `yaml:"module_level" json:"module_level"`
+	Color       bool   `yaml:"color" json:"color"`
 }
 
 // Validate checks if the configuration is valid

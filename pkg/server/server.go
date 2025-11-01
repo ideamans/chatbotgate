@@ -6,33 +6,29 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
 	"github.com/ideamans/multi-oauth2-proxy/pkg/auth/email"
 	"github.com/ideamans/multi-oauth2-proxy/pkg/auth/oauth2"
 	"github.com/ideamans/multi-oauth2-proxy/pkg/authz"
 	"github.com/ideamans/multi-oauth2-proxy/pkg/config"
 	"github.com/ideamans/multi-oauth2-proxy/pkg/i18n"
 	"github.com/ideamans/multi-oauth2-proxy/pkg/logging"
+	"github.com/ideamans/multi-oauth2-proxy/pkg/middleware"
 	"github.com/ideamans/multi-oauth2-proxy/pkg/proxy"
 	"github.com/ideamans/multi-oauth2-proxy/pkg/session"
 )
 
-// Server represents the HTTP server
+// Server represents a simplified HTTP server that wraps the auth middleware
 type Server struct {
 	config       *config.Config
-	router       *chi.Mux
-	sessionStore session.Store
-	oauthManager *oauth2.Manager
-	emailHandler *email.Handler
-	authzChecker authz.Checker
-	proxyHandler *proxy.Handler
-	translator   *i18n.Translator
-	logger       logging.Logger
+	handler      http.Handler
 	httpServer   *http.Server
+	logger       logging.Logger
 }
 
 // New creates a new server instance
+// The server can operate in two modes:
+// 1. Proxy mode (with proxyHandler): Auth middleware + Reverse proxy
+// 2. Server mode (without proxyHandler): Auth middleware only
 func New(
 	cfg *config.Config,
 	sessionStore session.Store,
@@ -42,68 +38,36 @@ func New(
 	proxyHandler *proxy.Handler,
 	logger logging.Logger,
 ) *Server {
-	s := &Server{
-		config:       cfg,
-		sessionStore: sessionStore,
-		oauthManager: oauthManager,
-		emailHandler: emailHandler,
-		authzChecker: authzChecker,
-		proxyHandler: proxyHandler,
-		translator:   i18n.NewTranslator(),
-		logger:       logger.WithModule("server"),
-	}
+	translator := i18n.NewTranslator()
 
-	s.setupRouter()
-	return s
-}
+	// Create the auth middleware
+	authMiddleware := middleware.New(
+		cfg,
+		sessionStore,
+		oauthManager,
+		emailHandler,
+		authzChecker,
+		translator,
+		logger.WithModule("middleware"),
+	)
 
-// setupRouter configures the HTTP router
-func (s *Server) setupRouter() {
-	r := chi.NewRouter()
+	var handler http.Handler
 
-	// Middleware
-	r.Use(middleware.RequestID)
-	r.Use(middleware.RealIP)
-	r.Use(middleware.Recoverer)
-	r.Use(middleware.Timeout(60 * time.Second))
-
-	// Get authentication path prefix
-	prefix := normalizeAuthPrefix(s.config.Server.GetAuthPathPrefix())
-
-	// Health check endpoints (no authentication required)
-	r.Get("/health", s.handleHealth)
-	r.Get("/ready", s.handleReady)
-
-	// Authentication endpoints (no authentication required)
-	authRouter := chi.NewRouter()
-	authRouter.Get("/login", s.handleLogin)
-	authRouter.Get("/logout", s.handleLogout)
-	authRouter.Post("/logout", s.handleLogout)
-	authRouter.Get("/oauth2/start/{provider}", s.handleOAuth2Start)
-	authRouter.Get("/oauth2/callback", s.handleOAuth2Callback)
-
-	if s.emailHandler != nil {
-		authRouter.Post("/email/send", s.handleEmailSend)
-		authRouter.Get("/email/verify", s.handleEmailVerify)
-	}
-
-	// Static assets endpoint
-	authRouter.Get("/assets/styles.css", s.handleStylesCSS)
-	authRouter.Get("/assets/icons/{icon}", s.handleIcon)
-
-	if prefix == "/" {
-		r.Mount("/", authRouter)
+	if proxyHandler != nil {
+		// Proxy mode: middleware wraps the proxy
+		handler = authMiddleware.Wrap(proxyHandler)
+		logger.Info("Server configured in proxy mode (auth + reverse proxy)")
 	} else {
-		r.Mount(prefix, authRouter)
+		// Server mode: middleware only
+		handler = authMiddleware.Wrap(nil)
+		logger.Info("Server configured in server mode (auth only)")
 	}
 
-	// Protected routes - all other routes require authentication and proxy to upstream
-	r.Group(func(r chi.Router) {
-		r.Use(s.authMiddleware)
-		r.HandleFunc("/*", s.handleProxy)
-	})
-
-	s.router = r
+	return &Server{
+		config:  cfg,
+		handler: handler,
+		logger:  logger.WithModule("server"),
+	}
 }
 
 // Start starts the HTTP server
@@ -111,24 +75,24 @@ func (s *Server) Start() error {
 	addr := fmt.Sprintf("%s:%d", s.config.Server.Host, s.config.Server.Port)
 
 	s.httpServer = &http.Server{
-		Addr:    addr,
-		Handler: s.router,
+		Addr:         addr,
+		Handler:      s.handler,
+		ReadTimeout:  15 * time.Second,
+		WriteTimeout: 15 * time.Second,
+		IdleTimeout:  60 * time.Second,
 	}
 
-	s.logger.Info("Starting server", "address", addr)
+	s.logger.Info("Starting server", "addr", addr)
 	return s.httpServer.ListenAndServe()
 }
 
 // Shutdown gracefully shuts down the server
 func (s *Server) Shutdown(ctx context.Context) error {
 	s.logger.Info("Shutting down server")
-	if s.httpServer != nil {
-		return s.httpServer.Shutdown(ctx)
-	}
-	return nil
+	return s.httpServer.Shutdown(ctx)
 }
 
-// Router returns the chi router (for testing)
-func (s *Server) Router() *chi.Mux {
-	return s.router
+// Handler returns the HTTP handler (for testing)
+func (s *Server) Handler() http.Handler {
+	return s.handler
 }
