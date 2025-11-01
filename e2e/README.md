@@ -23,6 +23,8 @@ make test       # build images and run Playwright flows (headless by default)
 make test-down  # tear down containers and volumes from make test
 ```
 
+**Note:** The `stub-auth` and `target-app` services implement graceful shutdown handlers, allowing containers to terminate quickly (< 1 second) when receiving SIGTERM signals.
+
 `make test` mounts `e2e/tmp` and `e2e/test-results` so OTPs and Playwright reports remain on the host for inspection. Clean up artifacts with `make clean-e2e` if required.
 
 To observe the browser while running tests, pass `HEADLESS=false` (or `PLAYWRIGHT_HEADLESS=false`) when invoking `make test`:

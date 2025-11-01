@@ -76,6 +76,24 @@ app.get('/', (req, res) => {
   res.send(renderPage(APP_NAME, body));
 });
 
-app.listen(PORT, HOST, () => {
+const server = app.listen(PORT, HOST, () => {
   console.log(`Target app listening on http://${HOST}:${PORT}`);
 });
+
+// Graceful shutdown handler
+const shutdown = (signal: string) => {
+  console.log(`\n${signal} received. Shutting down gracefully...`);
+  server.close(() => {
+    console.log('HTTP server closed');
+    process.exit(0);
+  });
+
+  // Force shutdown after 5 seconds if graceful shutdown fails
+  setTimeout(() => {
+    console.error('Could not close connections in time, forcefully shutting down');
+    process.exit(1);
+  }, 5000);
+};
+
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));

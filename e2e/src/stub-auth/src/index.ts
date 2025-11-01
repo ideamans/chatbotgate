@@ -552,8 +552,26 @@ function renderPage(title: string, body: string): string {
 </html>`;
 }
 
-app.listen(PORT, HOST, () => {
+const server = app.listen(PORT, HOST, () => {
   console.log(`Stub auth provider listening at ${BASE_URL} (host ${HOST})`);
   console.log(`Test user: ${TEST_USER_EMAIL} / ${TEST_USER_PASSWORD}`);
   console.log(`Client credentials: ${CLIENT_ID} / ${CLIENT_SECRET}`);
 });
+
+// Graceful shutdown handler
+const shutdown = (signal: string) => {
+  console.log(`\n${signal} received. Shutting down gracefully...`);
+  server.close(() => {
+    console.log('HTTP server closed');
+    process.exit(0);
+  });
+
+  // Force shutdown after 5 seconds if graceful shutdown fails
+  setTimeout(() => {
+    console.error('Could not close connections in time, forcefully shutting down');
+    process.exit(1);
+  }, 5000);
+};
+
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));
