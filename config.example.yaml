@@ -92,13 +92,12 @@ email_auth:
 
 # Authorization configuration
 authorization:
-  # Individual email addresses
-  allowed_emails:
+  # Allowed email addresses and domains
+  # Entries starting with @ are domains, others are email addresses
+  # Leave empty [] to allow all authenticated users (no whitelist)
+  allowed:
     - "user@example.com"
     - "admin@company.com"
-
-  # Allow all users from these domains
-  allowed_domains:
     - "@example.org"
     - "@company.com"
 

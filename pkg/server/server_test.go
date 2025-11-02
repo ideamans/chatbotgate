@@ -655,7 +655,7 @@ func TestServer_Authorization_WithWhitelist_AuthorizedEmail(t *testing.T) {
 			CookieSameSite: "lax",
 		},
 		Authorization: config.AuthorizationConfig{
-			AllowedEmails: []string{"authorized@example.com"}, // Whitelist configured
+			Allowed: []string{"authorized@example.com"}, // Whitelist configured
 		},
 	}
 

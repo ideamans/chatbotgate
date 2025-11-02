@@ -46,8 +46,7 @@ email_auth:
 
 # No authorization whitelist configured - all authenticated users are allowed
 authorization:
-  allowed_emails: []
-  allowed_domains: []
+  allowed: []
 
 logging:
   level: "debug"

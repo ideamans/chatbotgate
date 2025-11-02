@@ -138,8 +138,7 @@ func (e EmailTokenConfig) GetTokenExpireDuration() (time.Duration, error) {
 
 // AuthorizationConfig contains authorization settings
 type AuthorizationConfig struct {
-	AllowedEmails  []string `yaml:"allowed_emails" json:"allowed_emails"`
-	AllowedDomains []string `yaml:"allowed_domains" json:"allowed_domains"`
+	Allowed []string `yaml:"allowed" json:"allowed"` // Email addresses or domains (domain starts with @)
 }
 
 // LoggingConfig contains logging settings

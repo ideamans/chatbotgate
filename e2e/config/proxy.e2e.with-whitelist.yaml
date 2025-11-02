@@ -47,10 +47,10 @@ email_auth:
   otp_output_file: "/otp/passwordless-otp-wl.jsonl"  # Different file to avoid conflicts
 
 # Whitelist configured - only specific emails and domains are allowed
+# Entries starting with @ are domains, others are email addresses
 authorization:
-  allowed_emails:
+  allowed:
     - "allowed@example.com"
-  allowed_domains:
     - "@allowed.example.com"
 
 logging:
