@@ -11,8 +11,11 @@ services:
         condition: service_started
       target-app:
         condition: service_started
+      mailpit:
+        condition: service_started
     environment:
       - BASE_URL=http://proxy-app:4180
+      - MAILPIT_URL=http://mailpit:8025
       - PLAYWRIGHT_HEADLESS=${PLAYWRIGHT_HEADLESS:-true}
     networks:
       - e2e-net

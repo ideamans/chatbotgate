@@ -206,6 +206,16 @@ var defaultTranslations = Translations{
 		"ui.language":      "Language",
 		"ui.language.en":   "English",
 		"ui.language.ja":   "日本語",
+
+		// Email
+		"email.login.subject":      "Login Link - %s",
+		"email.login.greeting":     "Thank you for your login request.",
+		"email.login.intro1":       "Click the button below to log in to %s.",
+		"email.login.intro2":       "This link is valid for %d minutes.",
+		"email.login.instructions": "Please click the button below to complete your login:",
+		"email.login.button":       "Log In",
+		"email.login.outro":        "If you did not request this email, please ignore it.",
+		"email.login.trouble":      "If you're having trouble with the button '%s', copy and paste the URL below into your web browser.",
 	},
 
 	Japanese: Translation{
@@ -264,5 +274,15 @@ var defaultTranslations = Translations{
 		"ui.language":      "言語",
 		"ui.language.en":   "English",
 		"ui.language.ja":   "日本語",
+
+		// Email
+		"email.login.subject":      "ログインリンク - %s",
+		"email.login.greeting":     "ログインのリクエストをありがとうございます。",
+		"email.login.intro1":       "下のボタンをクリックして %s にログインしてください。",
+		"email.login.intro2":       "このリンクは %d 分間有効です。",
+		"email.login.instructions": "下のボタンをクリックしてログインを完了してください：",
+		"email.login.button":       "ログイン",
+		"email.login.outro":        "このメールに心当たりがない場合は、無視してください。",
+		"email.login.trouble":      "ボタン「%s」が機能しない場合は、以下のURLをコピーしてウェブブラウザに貼り付けてください。",
 	},
 }

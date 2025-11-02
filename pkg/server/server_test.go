@@ -12,6 +12,7 @@ import (
 	"github.com/ideamans/multi-oauth2-proxy/pkg/auth/oauth2"
 	"github.com/ideamans/multi-oauth2-proxy/pkg/authz"
 	"github.com/ideamans/multi-oauth2-proxy/pkg/config"
+	"github.com/ideamans/multi-oauth2-proxy/pkg/i18n"
 	"github.com/ideamans/multi-oauth2-proxy/pkg/logging"
 	"github.com/ideamans/multi-oauth2-proxy/pkg/proxy"
 	"github.com/ideamans/multi-oauth2-proxy/pkg/session"
@@ -549,14 +550,16 @@ func setupTestServerWithEmail(t *testing.T) (*Server, *session.MemoryStore) {
 	oauthManager.AddProvider(mockProvider)
 
 	authzChecker := &MockAuthzChecker{allowed: true}
+	translator := i18n.NewTranslator()
 
 	// Create email handler
 	emailHandler, err := email.NewHandler(
 		cfg.EmailAuth,
-		cfg.Service.Name,
+		cfg.Service,
 		"http://localhost:4180",
 		cfg.Server.GetAuthPathPrefix(),
 		authzChecker,
+		translator,
 		cfg.Session.CookieSecret,
 	)
 	if err != nil {

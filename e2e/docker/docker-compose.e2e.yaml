@@ -10,6 +10,7 @@ services:
     depends_on:
       - target-app
       - stub-auth
+      - mailpit
     volumes:
       - ../config/proxy.e2e.yaml:/config/proxy.e2e.yaml:ro
       - otp-files:/otp
@@ -29,6 +30,7 @@ services:
     depends_on:
       - target-app
       - stub-auth
+      - mailpit
     volumes:
       - ../config/proxy.e2e.with-whitelist.yaml:/config/proxy.e2e.with-whitelist.yaml
       - otp-files:/otp
@@ -60,6 +62,19 @@ services:
       - "3001:3001"
     networks:
       - e2e-net
+
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: e2e-mailpit
+    ports:
+      - "1025:1025"  # SMTP server
+      - "8025:8025"  # Web UI
+    environment:
+      - MP_SMTP_AUTH_ACCEPT_ANY=1
+      - MP_SMTP_AUTH_ALLOW_INSECURE=1
+    networks:
+      - e2e-net
+    restart: unless-stopped
 
 networks:
   e2e-net:

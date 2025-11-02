@@ -6,6 +6,7 @@ import (
 
 	"github.com/ideamans/multi-oauth2-proxy/pkg/authz"
 	"github.com/ideamans/multi-oauth2-proxy/pkg/config"
+	"github.com/ideamans/multi-oauth2-proxy/pkg/i18n"
 	"github.com/ideamans/multi-oauth2-proxy/pkg/ratelimit"
 )
 
@@ -15,7 +16,8 @@ type Handler struct {
 	sender         Sender
 	authzChecker   authz.Checker
 	limiter        *ratelimit.Limiter
-	fileWriter     *FileWriter
+	emailTemplate  *EmailTemplate
+	translator     *i18n.Translator
 	config         config.EmailAuthConfig
 	serviceName    string
 	baseURL        string
@@ -25,12 +27,14 @@ type Handler struct {
 // NewHandler creates a new email authentication handler
 func NewHandler(
 	cfg config.EmailAuthConfig,
-	serviceName string,
+	serviceCfg config.ServiceConfig,
 	baseURL string,
 	authPathPrefix string,
 	authzChecker authz.Checker,
+	translator *i18n.Translator,
 	cookieSecret string,
 ) (*Handler, error) {
+	serviceName := serviceCfg.Name
 	// Create token store
 	tokenStore := NewTokenStore(cookieSecret)
 
@@ -48,18 +52,26 @@ func NewHandler(
 	// Create rate limiter (3 emails per minute per address)
 	limiter := ratelimit.NewLimiter(3, 1*time.Minute)
 
-	// Create file writer if OTP output file is configured
-	var fileWriter *FileWriter
-	if cfg.OTPOutputFile != "" {
-		fileWriter = NewFileWriter(cfg.OTPOutputFile)
+	// Create email template
+	logoWidth := serviceCfg.LogoWidth
+	if logoWidth == "" {
+		logoWidth = "200px" // Default logo width
 	}
+	emailTemplate := NewEmailTemplate(
+		serviceName,
+		serviceCfg.LogoURL,
+		logoWidth,
+		serviceCfg.IconURL,
+		baseURL,
+	)
 
 	return &Handler{
 		tokenStore:     tokenStore,
 		sender:         sender,
 		authzChecker:   authzChecker,
 		limiter:        limiter,
-		fileWriter:     fileWriter,
+		emailTemplate:  emailTemplate,
+		translator:     translator,
 		config:         cfg,
 		serviceName:    serviceName,
 		baseURL:        baseURL,
@@ -68,7 +80,7 @@ func NewHandler(
 }
 
 // SendLoginLink sends a login link to the specified email address
-func (h *Handler) SendLoginLink(email string) error {
+func (h *Handler) SendLoginLink(email string, lang i18n.Language) error {
 	// Check authorization first
 	if !h.authzChecker.IsAllowed(email) {
 		return fmt.Errorf("email not authorized: %s", email)
@@ -94,31 +106,17 @@ func (h *Handler) SendLoginLink(email string) error {
 	// Create login URL
 	loginURL := fmt.Sprintf("%s%s/email/verify?token=%s", h.baseURL, h.authPathPrefix, token)
 
-	// If OTP file output is configured, write to file instead of sending email
-	if h.fileWriter != nil {
-		expiresAt := time.Now().Add(duration)
-		if err := h.fileWriter.WriteOTP(email, token, loginURL, expiresAt); err != nil {
-			// Clean up token if write fails
-			h.tokenStore.DeleteToken(token)
-			return fmt.Errorf("failed to write OTP to file: %w", err)
-		}
-		return nil
+	// Generate HTML email using Hermes template
+	htmlBody, textBody, err := h.emailTemplate.GenerateLoginEmail(loginURL, int(duration.Minutes()), lang, h.translator)
+	if err != nil {
+		// Clean up token if generation fails
+		h.tokenStore.DeleteToken(token)
+		return fmt.Errorf("failed to generate email: %w", err)
 	}
 
-	// Compose email
-	subject := fmt.Sprintf("Login Link - %s", h.serviceName)
-	body := fmt.Sprintf(`Click the link below to log in to %s.
-This link is valid for %d minutes.
-
-%s
-
-If you did not request this email, please ignore it.`,
-		h.serviceName,
-		int(duration.Minutes()),
-		loginURL)
-
-	// Send email
-	if err := h.sender.Send(email, subject, body); err != nil {
+	// Send HTML email
+	subject := fmt.Sprintf(h.translator.T(lang, "email.login.subject"), h.serviceName)
+	if err := h.sender.SendHTML(email, subject, htmlBody, textBody); err != nil {
 		// Clean up token if send fails
 		h.tokenStore.DeleteToken(token)
 		return fmt.Errorf("failed to send email: %w", err)

@@ -195,10 +195,6 @@ func ValidateConfig(cfg *config.Config) ValidationErrors {
 
 	// Validate email authentication configuration if enabled
 	if hasEnabledEmailAuth {
-		// Check if otp_output_file is configured (for testing/development)
-		// When OTP is output to file, actual email sending configuration is not required
-		isOTPFileMode := cfg.EmailAuth.OTPOutputFile != ""
-
 		if cfg.EmailAuth.SenderType == "" {
 			errs = append(errs, ValidationError{
 				Field:   "email_auth.sender_type",
@@ -211,44 +207,41 @@ func ValidateConfig(cfg *config.Config) ValidationErrors {
 			})
 		}
 
-		// Skip email sender validation if OTP output file is configured (test/dev mode)
-		if !isOTPFileMode {
-			// Validate SMTP configuration
-			if cfg.EmailAuth.SenderType == "smtp" {
-				if cfg.EmailAuth.SMTP.Host == "" {
-					errs = append(errs, ValidationError{
-						Field:   "email_auth.smtp.host",
-						Message: "SMTP host is required when using SMTP sender",
-					})
-				}
-				if cfg.EmailAuth.SMTP.Port == 0 {
-					errs = append(errs, ValidationError{
-						Field:   "email_auth.smtp.port",
-						Message: "SMTP port is required when using SMTP sender",
-					})
-				}
-				if cfg.EmailAuth.SMTP.From == "" {
-					errs = append(errs, ValidationError{
-						Field:   "email_auth.smtp.from",
-						Message: "SMTP from address is required when using SMTP sender",
-					})
-				}
+		// Validate SMTP configuration
+		if cfg.EmailAuth.SenderType == "smtp" {
+			if cfg.EmailAuth.SMTP.Host == "" {
+				errs = append(errs, ValidationError{
+					Field:   "email_auth.smtp.host",
+					Message: "SMTP host is required when using SMTP sender",
+				})
 			}
+			if cfg.EmailAuth.SMTP.Port == 0 {
+				errs = append(errs, ValidationError{
+					Field:   "email_auth.smtp.port",
+					Message: "SMTP port is required when using SMTP sender",
+				})
+			}
+			if cfg.EmailAuth.SMTP.From == "" {
+				errs = append(errs, ValidationError{
+					Field:   "email_auth.smtp.from",
+					Message: "SMTP from address is required when using SMTP sender",
+				})
+			}
+		}
 
-			// Validate SendGrid configuration
-			if cfg.EmailAuth.SenderType == "sendgrid" {
-				if cfg.EmailAuth.SendGrid.APIKey == "" {
-					errs = append(errs, ValidationError{
-						Field:   "email_auth.sendgrid.api_key",
-						Message: "SendGrid API key is required when using SendGrid sender",
-					})
-				}
-				if cfg.EmailAuth.SendGrid.From == "" {
-					errs = append(errs, ValidationError{
-						Field:   "email_auth.sendgrid.from",
-						Message: "SendGrid from address is required when using SendGrid sender",
-					})
-				}
+		// Validate SendGrid configuration
+		if cfg.EmailAuth.SenderType == "sendgrid" {
+			if cfg.EmailAuth.SendGrid.APIKey == "" {
+				errs = append(errs, ValidationError{
+					Field:   "email_auth.sendgrid.api_key",
+					Message: "SendGrid API key is required when using SendGrid sender",
+				})
+			}
+			if cfg.EmailAuth.SendGrid.From == "" {
+				errs = append(errs, ValidationError{
+					Field:   "email_auth.sendgrid.from",
+					Message: "SendGrid from address is required when using SendGrid sender",
+				})
 			}
 		}
 

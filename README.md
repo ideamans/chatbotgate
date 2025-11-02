@@ -542,6 +542,8 @@ go build -ldflags "-X main.version=1.0.0" -o multi-oauth2-proxy ./cmd/multi-oaut
 
 ### Testing
 
+#### Unit Tests
+
 ```bash
 # Run all tests
 go test ./...
@@ -556,6 +558,32 @@ go tool cover -html=coverage.out
 # Run specific package tests
 go test ./pkg/middleware/... -v
 ```
+
+#### E2E Tests
+
+The project includes a comprehensive E2E test environment with Docker Compose. See [E2E.md](./E2E.md) for details.
+
+```bash
+# Start E2E environment (includes Mailpit for email preview)
+docker compose -f e2e/docker/docker-compose.e2e.yaml up --build
+
+# Access the test environment:
+# - Proxy: http://localhost:4180
+# - Mailpit WebUI: http://localhost:8025 (email preview)
+# - Target App: http://localhost:3000
+# - OAuth2 Stub: http://localhost:3001
+
+# Run Playwright tests
+docker compose -f e2e/docker/docker-compose.e2e.yaml \
+               -f e2e/docker/docker-compose.e2e.playwright.yaml \
+               up --build playwright-runner
+```
+
+**Mailpit Email Preview**: The E2E environment includes [Mailpit](https://github.com/axllent/mailpit), a lightweight email server that allows you to:
+- Preview emails in a web UI (http://localhost:8025)
+- Click login links directly from emails
+- Test email authentication flows end-to-end
+- Use REST API to verify email content in tests
 
 ### Design System
 

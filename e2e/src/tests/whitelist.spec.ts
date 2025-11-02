@@ -1,16 +1,13 @@
 import { test, expect } from '@playwright/test';
-import { clearOtpFile, waitForOtp } from '../support/otp-reader';
+import { waitForLoginEmail, clearAllMessages } from '../support/mailpit-helper';
 import { routeStubAuthRequests } from '../support/stub-auth-route';
-import path from 'path';
 
 // Test users for whitelist testing
-const ALLOWED_EMAIL_USER = 'allowed@example.com';
-const ALLOWED_DOMAIN_USER = 'user@allowed.example.com';
-const DENIED_USER = 'denied@example.com';
+// These must match the users registered in stub-auth
+const ALLOWED_EMAIL_USER = 'allowed@example.com'; // Whitelisted email
+const ALLOWED_DOMAIN_USER = 'user@allowed.example.com'; // Whitelisted domain (registered in stub-auth)
+const DENIED_USER = 'denied@example.com'; // Not whitelisted (registered in stub-auth)
 const TEST_PASSWORD = 'password';
-
-// OTP file for whitelist proxy
-const WHITELIST_OTP_FILE = path.resolve(__dirname, '../../tmp/passwordless-otp-wl.jsonl');
 
 // Base URL for whitelist proxy
 const WHITELIST_PROXY_URL = 'http://localhost:4181';
@@ -124,7 +121,7 @@ test.describe('Whitelist Authorization - OAuth2', () => {
 
 test.describe('Whitelist Authorization - Email Authentication', () => {
   test.beforeEach(async ({ page }) => {
-    await clearOtpFile(WHITELIST_OTP_FILE);
+    await clearAllMessages();
     await routeStubAuthRequests(page);
   });
 
@@ -140,11 +137,14 @@ test.describe('Whitelist Authorization - Email Authentication', () => {
       page.getByRole('button', { name: 'Send Login Link' }).click(),
     ]);
 
-    // Wait for OTP from the whitelist OTP file
-    const otp = await waitForOtp(ALLOWED_EMAIL_USER, { otpFile: WHITELIST_OTP_FILE });
+    // Wait for email from Mailpit and extract login URL
+    const loginUrl = await waitForLoginEmail(ALLOWED_EMAIL_USER, {
+      timeoutMs: 10_000,
+      pollIntervalMs: 500,
+    });
 
     // Access the login URL
-    await page.goto(otp.login_url);
+    await page.goto(loginUrl);
 
     // Should successfully access the protected resource
     await expect(page.locator('[data-test="app-user-email"]')).toContainText(ALLOWED_EMAIL_USER);
@@ -162,11 +162,14 @@ test.describe('Whitelist Authorization - Email Authentication', () => {
       page.getByRole('button', { name: 'Send Login Link' }).click(),
     ]);
 
-    // Wait for OTP from the whitelist OTP file
-    const otp = await waitForOtp(ALLOWED_DOMAIN_USER, { otpFile: WHITELIST_OTP_FILE });
+    // Wait for email from Mailpit and extract login URL
+    const loginUrl = await waitForLoginEmail(ALLOWED_DOMAIN_USER, {
+      timeoutMs: 10_000,
+      pollIntervalMs: 500,
+    });
 
     // Access the login URL
-    await page.goto(otp.login_url);
+    await page.goto(loginUrl);
 
     // Should successfully access the protected resource
     await expect(page.locator('[data-test="app-user-email"]')).toContainText(ALLOWED_DOMAIN_USER);
