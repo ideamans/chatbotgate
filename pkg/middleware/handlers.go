@@ -215,35 +215,62 @@ func (m *Middleware) handleLogin(w http.ResponseWriter, r *http.Request) {
 			html += `<div class="auth-divider"><span>` + t("login.or") + `</span></div>`
 		}
 
-		// Get saved email from cookie
-		savedEmail := ""
-		if cookie, err := r.Cookie("saved_email"); err == nil {
-			savedEmail = cookie.Value
-		}
-		emailValue := ""
-		saveChecked := ""
-		if savedEmail != "" {
-			emailValue = ` value="` + savedEmail + `"`
-			saveChecked = ` checked`
-		}
-
 		html += `
-		<form method="POST" action="` + emailSendPath + `">
+		<form method="POST" action="` + emailSendPath + `" id="email-form">
 			<div class="form-group">
 				<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-xs);">
 					<label class="label" for="email" style="margin-bottom: 0;">` + t("login.email.label") + `</label>
 					<label style="display: flex; align-items: center; gap: 0.25rem; cursor: pointer; font-size: 0.875rem; color: var(--color-text-secondary);">
-						<input type="checkbox" name="save_email" value="1" style="cursor: pointer;"` + saveChecked + `>
+						<input type="checkbox" id="save-email-checkbox" style="cursor: pointer;">
 						<span>` + t("login.email.save") + `</span>
 					</label>
 				</div>
-				<input type="email" id="email" name="email" class="input" placeholder="you@example.com"` + emailValue + ` required>
+				<input type="email" id="email" name="email" class="input" placeholder="you@example.com" required>
 			</div>
 			<button type="submit" class="btn btn-primary provider-btn">
 				<img src="` + emailIconPath + `" alt="Email">
 				` + t("login.email.submit") + `
 			</button>
-		</form>`
+		</form>
+		<script>
+		(function() {
+			const emailInput = document.getElementById('email');
+			const saveCheckbox = document.getElementById('save-email-checkbox');
+			const STORAGE_KEY_EMAIL = 'saved_email';
+			const STORAGE_KEY_SAVE = 'save_email_enabled';
+
+			// Load saved settings
+			const savedEmail = localStorage.getItem(STORAGE_KEY_EMAIL);
+			const saveEnabled = localStorage.getItem(STORAGE_KEY_SAVE) === 'true';
+
+			if (savedEmail && saveEnabled) {
+				emailInput.value = savedEmail;
+				saveCheckbox.checked = true;
+			} else if (saveEnabled) {
+				saveCheckbox.checked = true;
+			}
+
+			// Save email on input change (if checkbox is checked)
+			emailInput.addEventListener('input', function() {
+				if (saveCheckbox.checked) {
+					localStorage.setItem(STORAGE_KEY_EMAIL, emailInput.value);
+				}
+			});
+
+			// Handle checkbox changes
+			saveCheckbox.addEventListener('change', function() {
+				if (saveCheckbox.checked) {
+					// Save current email value and remember the checkbox state
+					localStorage.setItem(STORAGE_KEY_EMAIL, emailInput.value);
+					localStorage.setItem(STORAGE_KEY_SAVE, 'true');
+				} else {
+					// Clear saved email and checkbox state
+					localStorage.removeItem(STORAGE_KEY_EMAIL);
+					localStorage.removeItem(STORAGE_KEY_SAVE);
+				}
+			});
+		})();
+		</script>`
 	}
 
 	html += `
@@ -600,32 +627,6 @@ func (m *Middleware) handleEmailSend(w http.ResponseWriter, r *http.Request) {
 		m.logger.Error("Failed to send login link", "email", email, "error", err)
 		http.Error(w, t("error.internal"), http.StatusInternalServerError)
 		return
-	}
-
-	// Handle save email checkbox
-	saveEmail := r.FormValue("save_email")
-	if saveEmail == "1" {
-		// Save email to cookie (1 year)
-		http.SetCookie(w, &http.Cookie{
-			Name:     "saved_email",
-			Value:    email,
-			Path:     "/",
-			MaxAge:   365 * 24 * 60 * 60, // 1 year
-			HttpOnly: false,               // Allow JavaScript access for form pre-filling
-			Secure:   r.TLS != nil,        // Secure if HTTPS
-			SameSite: http.SameSiteLaxMode,
-		})
-	} else {
-		// Delete saved email cookie
-		http.SetCookie(w, &http.Cookie{
-			Name:     "saved_email",
-			Value:    "",
-			Path:     "/",
-			MaxAge:   -1, // Delete cookie
-			HttpOnly: false,
-			Secure:   r.TLS != nil,
-			SameSite: http.SameSiteLaxMode,
-		})
 	}
 
 	// Use embedded CSS

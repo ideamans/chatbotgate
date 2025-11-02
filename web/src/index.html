@@ -530,22 +530,62 @@
               <span>or</span>
             </div>
 
-            <form>
+            <form id="demo-email-form">
               <div class="form-group">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-xs);">
-                  <label class="label" for="email" style="margin-bottom: 0;">Email Address</label>
+                  <label class="label" for="demo-email" style="margin-bottom: 0;">Email Address</label>
                   <label style="display: flex; align-items: center; gap: 0.25rem; cursor: pointer; font-size: 0.875rem; color: var(--color-text-secondary);">
-                    <input type="checkbox" name="save_email" value="1" style="cursor: pointer;">
+                    <input type="checkbox" id="demo-save-email-checkbox" style="cursor: pointer;">
                     <span>Save</span>
                   </label>
                 </div>
-                <input type="email" id="email" class="input" placeholder="you@example.com">
+                <input type="email" id="demo-email" name="email" class="input" placeholder="you@example.com">
               </div>
-              <button type="submit" class="btn btn-primary provider-btn">
+              <button type="button" class="btn btn-primary provider-btn">
                 <img src="/icons/email.svg" alt="Email">
                 Send Login Link
               </button>
             </form>
+            <script>
+            // Demo: Email save functionality
+            (function() {
+              const emailInput = document.getElementById('demo-email');
+              const saveCheckbox = document.getElementById('demo-save-email-checkbox');
+              if (!emailInput || !saveCheckbox) return;
+
+              const STORAGE_KEY = 'demo_saved_email';
+              const SAVE_KEY = 'demo_save_enabled';
+
+              // Load
+              const savedEmail = localStorage.getItem(STORAGE_KEY);
+              const saveEnabled = localStorage.getItem(SAVE_KEY) === 'true';
+
+              if (savedEmail && saveEnabled) {
+                emailInput.value = savedEmail;
+                saveCheckbox.checked = true;
+              } else if (saveEnabled) {
+                saveCheckbox.checked = true;
+              }
+
+              // Save on input
+              emailInput.addEventListener('input', function() {
+                if (saveCheckbox.checked) {
+                  localStorage.setItem(STORAGE_KEY, emailInput.value);
+                }
+              });
+
+              // Handle checkbox
+              saveCheckbox.addEventListener('change', function() {
+                if (saveCheckbox.checked) {
+                  localStorage.setItem(STORAGE_KEY, emailInput.value);
+                  localStorage.setItem(SAVE_KEY, 'true');
+                } else {
+                  localStorage.removeItem(STORAGE_KEY);
+                  localStorage.removeItem(SAVE_KEY);
+                }
+              });
+            })();
+            </script>
           </div>
         </div>
       </div>
