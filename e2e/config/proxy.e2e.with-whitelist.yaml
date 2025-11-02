@@ -68,6 +68,6 @@ kvs:
       cleanup_interval: "5m"
 
   namespaces:
-    session: "session:"
-    token: "token:"
-    ratelimit: "ratelimit:"
+    session: "session"
+    token: "token"
+    ratelimit: "ratelimit"

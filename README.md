@@ -360,11 +360,15 @@ kvs:
     #   db: 0
     #   pool_size: 0  # 0 = default (10 * CPU cores)
 
-  # Namespace prefixes (optional, defaults shown)
+  # Namespace names for logical isolation (optional, defaults shown)
+  # Each namespace gets isolated storage:
+  # - Memory: separate instance
+  # - LevelDB: separate directory
+  # - Redis: key prefix (namespace:key)
   namespaces:
-    session: "session:"      # Session keys
-    token: "token:"          # OTP token keys
-    ratelimit: "ratelimit:"  # Rate limit bucket keys
+    session: "session"        # Namespace for sessions
+    token: "token"            # Namespace for OTP tokens
+    ratelimit: "ratelimit"    # Namespace for rate limits
 
   # Optional: Override with dedicated backends
   # session:

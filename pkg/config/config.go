@@ -176,21 +176,21 @@ type KVSConfig struct {
 
 // NamespaceConfig defines the key prefixes for each use case when sharing a KVS
 type NamespaceConfig struct {
-	Session   string `yaml:"session" json:"session"`     // Default: "session:"
-	Token     string `yaml:"token" json:"token"`       // Default: "token:"
-	RateLimit string `yaml:"ratelimit" json:"ratelimit"`   // Default: "ratelimit:"
+	Session   string `yaml:"session" json:"session"`     // Default: "session"
+	Token     string `yaml:"token" json:"token"`         // Default: "token"
+	RateLimit string `yaml:"ratelimit" json:"ratelimit"` // Default: "ratelimit"
 }
 
-// SetDefaults sets default namespace prefixes if not specified
+// SetDefaults sets default namespace names if not specified
 func (n *NamespaceConfig) SetDefaults() {
 	if n.Session == "" {
-		n.Session = "session:"
+		n.Session = "session"
 	}
 	if n.Token == "" {
-		n.Token = "token:"
+		n.Token = "token"
 	}
 	if n.RateLimit == "" {
-		n.RateLimit = "ratelimit:"
+		n.RateLimit = "ratelimit"
 	}
 }
 

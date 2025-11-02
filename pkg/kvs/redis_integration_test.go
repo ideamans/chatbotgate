@@ -164,16 +164,16 @@ func TestRedisMultipleDatabase(t *testing.T) {
 	_ = store2.Delete(ctx, "db-test")
 }
 
-// TestRedisPrefix tests that prefix configuration works correctly
-func TestRedisPrefix(t *testing.T) {
+// TestRedisNamespace tests that namespace configuration works correctly
+func TestRedisNamespace(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping Redis integration tests in short mode")
 	}
 
-	// Create two stores with different prefixes
+	// Create two stores with different namespaces
 	config1 := Config{
-		Type:   "redis",
-		Prefix: "app1:",
+		Type:      "redis",
+		Namespace: "app1",
 		Redis: RedisConfig{
 			Addr:     "localhost:6379",
 			Password: "",
@@ -183,8 +183,8 @@ func TestRedisPrefix(t *testing.T) {
 	}
 
 	config2 := Config{
-		Type:   "redis",
-		Prefix: "app2:",
+		Type:      "redis",
+		Namespace: "app2",
 		Redis: RedisConfig{
 			Addr:     "localhost:6379",
 			Password: "",
@@ -207,35 +207,35 @@ func TestRedisPrefix(t *testing.T) {
 	ctx := context.Background()
 
 	// Set same logical key in both stores
-	err = store1.Set(ctx, "prefix-test", []byte("value-app1"), 0)
+	err = store1.Set(ctx, "namespace-test", []byte("value-app1"), 0)
 	require.NoError(t, err, "Set in store1 should not return error")
 
-	err = store2.Set(ctx, "prefix-test", []byte("value-app2"), 0)
+	err = store2.Set(ctx, "namespace-test", []byte("value-app2"), 0)
 	require.NoError(t, err, "Set in store2 should not return error")
 
-	// Verify values are isolated by prefix
-	val1, err := store1.Get(ctx, "prefix-test")
+	// Verify values are isolated by namespace
+	val1, err := store1.Get(ctx, "namespace-test")
 	require.NoError(t, err, "Get from store1 should not return error")
 	assert.Equal(t, []byte("value-app1"), val1, "store1 should have its own value")
 
-	val2, err := store2.Get(ctx, "prefix-test")
+	val2, err := store2.Get(ctx, "namespace-test")
 	require.NoError(t, err, "Get from store2 should not return error")
 	assert.Equal(t, []byte("value-app2"), val2, "store2 should have its own value")
 
-	// Verify List only returns keys with the correct prefix
+	// Verify List only returns keys with the correct namespace
 	keys1, err := store1.List(ctx, "")
 	require.NoError(t, err, "List from store1 should not return error")
-	assert.Contains(t, keys1, "prefix-test", "store1 should list its own keys")
+	assert.Contains(t, keys1, "namespace-test", "store1 should list its own keys")
 	assert.Len(t, keys1, 1, "store1 should only see its own keys")
 
 	keys2, err := store2.List(ctx, "")
 	require.NoError(t, err, "List from store2 should not return error")
-	assert.Contains(t, keys2, "prefix-test", "store2 should list its own keys")
+	assert.Contains(t, keys2, "namespace-test", "store2 should list its own keys")
 	assert.Len(t, keys2, 1, "store2 should only see its own keys")
 
 	// Clean up
-	_ = store1.Delete(ctx, "prefix-test")
-	_ = store2.Delete(ctx, "prefix-test")
+	_ = store1.Delete(ctx, "namespace-test")
+	_ = store2.Delete(ctx, "namespace-test")
 }
 
 // TestRedisConcurrentOperations tests concurrent operations on Redis store

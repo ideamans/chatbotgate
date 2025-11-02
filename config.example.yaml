@@ -173,15 +173,18 @@ kvs:
     #   db: 0
     #   pool_size: 0  # 0 = default (10 * CPU cores)
 
-  # Namespace prefixes for shared KVS (optional, defaults shown below)
-  # These prefixes isolate different data types when using a shared backend
+  # Namespace names for logical isolation (optional, defaults shown below)
+  # Each namespace gets isolated storage:
+  # - Memory: separate instance per namespace
+  # - LevelDB: separate directory per namespace
+  # - Redis: key prefix (namespace:key format)
   namespaces:
-    session: "session:"     # Prefix for session keys
-    token: "token:"         # Prefix for OTP token keys
-    ratelimit: "ratelimit:" # Prefix for rate limit bucket keys
+    session: "session"        # Namespace name for sessions
+    token: "token"            # Namespace name for OTP tokens
+    ratelimit: "ratelimit"    # Namespace name for rate limits
 
   # Optional: Override session storage with dedicated backend
-  # If not specified, uses default KVS with "session:" prefix
+  # If not specified, uses default KVS with "session" namespace
   # session:
   #   type: "redis"
   #   redis:

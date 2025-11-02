@@ -55,8 +55,11 @@ type Config struct {
 	// Type specifies the store type: "memory", "leveldb", or "redis"
 	Type string `yaml:"type"`
 
-	// Prefix is prepended to all keys (useful for namespace isolation)
-	Prefix string `yaml:"prefix"`
+	// Namespace provides logical isolation within the store.
+	// - Memory: uses hierarchical map structure
+	// - LevelDB: creates separate directory per namespace
+	// - Redis: uses as key prefix
+	Namespace string `yaml:"namespace"`
 
 	// Memory-specific config
 	Memory MemoryConfig `yaml:"memory"`
@@ -105,14 +108,18 @@ type RedisConfig struct {
 }
 
 // New creates a new KVS store based on the provided config.
+// The Namespace field provides logical isolation - implementation varies by backend:
+// - Memory: separate store instance per namespace
+// - LevelDB: separate directory per namespace
+// - Redis: key prefix per namespace
 func New(cfg Config) (Store, error) {
 	switch cfg.Type {
 	case "memory", "":
-		return NewMemoryStore(cfg.Prefix, cfg.Memory)
+		return NewMemoryStore(cfg.Namespace, cfg.Memory)
 	case "leveldb":
-		return NewLevelDBStore(cfg.Prefix, cfg.LevelDB)
+		return NewLevelDBStore(cfg.Namespace, cfg.LevelDB)
 	case "redis":
-		return NewRedisStore(cfg.Prefix, cfg.Redis)
+		return NewRedisStore(cfg.Namespace, cfg.Redis)
 	default:
 		return nil, errors.New("kvs: unsupported store type: " + cfg.Type)
 	}

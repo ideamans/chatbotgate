@@ -18,8 +18,9 @@ import (
 
 // LevelDBStore is a LevelDB-based implementation of Store.
 // It provides persistent storage on the filesystem with background cleanup of expired keys.
+// Each namespace gets its own LevelDB directory for complete isolation.
 type LevelDBStore struct {
-	prefix          string
+	namespace       string
 	db              *leveldb.DB
 	closed          bool
 	mu              sync.RWMutex
@@ -28,32 +29,35 @@ type LevelDBStore struct {
 	cleanupDone     chan struct{}
 }
 
-// NewLevelDBStore creates a new LevelDB KVS store.
-func NewLevelDBStore(prefix string, cfg LevelDBConfig) (*LevelDBStore, error) {
-	// Resolve path
-	dbPath := cfg.Path
-	if dbPath == "" {
+// NewLevelDBStore creates a new LevelDB KVS store for the given namespace.
+// Each namespace gets its own isolated LevelDB database directory.
+func NewLevelDBStore(namespace string, cfg LevelDBConfig) (*LevelDBStore, error) {
+	// Resolve base path
+	basePath := cfg.Path
+	if basePath == "" {
 		// Use OS cache directory if no path specified
 		cacheDir, err := os.UserCacheDir()
 		if err != nil {
 			// Fallback to temp directory
 			cacheDir = os.TempDir()
 		}
+		basePath = filepath.Join(cacheDir, "multi-oauth2-proxy", "kvs")
+	}
 
-		// Create a unique directory name based on prefix
-		dirName := "multi-oauth2-proxy"
-		if prefix != "" {
-			// Sanitize prefix for use in directory name
-			sanitized := strings.Map(func(r rune) rune {
-				if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') || r == '-' || r == '_' {
-					return r
-				}
-				return '-'
-			}, prefix)
-			dirName = fmt.Sprintf("%s-%s", dirName, sanitized)
-		}
-
-		dbPath = filepath.Join(cacheDir, dirName)
+	// Append namespace to create isolated directory
+	dbPath := basePath
+	if namespace != "" {
+		// Sanitize namespace for use in directory name
+		sanitized := strings.Map(func(r rune) rune {
+			if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') || r == '-' || r == '_' {
+				return r
+			}
+			return '-'
+		}, namespace)
+		dbPath = filepath.Join(basePath, sanitized)
+	} else {
+		// Default namespace directory
+		dbPath = filepath.Join(basePath, "default")
 	}
 
 	// Ensure directory exists
@@ -88,7 +92,7 @@ func NewLevelDBStore(prefix string, cfg LevelDBConfig) (*LevelDBStore, error) {
 	}
 
 	store := &LevelDBStore{
-		prefix:          prefix,
+		namespace:       namespace,
 		db:              db,
 		cleanupInterval: cleanupInterval,
 		stopCleanup:     make(chan struct{}),
@@ -99,14 +103,6 @@ func NewLevelDBStore(prefix string, cfg LevelDBConfig) (*LevelDBStore, error) {
 	go store.cleanupLoop()
 
 	return store, nil
-}
-
-// prefixedKey returns the key with prefix prepended.
-func (l *LevelDBStore) prefixedKey(key string) string {
-	if l.prefix == "" {
-		return key
-	}
-	return l.prefix + key
 }
 
 // encodeValue encodes a value with optional expiration time.
@@ -150,7 +146,7 @@ func (l *LevelDBStore) Get(ctx context.Context, key string) ([]byte, error) {
 	}
 	l.mu.RUnlock()
 
-	encoded, err := l.db.Get([]byte(l.prefixedKey(key)), nil)
+	encoded, err := l.db.Get([]byte(key), nil)
 	if err != nil {
 		if err == leveldb.ErrNotFound {
 			return nil, ErrNotFound
@@ -181,7 +177,7 @@ func (l *LevelDBStore) Set(ctx context.Context, key string, value []byte, ttl ti
 	l.mu.RUnlock()
 
 	encoded := encodeValue(value, ttl)
-	err := l.db.Put([]byte(l.prefixedKey(key)), encoded, nil)
+	err := l.db.Put([]byte(key), encoded, nil)
 	if err != nil {
 		return fmt.Errorf("kvs/leveldb: set failed: %w", err)
 	}
@@ -198,7 +194,7 @@ func (l *LevelDBStore) Delete(ctx context.Context, key string) error {
 	}
 	l.mu.RUnlock()
 
-	err := l.db.Delete([]byte(l.prefixedKey(key)), nil)
+	err := l.db.Delete([]byte(key), nil)
 	if err != nil && err != leveldb.ErrNotFound {
 		return fmt.Errorf("kvs/leveldb: delete failed: %w", err)
 	}
@@ -215,7 +211,7 @@ func (l *LevelDBStore) Exists(ctx context.Context, key string) (bool, error) {
 	}
 	l.mu.RUnlock()
 
-	encoded, err := l.db.Get([]byte(l.prefixedKey(key)), nil)
+	encoded, err := l.db.Get([]byte(key), nil)
 	if err != nil {
 		if err == leveldb.ErrNotFound {
 			return false, nil
@@ -240,8 +236,7 @@ func (l *LevelDBStore) List(ctx context.Context, keyPrefix string) ([]string, er
 	}
 	l.mu.RUnlock()
 
-	fullPrefix := l.prefixedKey(keyPrefix)
-	prefixBytes := []byte(fullPrefix)
+	prefixBytes := []byte(keyPrefix)
 
 	iter := l.db.NewIterator(util.BytesPrefix(prefixBytes), nil)
 	defer iter.Release()
@@ -260,13 +255,7 @@ func (l *LevelDBStore) List(ctx context.Context, keyPrefix string) ([]string, er
 			continue // Skip expired entries
 		}
 
-		// Remove store prefix to return clean key
-		cleanKey := key
-		if l.prefix != "" && strings.HasPrefix(key, l.prefix) {
-			cleanKey = strings.TrimPrefix(key, l.prefix)
-		}
-
-		keys = append(keys, cleanKey)
+		keys = append(keys, key)
 	}
 
 	if err := iter.Error(); err != nil {
@@ -285,8 +274,7 @@ func (l *LevelDBStore) Count(ctx context.Context, prefix string) (int, error) {
 	}
 	l.mu.RUnlock()
 
-	fullPrefix := l.prefixedKey(prefix)
-	prefixBytes := []byte(fullPrefix)
+	prefixBytes := []byte(prefix)
 
 	iter := l.db.NewIterator(util.BytesPrefix(prefixBytes), nil)
 	defer iter.Release()
@@ -361,9 +349,9 @@ func (l *LevelDBStore) cleanup() {
 	}
 	l.mu.RUnlock()
 
-	// Scan all keys with our prefix
-	prefixBytes := []byte(l.prefix)
-	iter := l.db.NewIterator(util.BytesPrefix(prefixBytes), nil)
+	// Scan all keys in this namespace's database
+	// Since each namespace has its own LevelDB directory, we scan everything
+	iter := l.db.NewIterator(nil, nil)
 	defer iter.Release()
 
 	now := time.Now().UnixNano()

@@ -241,15 +241,15 @@ func TestLevelDBCleanupBatchDeletion(t *testing.T) {
 	assert.Equal(t, 0, finalCount, "All expired keys should be deleted via batch operation")
 }
 
-// TestLevelDBCleanupWithPrefix tests cleanup works with prefixed store
-func TestLevelDBCleanupWithPrefix(t *testing.T) {
-	tmpDir, err := os.MkdirTemp("", "kvs-leveldb-cleanup-prefix-test-*")
+// TestLevelDBCleanupWithNamespace tests cleanup works with namespaced store
+func TestLevelDBCleanupWithNamespace(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "kvs-leveldb-cleanup-namespace-test-*")
 	require.NoError(t, err, "Should create temp dir")
 	defer os.RemoveAll(tmpDir)
 
 	config := Config{
-		Type:   "leveldb",
-		Prefix: "test-prefix:",
+		Type:      "leveldb",
+		Namespace: "test-namespace",
 		LevelDB: LevelDBConfig{
 			Path:            filepath.Join(tmpDir, "db"),
 			SyncWrites:      false,
@@ -278,10 +278,10 @@ func TestLevelDBCleanupWithPrefix(t *testing.T) {
 	// Wait for expiration and cleanup
 	time.Sleep(400 * time.Millisecond)
 
-	// Verify cleanup worked with prefix
+	// Verify cleanup worked with namespace
 	count, err = store.Count(ctx, "cleanup-")
 	require.NoError(t, err, "Count should not return error")
-	assert.Equal(t, 0, count, "All expired keys should be cleaned up even with prefix")
+	assert.Equal(t, 0, count, "All expired keys should be cleaned up even with namespace")
 }
 
 // TestLevelDBCleanupConcurrentOperations tests cleanup works correctly during concurrent operations

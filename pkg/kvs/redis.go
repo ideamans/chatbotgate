@@ -12,15 +12,17 @@ import (
 
 // RedisStore is a Redis-based implementation of Store.
 // It provides distributed, persistent storage backed by Redis.
+// Namespace isolation is implemented using key prefixes (namespace:key format).
 type RedisStore struct {
-	prefix string
-	client *redis.Client
-	closed bool
-	mu     sync.RWMutex
+	namespace string // Stored as "namespace:" prefix for Redis keys
+	client    *redis.Client
+	closed    bool
+	mu        sync.RWMutex
 }
 
-// NewRedisStore creates a new Redis KVS store.
-func NewRedisStore(prefix string, cfg RedisConfig) (*RedisStore, error) {
+// NewRedisStore creates a new Redis KVS store for the given namespace.
+// Namespace isolation is achieved using key prefixes.
+func NewRedisStore(namespace string, cfg RedisConfig) (*RedisStore, error) {
 	opts := &redis.Options{
 		Addr:     cfg.Addr,
 		Password: cfg.Password,
@@ -41,18 +43,24 @@ func NewRedisStore(prefix string, cfg RedisConfig) (*RedisStore, error) {
 		return nil, fmt.Errorf("kvs/redis: failed to connect to %s: %w", cfg.Addr, err)
 	}
 
+	// Convert namespace to prefix format (namespace:)
+	prefix := ""
+	if namespace != "" {
+		prefix = namespace + ":"
+	}
+
 	return &RedisStore{
-		prefix: prefix,
-		client: client,
+		namespace: prefix,
+		client:    client,
 	}, nil
 }
 
-// prefixedKey returns the key with prefix prepended.
+// prefixedKey returns the key with namespace prefix prepended.
 func (r *RedisStore) prefixedKey(key string) string {
-	if r.prefix == "" {
+	if r.namespace == "" {
 		return key
 	}
-	return r.prefix + key
+	return r.namespace + key
 }
 
 // Get retrieves a value by key.
@@ -144,10 +152,10 @@ func (r *RedisStore) List(ctx context.Context, keyPrefix string) ([]string, erro
 	for iter.Next(ctx) {
 		key := iter.Val()
 
-		// Remove store prefix to return clean key
+		// Remove namespace prefix to return clean key
 		cleanKey := key
-		if r.prefix != "" && strings.HasPrefix(key, r.prefix) {
-			cleanKey = strings.TrimPrefix(key, r.prefix)
+		if r.namespace != "" && strings.HasPrefix(key, r.namespace) {
+			cleanKey = strings.TrimPrefix(key, r.namespace)
 		}
 
 		keys = append(keys, cleanKey)

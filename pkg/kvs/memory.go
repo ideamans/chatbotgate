@@ -16,8 +16,9 @@ type memoryItem struct {
 // MemoryStore is an in-memory implementation of Store.
 // It stores data in a map and runs a background goroutine to clean up expired items.
 // Data is volatile and will be lost when the process restarts.
+// Each MemoryStore instance is isolated by namespace.
 type MemoryStore struct {
-	prefix          string
+	namespace       string
 	items           map[string]*memoryItem
 	mu              sync.RWMutex
 	closed          bool
@@ -26,15 +27,16 @@ type MemoryStore struct {
 	cleanupDone     chan struct{}
 }
 
-// NewMemoryStore creates a new in-memory KVS store.
-func NewMemoryStore(prefix string, cfg MemoryConfig) (*MemoryStore, error) {
+// NewMemoryStore creates a new in-memory KVS store for the given namespace.
+// Each namespace gets its own isolated MemoryStore instance.
+func NewMemoryStore(namespace string, cfg MemoryConfig) (*MemoryStore, error) {
 	cleanupInterval := cfg.CleanupInterval
 	if cleanupInterval == 0 {
 		cleanupInterval = 5 * time.Minute
 	}
 
 	store := &MemoryStore{
-		prefix:          prefix,
+		namespace:       namespace,
 		items:           make(map[string]*memoryItem),
 		cleanupInterval: cleanupInterval,
 		stopCleanup:     make(chan struct{}),
@@ -47,14 +49,6 @@ func NewMemoryStore(prefix string, cfg MemoryConfig) (*MemoryStore, error) {
 	return store, nil
 }
 
-// prefixedKey returns the key with prefix prepended.
-func (m *MemoryStore) prefixedKey(key string) string {
-	if m.prefix == "" {
-		return key
-	}
-	return m.prefix + key
-}
-
 // Get retrieves a value by key.
 func (m *MemoryStore) Get(ctx context.Context, key string) ([]byte, error) {
 	m.mu.RLock()
@@ -64,7 +58,7 @@ func (m *MemoryStore) Get(ctx context.Context, key string) ([]byte, error) {
 		return nil, ErrClosed
 	}
 
-	item, exists := m.items[m.prefixedKey(key)]
+	item, exists := m.items[key]
 	if !exists {
 		return nil, ErrNotFound
 	}
@@ -101,7 +95,7 @@ func (m *MemoryStore) Set(ctx context.Context, key string, value []byte, ttl tim
 		item.expiresAt = time.Now().Add(ttl)
 	}
 
-	m.items[m.prefixedKey(key)] = item
+	m.items[key] = item
 	return nil
 }
 
@@ -114,7 +108,7 @@ func (m *MemoryStore) Delete(ctx context.Context, key string) error {
 		return ErrClosed
 	}
 
-	delete(m.items, m.prefixedKey(key))
+	delete(m.items, key)
 	return nil
 }
 
@@ -127,7 +121,7 @@ func (m *MemoryStore) Exists(ctx context.Context, key string) (bool, error) {
 		return false, ErrClosed
 	}
 
-	item, exists := m.items[m.prefixedKey(key)]
+	item, exists := m.items[key]
 	if !exists {
 		return false, nil
 	}
@@ -149,13 +143,12 @@ func (m *MemoryStore) List(ctx context.Context, keyPrefix string) ([]string, err
 		return nil, ErrClosed
 	}
 
-	fullPrefix := m.prefixedKey(keyPrefix)
 	var keys []string
 	now := time.Now()
 
 	for key, item := range m.items {
 		// Check if key matches prefix
-		if !strings.HasPrefix(key, fullPrefix) {
+		if !strings.HasPrefix(key, keyPrefix) {
 			continue
 		}
 
@@ -164,13 +157,7 @@ func (m *MemoryStore) List(ctx context.Context, keyPrefix string) ([]string, err
 			continue
 		}
 
-		// Remove store prefix to return clean key
-		cleanKey := key
-		if m.prefix != "" && strings.HasPrefix(key, m.prefix) {
-			cleanKey = strings.TrimPrefix(key, m.prefix)
-		}
-
-		keys = append(keys, cleanKey)
+		keys = append(keys, key)
 	}
 
 	return keys, nil
