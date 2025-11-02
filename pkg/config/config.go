@@ -23,10 +23,8 @@ type ServiceConfig struct {
 	LogoWidth   string `yaml:"logo_width" json:"logo_width"`   // Logo width (e.g., "100px", "150px", "200px", default: "200px")
 }
 
-// ServerConfig contains HTTP server settings
+// ServerConfig contains authentication server settings
 type ServerConfig struct {
-	Host           string `yaml:"host" json:"host"`
-	Port           int    `yaml:"port" json:"port"`
 	AuthPathPrefix string `yaml:"auth_path_prefix" json:"auth_path_prefix"` // Path prefix for authentication endpoints (default: "/_auth")
 	CallbackURL    string `yaml:"callback_url" json:"callback_url"`         // Optional: Override OAuth2 callback URL (useful when behind reverse proxy or different external port)
 	BaseURL        string `yaml:"base_url" json:"base_url"`                 // Optional: Override base URL for email links and redirects (e.g., "http://localhost:4181")
@@ -85,6 +83,7 @@ type OAuth2Provider struct {
 	ClientID     string `yaml:"client_id" json:"client_id"`
 	ClientSecret string `yaml:"client_secret" json:"client_secret"`
 	Enabled      bool   `yaml:"enabled" json:"enabled"`
+	IconURL      string `yaml:"icon_url" json:"icon_url"` // Optional custom icon URL (if not set, uses default icon based on provider type)
 
 	// Custom provider settings (only used when Type is "custom")
 	AuthURL            string `yaml:"auth_url" json:"auth_url"`              // Custom authorization endpoint
@@ -138,8 +137,7 @@ func (e EmailTokenConfig) GetTokenExpireDuration() (time.Duration, error) {
 
 // AuthorizationConfig contains authorization settings
 type AuthorizationConfig struct {
-	AllowedEmails  []string `yaml:"allowed_emails" json:"allowed_emails"`
-	AllowedDomains []string `yaml:"allowed_domains" json:"allowed_domains"`
+	Allowed []string `yaml:"allowed" json:"allowed"` // Email addresses or domains (domain starts with @)
 }
 
 // LoggingConfig contains logging settings
@@ -153,10 +151,6 @@ type LoggingConfig struct {
 func (c *Config) Validate() error {
 	if c.Service.Name == "" {
 		return ErrServiceNameRequired
-	}
-
-	if c.Server.Port <= 0 || c.Server.Port > 65535 {
-		return ErrInvalidPort
 	}
 
 	if c.Proxy.Upstream == "" {

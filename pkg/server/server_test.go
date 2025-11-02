@@ -79,8 +79,7 @@ func setupTestServer(t *testing.T) (*Server, *session.MemoryStore, func()) {
 			Description: "Test Description",
 		},
 		Server: config.ServerConfig{
-			Host: "localhost",
-			Port: 4180,
+			AuthPathPrefix: "/_auth",
 		},
 		Proxy: config.ProxyConfig{
 			Upstream: backend.URL, // Use real backend URL
@@ -113,7 +112,7 @@ func setupTestServer(t *testing.T) (*Server, *session.MemoryStore, func()) {
 
 	logger := logging.NewSimpleLogger("test", logging.LevelInfo, false)
 
-	server := New(cfg, sessionStore, oauthManager, nil, authzChecker, proxyHandler, logger)
+	server := New(cfg, "localhost", 4180, sessionStore, oauthManager, nil, authzChecker, proxyHandler, logger)
 
 	cleanup := func() {
 		backend.Close()
@@ -513,8 +512,7 @@ func setupTestServerWithEmail(t *testing.T) (*Server, *session.MemoryStore) {
 			Description: "Test Description",
 		},
 		Server: config.ServerConfig{
-			Host: "localhost",
-			Port: 4180,
+			AuthPathPrefix: "/_auth",
 		},
 		Proxy: config.ProxyConfig{
 			Upstream: "http://backend.test",
@@ -575,7 +573,7 @@ func setupTestServerWithEmail(t *testing.T) (*Server, *session.MemoryStore) {
 
 	logger := logging.NewSimpleLogger("test", logging.LevelInfo, false)
 
-	server := New(cfg, sessionStore, oauthManager, emailHandler, authzChecker, proxyHandler, logger)
+	server := New(cfg, "localhost", 4180, sessionStore, oauthManager, emailHandler, authzChecker, proxyHandler, logger)
 
 	return server, sessionStore
 }
@@ -640,8 +638,7 @@ func TestServer_Authorization_WithWhitelist_AuthorizedEmail(t *testing.T) {
 			Description: "Test Description",
 		},
 		Server: config.ServerConfig{
-			Host: "localhost",
-			Port: 4180,
+			AuthPathPrefix: "/_auth",
 		},
 		Proxy: config.ProxyConfig{
 			Upstream: backend.URL,
@@ -655,7 +652,7 @@ func TestServer_Authorization_WithWhitelist_AuthorizedEmail(t *testing.T) {
 			CookieSameSite: "lax",
 		},
 		Authorization: config.AuthorizationConfig{
-			AllowedEmails: []string{"authorized@example.com"}, // Whitelist configured
+			Allowed: []string{"authorized@example.com"}, // Whitelist configured
 		},
 	}
 
@@ -672,7 +669,7 @@ func TestServer_Authorization_WithWhitelist_AuthorizedEmail(t *testing.T) {
 
 	logger := logging.NewSimpleLogger("test", logging.LevelInfo, false)
 
-	server := New(cfg, sessionStore, oauthManager, nil, authzChecker, proxyHandler, logger)
+	server := New(cfg, "localhost", 4180, sessionStore, oauthManager, nil, authzChecker, proxyHandler, logger)
 
 	// Create a session with authorized email
 	sessionID := "test-session-authorized"

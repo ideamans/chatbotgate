@@ -3,8 +3,6 @@ service:
   description: "E2E verification environment with whitelist"
 
 server:
-  host: 0.0.0.0
-  port: 4180  # Internal port (mapped to 4181 externally)
   auth_path_prefix: "/_auth"
   callback_url: "http://localhost:4181/_auth/oauth2/callback"  # External callback URL
   base_url: "http://localhost:4181"  # External base URL for email links
@@ -47,10 +45,10 @@ email_auth:
   otp_output_file: "/otp/passwordless-otp-wl.jsonl"  # Different file to avoid conflicts
 
 # Whitelist configured - only specific emails and domains are allowed
+# Entries starting with @ are domains, others are email addresses
 authorization:
-  allowed_emails:
+  allowed:
     - "allowed@example.com"
-  allowed_domains:
     - "@allowed.example.com"
 
 logging:

@@ -8,11 +8,9 @@ import (
 
 func TestEmailChecker_IsAllowed(t *testing.T) {
 	cfg := config.AuthorizationConfig{
-		AllowedEmails: []string{
+		Allowed: []string{
 			"user@example.com",
 			"admin@test.org",
-		},
-		AllowedDomains: []string{
 			"@ideamans.com",
 			"@company.net",
 		},
@@ -99,8 +97,7 @@ func TestEmailChecker_IsAllowed(t *testing.T) {
 
 func TestEmailChecker_EmptyConfig(t *testing.T) {
 	cfg := config.AuthorizationConfig{
-		AllowedEmails:  []string{},
-		AllowedDomains: []string{},
+		Allowed: []string{},
 	}
 
 	checker := NewEmailChecker(cfg)
@@ -127,10 +124,8 @@ func TestEmailChecker_EmptyConfig(t *testing.T) {
 
 func TestNewEmailChecker(t *testing.T) {
 	cfg := config.AuthorizationConfig{
-		AllowedEmails: []string{
+		Allowed: []string{
 			"User@Example.COM",
-		},
-		AllowedDomains: []string{
 			"@IDEAMANS.COM",
 		},
 	}
@@ -157,30 +152,31 @@ func TestEmailChecker_RequiresEmail(t *testing.T) {
 		{
 			name: "no whitelist - email not required",
 			config: config.AuthorizationConfig{
-				AllowedEmails:  []string{},
-				AllowedDomains: []string{},
+				Allowed: []string{},
 			},
 			want: false,
 		},
 		{
 			name: "only allowed emails - email required",
 			config: config.AuthorizationConfig{
-				AllowedEmails: []string{"user@example.com"},
+				Allowed: []string{"user@example.com"},
 			},
 			want: true,
 		},
 		{
 			name: "only allowed domains - email required",
 			config: config.AuthorizationConfig{
-				AllowedDomains: []string{"@example.com"},
+				Allowed: []string{"@example.com"},
 			},
 			want: true,
 		},
 		{
 			name: "both emails and domains - email required",
 			config: config.AuthorizationConfig{
-				AllowedEmails:  []string{"user@example.com"},
-				AllowedDomains: []string{"@company.com"},
+				Allowed: []string{
+					"user@example.com",
+					"@company.com",
+				},
 			},
 			want: true,
 		},

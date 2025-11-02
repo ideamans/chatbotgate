@@ -25,16 +25,24 @@ type EmailChecker struct {
 
 // NewEmailChecker creates a new EmailChecker from configuration
 func NewEmailChecker(cfg config.AuthorizationConfig) *EmailChecker {
-	// Convert allowed emails to a map for faster lookup
+	// Convert allowed entries to emails and domains
+	// Entries starting with @ are domains, others are email addresses
 	emailMap := make(map[string]bool)
-	for _, email := range cfg.AllowedEmails {
-		emailMap[strings.ToLower(email)] = true
-	}
+	var domains []string
 
-	// Store allowed domains (already with @ prefix in config)
-	domains := make([]string, len(cfg.AllowedDomains))
-	for i, domain := range cfg.AllowedDomains {
-		domains[i] = strings.ToLower(domain)
+	for _, entry := range cfg.Allowed {
+		entry = strings.TrimSpace(entry)
+		if entry == "" {
+			continue
+		}
+
+		if strings.HasPrefix(entry, "@") {
+			// Domain entry
+			domains = append(domains, strings.ToLower(entry))
+		} else {
+			// Email address entry
+			emailMap[strings.ToLower(entry)] = true
+		}
 	}
 
 	return &EmailChecker{

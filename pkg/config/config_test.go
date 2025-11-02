@@ -19,8 +19,7 @@ func TestConfig_Validate(t *testing.T) {
 					Description: "Test Description",
 				},
 				Server: ServerConfig{
-					Host: "0.0.0.0",
-					Port: 4180,
+					AuthPathPrefix: "/_auth",
 				},
 				Proxy: ProxyConfig{
 					Upstream: "http://localhost:8080",
@@ -48,9 +47,7 @@ func TestConfig_Validate(t *testing.T) {
 				Service: ServiceConfig{
 					Name: "",
 				},
-				Server: ServerConfig{
-					Port: 4180,
-				},
+				Server: ServerConfig{},
 				Proxy: ProxyConfig{
 					Upstream: "http://localhost:8080",
 				},
@@ -66,37 +63,12 @@ func TestConfig_Validate(t *testing.T) {
 			wantErr: ErrServiceNameRequired,
 		},
 		{
-			name: "invalid port",
-			config: &Config{
-				Service: ServiceConfig{
-					Name: "Test",
-				},
-				Server: ServerConfig{
-					Port: 0,
-				},
-				Proxy: ProxyConfig{
-					Upstream: "http://localhost:8080",
-				},
-				Session: SessionConfig{
-					CookieSecret: "this-is-a-secret-key-with-32-characters",
-				},
-				OAuth2: OAuth2Config{
-					Providers: []OAuth2Provider{
-						{Enabled: true},
-					},
-				},
-			},
-			wantErr: ErrInvalidPort,
-		},
-		{
 			name: "missing upstream",
 			config: &Config{
 				Service: ServiceConfig{
 					Name: "Test",
 				},
-				Server: ServerConfig{
-					Port: 4180,
-				},
+				Server: ServerConfig{},
 				Proxy: ProxyConfig{
 					Upstream: "",
 				},
@@ -117,9 +89,7 @@ func TestConfig_Validate(t *testing.T) {
 				Service: ServiceConfig{
 					Name: "Test",
 				},
-				Server: ServerConfig{
-					Port: 4180,
-				},
+				Server: ServerConfig{},
 				Proxy: ProxyConfig{
 					Upstream: "http://localhost:8080",
 				},
@@ -140,9 +110,7 @@ func TestConfig_Validate(t *testing.T) {
 				Service: ServiceConfig{
 					Name: "Test",
 				},
-				Server: ServerConfig{
-					Port: 4180,
-				},
+				Server: ServerConfig{},
 				Proxy: ProxyConfig{
 					Upstream: "http://localhost:8080",
 				},

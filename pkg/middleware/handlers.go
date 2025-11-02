@@ -173,18 +173,32 @@ func (m *Middleware) handleLogin(w http.ResponseWriter, r *http.Request) {
 		html += `<div style="margin-bottom: var(--spacing-lg);">`
 		for _, p := range providers {
 			providerName := p.Name()
-			// Map provider names to icon files
-			iconName := providerName
-			knownIcons := map[string]bool{
-				"google":    true,
-				"github":    true,
-				"microsoft": true,
-				"facebook":  true,
+
+			// Find icon URL from config
+			var iconPath string
+			for _, providerCfg := range m.config.OAuth2.Providers {
+				if providerCfg.Name == providerName && providerCfg.IconURL != "" {
+					// Use custom icon URL from config
+					iconPath = providerCfg.IconURL
+					break
+				}
 			}
-			if !knownIcons[providerName] {
-				iconName = "oidc" // Default to OIDC icon for custom providers
+
+			// If no custom icon URL, use default embedded icon
+			if iconPath == "" {
+				iconName := providerName
+				knownIcons := map[string]bool{
+					"google":    true,
+					"github":    true,
+					"microsoft": true,
+					"facebook":  true,
+				}
+				if !knownIcons[providerName] {
+					iconName = "oidc" // Default to OIDC icon for custom providers
+				}
+				iconPath = joinAuthPath(prefix, "/assets/icons/"+iconName+".svg")
 			}
-			iconPath := joinAuthPath(prefix, "/assets/icons/"+iconName+".svg")
+
 			html += `<a href="` + prefix + `/oauth2/start/` + providerName + `" class="btn btn-secondary provider-btn">`
 			html += `<img src="` + iconPath + `" alt="` + providerName + `">`
 			html += fmt.Sprintf(t("login.oauth2.continue"), providerName) + `</a>`

@@ -56,24 +56,14 @@ func (l *FileLoader) Load() (*Config, error) {
 	// Apply defaults
 	applyDefaults(&cfg)
 
-	// Validate configuration
-	if err := cfg.Validate(); err != nil {
-		return nil, fmt.Errorf("invalid configuration: %w", err)
-	}
+	// Note: Detailed validation is performed by the middleware manager
+	// This allows for better error reporting with multiple validation errors
 
 	return &cfg, nil
 }
 
 // applyDefaults sets default values for optional fields
 func applyDefaults(cfg *Config) {
-	if cfg.Server.Host == "" {
-		cfg.Server.Host = "0.0.0.0"
-	}
-
-	if cfg.Server.Port == 0 {
-		cfg.Server.Port = 4180
-	}
-
 	if cfg.Session.CookieName == "" {
 		cfg.Session.CookieName = "_oauth2_proxy"
 	}

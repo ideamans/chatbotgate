@@ -56,22 +56,21 @@ func TestMiddleware_RequiresEmail(t *testing.T) {
 		{
 			name: "no whitelist - email not required",
 			authzConfig: config.AuthorizationConfig{
-				AllowedEmails:  []string{},
-				AllowedDomains: []string{},
+				Allowed: []string{},
 			},
 			expectRequired: false,
 		},
 		{
 			name: "with allowed emails - email required",
 			authzConfig: config.AuthorizationConfig{
-				AllowedEmails: []string{"user@example.com"},
+				Allowed: []string{"user@example.com"},
 			},
 			expectRequired: true,
 		},
 		{
 			name: "with allowed domains - email required",
 			authzConfig: config.AuthorizationConfig{
-				AllowedDomains: []string{"@example.com"},
+				Allowed: []string{"@example.com"},
 			},
 			expectRequired: true,
 		},
@@ -139,8 +138,7 @@ func TestMiddleware_Authorization_NoWhitelist(t *testing.T) {
 			CookieHTTPOnly: true,
 		},
 		Authorization: config.AuthorizationConfig{
-			AllowedEmails:  []string{}, // No whitelist
-			AllowedDomains: []string{},
+			Allowed: []string{}, // No whitelist
 		},
 	}
 
@@ -238,7 +236,7 @@ func TestMiddleware_Authorization_WithWhitelist(t *testing.T) {
 			CookieSecure: false,
 		},
 		Authorization: config.AuthorizationConfig{
-			AllowedEmails: []string{"authorized@example.com"}, // Whitelist configured
+			Allowed: []string{"authorized@example.com"}, // Whitelist configured
 		},
 	}
 
