@@ -59,3 +59,15 @@ logging:
   level: "debug"
   module_level: ""
   color: false
+
+# KVS configuration (unified storage for sessions, tokens, and rate limiting)
+kvs:
+  default:
+    type: "memory"
+    memory:
+      cleanup_interval: "5m"
+
+  namespaces:
+    session: "session"
+    token: "token"
+    ratelimit: "ratelimit"

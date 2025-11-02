@@ -3,11 +3,21 @@ package ratelimit
 import (
 	"testing"
 	"time"
+
+	"github.com/ideamans/multi-oauth2-proxy/pkg/kvs"
 )
+
+// createTestLimiter creates a limiter with memory-based KVS for testing
+func createTestLimiter(rate int, interval time.Duration) *Limiter {
+	kvsStore, _ := kvs.NewMemoryStore("ratelimit:", kvs.MemoryConfig{
+		CleanupInterval: 1 * time.Minute,
+	})
+	return NewLimiter(rate, interval, kvsStore)
+}
 
 func TestLimiter_Allow(t *testing.T) {
 	// Allow 3 requests per second
-	limiter := NewLimiter(3, 1*time.Second)
+	limiter := createTestLimiter(3, 1*time.Second)
 
 	key := "test-key"
 
@@ -26,7 +36,7 @@ func TestLimiter_Allow(t *testing.T) {
 
 func TestLimiter_Refill(t *testing.T) {
 	// Allow 2 requests per 100ms
-	limiter := NewLimiter(2, 100*time.Millisecond)
+	limiter := createTestLimiter(2, 100*time.Millisecond)
 
 	key := "test-key"
 
@@ -49,7 +59,7 @@ func TestLimiter_Refill(t *testing.T) {
 }
 
 func TestLimiter_MultipleKeys(t *testing.T) {
-	limiter := NewLimiter(2, 1*time.Second)
+	limiter := createTestLimiter(2, 1*time.Second)
 
 	// Different keys should have independent limits
 	if !limiter.Allow("key1") {
@@ -75,7 +85,7 @@ func TestLimiter_MultipleKeys(t *testing.T) {
 }
 
 func TestLimiter_Reset(t *testing.T) {
-	limiter := NewLimiter(1, 1*time.Second)
+	limiter := createTestLimiter(1, 1*time.Second)
 
 	key := "test-key"
 
@@ -97,7 +107,10 @@ func TestLimiter_Reset(t *testing.T) {
 }
 
 func TestLimiter_Cleanup(t *testing.T) {
-	limiter := NewLimiter(5, 1*time.Second)
+	kvsStore, _ := kvs.NewMemoryStore("ratelimit:", kvs.MemoryConfig{
+		CleanupInterval: 1 * time.Minute,
+	})
+	limiter := NewLimiter(5, 1*time.Second, kvsStore)
 
 	// Create some buckets
 	limiter.Allow("key1")
@@ -116,11 +129,8 @@ func TestLimiter_Cleanup(t *testing.T) {
 	// key1, key2, key3 should be cleaned up
 	// key4 should still exist
 
-	// We can't directly check the map, but we can verify behavior
-	// If cleaned up properly, keys should start fresh
-	limiter.mu.RLock()
-	count := len(limiter.buckets)
-	limiter.mu.RUnlock()
+	// Check KVS count
+	count, _ := kvsStore.Count(nil, "")
 
 	// Only key4 should remain
 	if count != 1 {
@@ -129,7 +139,7 @@ func TestLimiter_Cleanup(t *testing.T) {
 }
 
 func TestLimiter_ZeroRate(t *testing.T) {
-	limiter := NewLimiter(0, 1*time.Second)
+	limiter := createTestLimiter(0, 1*time.Second)
 
 	key := "test-key"
 
@@ -141,7 +151,7 @@ func TestLimiter_ZeroRate(t *testing.T) {
 
 func TestLimiter_HighRate(t *testing.T) {
 	// Allow 100 requests per second
-	limiter := NewLimiter(100, 1*time.Second)
+	limiter := createTestLimiter(100, 1*time.Second)
 
 	key := "test-key"
 

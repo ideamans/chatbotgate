@@ -7,6 +7,7 @@ import (
 	"github.com/ideamans/multi-oauth2-proxy/pkg/authz"
 	"github.com/ideamans/multi-oauth2-proxy/pkg/config"
 	"github.com/ideamans/multi-oauth2-proxy/pkg/i18n"
+	"github.com/ideamans/multi-oauth2-proxy/pkg/kvs"
 	"github.com/ideamans/multi-oauth2-proxy/pkg/ratelimit"
 )
 
@@ -33,10 +34,12 @@ func NewHandler(
 	authzChecker authz.Checker,
 	translator *i18n.Translator,
 	cookieSecret string,
+	tokenKVS kvs.Store,
+	rateLimitKVS kvs.Store,
 ) (*Handler, error) {
 	serviceName := serviceCfg.Name
-	// Create token store
-	tokenStore := NewTokenStore(cookieSecret)
+	// Create token store with KVS backend
+	tokenStore := NewTokenStore(cookieSecret, tokenKVS)
 
 	// Create sender based on configuration
 	var sender Sender
@@ -49,8 +52,8 @@ func NewHandler(
 		return nil, fmt.Errorf("unsupported sender type: %s", cfg.SenderType)
 	}
 
-	// Create rate limiter (3 emails per minute per address)
-	limiter := ratelimit.NewLimiter(3, 1*time.Minute)
+	// Create rate limiter with KVS backend (3 emails per minute per address)
+	limiter := ratelimit.NewLimiter(3, 1*time.Minute, rateLimitKVS)
 
 	// Create email template
 	logoWidth := serviceCfg.LogoWidth

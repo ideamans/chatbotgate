@@ -4,9 +4,11 @@ import (
 	"errors"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/ideamans/multi-oauth2-proxy/pkg/config"
 	"github.com/ideamans/multi-oauth2-proxy/pkg/i18n"
+	"github.com/ideamans/multi-oauth2-proxy/pkg/kvs"
 )
 
 // MockAuthzChecker is a mock authorization checker
@@ -21,6 +23,22 @@ func (m *MockAuthzChecker) RequiresEmail() bool {
 
 func (m *MockAuthzChecker) IsAllowed(email string) bool {
 	return m.allowed
+}
+
+// createTestTokenKVS creates a memory-based token KVS for testing
+func createTestTokenKVS() kvs.Store {
+	kvsStore, _ := kvs.NewMemoryStore("token:", kvs.MemoryConfig{
+		CleanupInterval: 1 * time.Minute,
+	})
+	return kvsStore
+}
+
+// createTestRateLimitKVS creates a memory-based rate limit KVS for testing
+func createTestRateLimitKVS() kvs.Store {
+	kvsStore, _ := kvs.NewMemoryStore("ratelimit:", kvs.MemoryConfig{
+		CleanupInterval: 1 * time.Minute,
+	})
+	return kvsStore
 }
 
 // testServiceConfig returns a default ServiceConfig for testing
@@ -54,7 +72,7 @@ func TestNewHandler(t *testing.T) {
 
 	authzChecker := &MockAuthzChecker{allowed: true}
 
-	handler, err := NewHandler(cfg, testServiceConfig(), "http://localhost:4180", "/_auth", authzChecker, testTranslator(), "test-secret")
+	handler, err := NewHandler(cfg, testServiceConfig(), "http://localhost:4180", "/_auth", authzChecker, testTranslator(), "test-secret", createTestTokenKVS(), createTestRateLimitKVS())
 	if err != nil {
 		t.Fatalf("NewHandler() error = %v", err)
 	}
@@ -72,7 +90,7 @@ func TestNewHandler_InvalidSenderType(t *testing.T) {
 
 	authzChecker := &MockAuthzChecker{allowed: true}
 
-	_, err := NewHandler(cfg, testServiceConfig(), "http://localhost:4180", "/_auth", authzChecker, testTranslator(), "test-secret")
+	_, err := NewHandler(cfg, testServiceConfig(), "http://localhost:4180", "/_auth", authzChecker, testTranslator(), "test-secret", createTestTokenKVS(), createTestRateLimitKVS())
 	if err == nil {
 		t.Error("NewHandler() should return error for invalid sender type")
 	}
@@ -95,7 +113,7 @@ func TestHandler_SendLoginLink(t *testing.T) {
 	authzChecker := &MockAuthzChecker{allowed: true}
 	mockSender := &MockSender{}
 
-	handler, _ := NewHandler(cfg, testServiceConfig(), "http://localhost:4180", "/_auth", authzChecker, testTranslator(), "test-secret")
+	handler, _ := NewHandler(cfg, testServiceConfig(), "http://localhost:4180", "/_auth", authzChecker, testTranslator(), "test-secret", createTestTokenKVS(), createTestRateLimitKVS())
 	handler.sender = mockSender // Replace with mock
 
 	email := "user@example.com"
@@ -142,7 +160,7 @@ func TestHandler_SendLoginLink_NotAuthorized(t *testing.T) {
 	authzChecker := &MockAuthzChecker{allowed: false}
 	mockSender := &MockSender{}
 
-	handler, _ := NewHandler(cfg, testServiceConfig(), "http://localhost:4180", "/_auth", authzChecker, testTranslator(), "test-secret")
+	handler, _ := NewHandler(cfg, testServiceConfig(), "http://localhost:4180", "/_auth", authzChecker, testTranslator(), "test-secret", createTestTokenKVS(), createTestRateLimitKVS())
 	handler.sender = mockSender
 
 	email := "unauthorized@example.com"
@@ -172,7 +190,7 @@ func TestHandler_SendLoginLink_RateLimit(t *testing.T) {
 	authzChecker := &MockAuthzChecker{allowed: true}
 	mockSender := &MockSender{}
 
-	handler, _ := NewHandler(cfg, testServiceConfig(), "http://localhost:4180", "/_auth", authzChecker, testTranslator(), "test-secret")
+	handler, _ := NewHandler(cfg, testServiceConfig(), "http://localhost:4180", "/_auth", authzChecker, testTranslator(), "test-secret", createTestTokenKVS(), createTestRateLimitKVS())
 	handler.sender = mockSender
 
 	email := "user@example.com"
@@ -209,7 +227,7 @@ func TestHandler_SendLoginLink_SendFails(t *testing.T) {
 		},
 	}
 
-	handler, _ := NewHandler(cfg, testServiceConfig(), "http://localhost:4180", "/_auth", authzChecker, testTranslator(), "test-secret")
+	handler, _ := NewHandler(cfg, testServiceConfig(), "http://localhost:4180", "/_auth", authzChecker, testTranslator(), "test-secret", createTestTokenKVS(), createTestRateLimitKVS())
 	handler.sender = mockSender
 
 	email := "user@example.com"
@@ -234,7 +252,7 @@ func TestHandler_VerifyToken(t *testing.T) {
 	authzChecker := &MockAuthzChecker{allowed: true}
 	mockSender := &MockSender{}
 
-	handler, _ := NewHandler(cfg, testServiceConfig(), "http://localhost:4180", "/_auth", authzChecker, testTranslator(), "test-secret")
+	handler, _ := NewHandler(cfg, testServiceConfig(), "http://localhost:4180", "/_auth", authzChecker, testTranslator(), "test-secret", createTestTokenKVS(), createTestRateLimitKVS())
 	handler.sender = mockSender
 
 	email := "user@example.com"

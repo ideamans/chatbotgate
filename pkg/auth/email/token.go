@@ -1,14 +1,17 @@
 package email
 
 import (
+	"context"
 	"crypto/hmac"
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
-	"sync"
 	"time"
+
+	"github.com/ideamans/multi-oauth2-proxy/pkg/kvs"
 )
 
 var (
@@ -39,17 +42,16 @@ func (t *Token) IsValid() bool {
 	return time.Now().Before(t.ExpiresAt)
 }
 
-// TokenStore manages email authentication tokens
+// TokenStore manages email authentication tokens using a KVS backend
 type TokenStore struct {
-	tokens map[string]*Token
-	mu     sync.RWMutex
+	kvs    kvs.Store
 	secret []byte
 }
 
-// NewTokenStore creates a new token store
-func NewTokenStore(secret string) *TokenStore {
+// NewTokenStore creates a new token store backed by KVS
+func NewTokenStore(secret string, kvsStore kvs.Store) *TokenStore {
 	return &TokenStore{
-		tokens: make(map[string]*Token),
+		kvs:    kvsStore,
 		secret: []byte(secret),
 	}
 }
@@ -71,7 +73,7 @@ func (s *TokenStore) GenerateToken(email string, duration time.Duration) (string
 	// Encode as base64
 	tokenValue := base64.URLEncoding.EncodeToString(tokenBytes)
 
-	// Store token
+	// Create token
 	token := &Token{
 		Value:     tokenValue,
 		Email:     email,
@@ -80,21 +82,36 @@ func (s *TokenStore) GenerateToken(email string, duration time.Duration) (string
 		Used:      false,
 	}
 
-	s.mu.Lock()
-	s.tokens[tokenValue] = token
-	s.mu.Unlock()
+	// Marshal and store in KVS
+	data, err := json.Marshal(token)
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal token: %w", err)
+	}
+
+	ctx := context.Background()
+	if err := s.kvs.Set(ctx, tokenValue, data, duration); err != nil {
+		return "", fmt.Errorf("failed to store token: %w", err)
+	}
 
 	return tokenValue, nil
 }
 
 // VerifyToken verifies a token and returns the associated email
 func (s *TokenStore) VerifyToken(tokenValue string) (string, error) {
-	s.mu.RLock()
-	token, exists := s.tokens[tokenValue]
-	s.mu.RUnlock()
+	ctx := context.Background()
 
-	if !exists {
-		return "", ErrTokenNotFound
+	// Get token from KVS
+	data, err := s.kvs.Get(ctx, tokenValue)
+	if err != nil {
+		if errors.Is(err, kvs.ErrNotFound) {
+			return "", ErrTokenNotFound
+		}
+		return "", fmt.Errorf("failed to get token: %w", err)
+	}
+
+	var token Token
+	if err := json.Unmarshal(data, &token); err != nil {
+		return "", fmt.Errorf("failed to unmarshal token: %w", err)
 	}
 
 	if token.Used {
@@ -105,37 +122,39 @@ func (s *TokenStore) VerifyToken(tokenValue string) (string, error) {
 		return "", ErrTokenExpired
 	}
 
-	// Mark as used
-	s.mu.Lock()
+	// Mark as used and update in KVS
 	token.Used = true
-	s.mu.Unlock()
+	updatedData, err := json.Marshal(token)
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal updated token: %w", err)
+	}
+
+	ttl := time.Until(token.ExpiresAt)
+	if err := s.kvs.Set(ctx, tokenValue, updatedData, ttl); err != nil {
+		return "", fmt.Errorf("failed to update token: %w", err)
+	}
 
 	return token.Email, nil
 }
 
 // DeleteToken removes a token from the store
 func (s *TokenStore) DeleteToken(tokenValue string) {
-	s.mu.Lock()
-	delete(s.tokens, tokenValue)
-	s.mu.Unlock()
+	ctx := context.Background()
+	_ = s.kvs.Delete(ctx, tokenValue) // Ignore errors for compatibility
 }
 
-// CleanupExpired removes expired tokens
+// CleanupExpired removes expired tokens (no-op for KVS with TTL support)
+// The underlying KVS automatically handles expiration, so this is a no-op for compatibility.
 func (s *TokenStore) CleanupExpired() {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	now := time.Now()
-	for tokenValue, token := range s.tokens {
-		if now.After(token.ExpiresAt) {
-			delete(s.tokens, tokenValue)
-		}
-	}
+	// No-op: KVS implementations with TTL support handle cleanup automatically
 }
 
 // Count returns the number of tokens (for testing)
 func (s *TokenStore) Count() int {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	return len(s.tokens)
+	ctx := context.Background()
+	count, err := s.kvs.Count(ctx, "")
+	if err != nil {
+		return 0
+	}
+	return count
 }
