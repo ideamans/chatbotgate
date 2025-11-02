@@ -23,6 +23,7 @@ func NewGitHubProvider(clientID, clientSecret, redirectURL string) *GitHubProvid
 			RedirectURL:  redirectURL,
 			Scopes: []string{
 				"user:email",
+				"read:user", // For accessing user profile (name)
 			},
 			Endpoint: github.Endpoint,
 		},
@@ -39,19 +40,36 @@ func (p *GitHubProvider) Config() *oauth2.Config {
 	return p.config
 }
 
-// GetUserEmail retrieves the user's email from GitHub
-func (p *GitHubProvider) GetUserEmail(ctx context.Context, token *oauth2.Token) (string, error) {
+// GetUserInfo retrieves the user's information from GitHub
+func (p *GitHubProvider) GetUserInfo(ctx context.Context, token *oauth2.Token) (*UserInfo, error) {
 	client := p.config.Client(ctx, token)
+
+	// Get user profile (name)
+	var userName string
+	userResp, err := client.Get("https://api.github.com/user")
+	if err == nil && userResp.StatusCode == 200 {
+		defer userResp.Body.Close()
+		var user struct {
+			Name  string `json:"name"`
+			Login string `json:"login"`
+		}
+		if json.NewDecoder(userResp.Body).Decode(&user) == nil {
+			userName = user.Name
+			if userName == "" {
+				userName = user.Login // Fallback to login if name is not set
+			}
+		}
+	}
 
 	// Get user's emails
 	resp, err := client.Get("https://api.github.com/user/emails")
 	if err != nil {
-		return "", fmt.Errorf("failed to get user emails: %w", err)
+		return nil, fmt.Errorf("failed to get user emails: %w", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
-		return "", fmt.Errorf("failed to get user emails: status %d", resp.StatusCode)
+		return nil, fmt.Errorf("failed to get user emails: status %d", resp.StatusCode)
 	}
 
 	var emails []struct {
@@ -62,22 +80,43 @@ func (p *GitHubProvider) GetUserEmail(ctx context.Context, token *oauth2.Token) 
 	}
 
 	if err := json.NewDecoder(resp.Body).Decode(&emails); err != nil {
-		return "", fmt.Errorf("failed to decode user emails: %w", err)
+		return nil, fmt.Errorf("failed to decode user emails: %w", err)
 	}
 
+	var email string
 	// Find primary verified email
-	for _, email := range emails {
-		if email.Primary && email.Verified {
-			return email.Email, nil
+	for _, e := range emails {
+		if e.Primary && e.Verified {
+			email = e.Email
+			break
 		}
 	}
 
 	// Fallback to first verified email
-	for _, email := range emails {
-		if email.Verified {
-			return email.Email, nil
+	if email == "" {
+		for _, e := range emails {
+			if e.Verified {
+				email = e.Email
+				break
+			}
 		}
 	}
 
-	return "", ErrEmailNotFound
+	if email == "" {
+		return nil, ErrEmailNotFound
+	}
+
+	return &UserInfo{
+		Email: email,
+		Name:  userName,
+	}, nil
+}
+
+// GetUserEmail retrieves the user's email from GitHub (deprecated, use GetUserInfo)
+func (p *GitHubProvider) GetUserEmail(ctx context.Context, token *oauth2.Token) (string, error) {
+	userInfo, err := p.GetUserInfo(ctx, token)
+	if err != nil {
+		return "", err
+	}
+	return userInfo.Email, nil
 }

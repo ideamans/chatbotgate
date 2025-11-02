@@ -21,6 +21,7 @@ import (
 type mockProvider struct {
 	name          string
 	emailToReturn string
+	nameToReturn  string
 	emailError    error
 }
 
@@ -37,6 +38,16 @@ func (p *mockProvider) Config() *stdoauth2.Config {
 			TokenURL: "https://example.com/token",
 		},
 	}
+}
+
+func (p *mockProvider) GetUserInfo(ctx context.Context, token *stdoauth2.Token) (*oauth2.UserInfo, error) {
+	if p.emailError != nil {
+		return nil, p.emailError
+	}
+	return &oauth2.UserInfo{
+		Email: p.emailToReturn,
+		Name:  p.nameToReturn,
+	}, nil
 }
 
 func (p *mockProvider) GetUserEmail(ctx context.Context, token *stdoauth2.Token) (string, error) {

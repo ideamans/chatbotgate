@@ -79,14 +79,23 @@ func (m *Manager) Exchange(ctx context.Context, providerName, code string) (*oau
 	return token, nil
 }
 
-// GetUserEmail retrieves the user's email using a token
-func (m *Manager) GetUserEmail(ctx context.Context, providerName string, token *oauth2.Token) (string, error) {
+// GetUserInfo retrieves the user's information using a token
+func (m *Manager) GetUserInfo(ctx context.Context, providerName string, token *oauth2.Token) (*UserInfo, error) {
 	provider, err := m.GetProvider(providerName)
+	if err != nil {
+		return nil, err
+	}
+
+	return provider.GetUserInfo(ctx, token)
+}
+
+// GetUserEmail retrieves the user's email using a token (deprecated, use GetUserInfo)
+func (m *Manager) GetUserEmail(ctx context.Context, providerName string, token *oauth2.Token) (string, error) {
+	userInfo, err := m.GetUserInfo(ctx, providerName, token)
 	if err != nil {
 		return "", err
 	}
-
-	return provider.GetUserEmail(ctx, token)
+	return userInfo.Email, nil
 }
 
 // GenerateState generates a random state string for CSRF protection

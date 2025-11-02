@@ -40,32 +40,47 @@ func (p *GoogleProvider) Config() *oauth2.Config {
 	return p.config
 }
 
-// GetUserEmail retrieves the user's email from Google
-func (p *GoogleProvider) GetUserEmail(ctx context.Context, token *oauth2.Token) (string, error) {
+// GetUserInfo retrieves the user's information from Google
+func (p *GoogleProvider) GetUserInfo(ctx context.Context, token *oauth2.Token) (*UserInfo, error) {
 	client := p.config.Client(ctx, token)
 
 	resp, err := client.Get("https://www.googleapis.com/oauth2/v2/userinfo")
 	if err != nil {
-		return "", fmt.Errorf("failed to get user info: %w", err)
+		return nil, fmt.Errorf("failed to get user info: %w", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
-		return "", fmt.Errorf("failed to get user info: status %d", resp.StatusCode)
+		return nil, fmt.Errorf("failed to get user info: status %d", resp.StatusCode)
 	}
 
-	var userInfo struct {
+	var apiUserInfo struct {
 		Email         string `json:"email"`
 		VerifiedEmail bool   `json:"verified_email"`
+		Name          string `json:"name"`
+		GivenName     string `json:"given_name"`
+		FamilyName    string `json:"family_name"`
 	}
 
-	if err := json.NewDecoder(resp.Body).Decode(&userInfo); err != nil {
-		return "", fmt.Errorf("failed to decode user info: %w", err)
+	if err := json.NewDecoder(resp.Body).Decode(&apiUserInfo); err != nil {
+		return nil, fmt.Errorf("failed to decode user info: %w", err)
 	}
 
-	if userInfo.Email == "" {
-		return "", ErrEmailNotFound
+	if apiUserInfo.Email == "" {
+		return nil, ErrEmailNotFound
 	}
 
+	return &UserInfo{
+		Email: apiUserInfo.Email,
+		Name:  apiUserInfo.Name,
+	}, nil
+}
+
+// GetUserEmail retrieves the user's email from Google (deprecated, use GetUserInfo)
+func (p *GoogleProvider) GetUserEmail(ctx context.Context, token *oauth2.Token) (string, error) {
+	userInfo, err := p.GetUserInfo(ctx, token)
+	if err != nil {
+		return "", err
+	}
 	return userInfo.Email, nil
 }

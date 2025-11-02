@@ -70,7 +70,7 @@ func New(cfg WatcherConfig) (*ConfigWatcher, error) {
 		reloadNotify: cfg.ReloadNotify,
 	}
 
-	watcher.logger.Info("ConfigWatcher initialized", "config_path", absPath)
+	watcher.logger.Debug("Config watcher initialized", "path", absPath)
 
 	return watcher, nil
 }
@@ -78,12 +78,13 @@ func New(cfg WatcherConfig) (*ConfigWatcher, error) {
 // Watch starts watching for configuration changes using fsnotify.
 // Call this method in a goroutine. It blocks until the context is cancelled.
 func (w *ConfigWatcher) Watch(ctx context.Context) {
-	w.logger.Info("Starting configuration watch")
+	w.logger.Debug("Starting configuration file watch")
 
 	// Create fsnotify watcher
 	fsWatcher, err := fsnotify.NewWatcher()
 	if err != nil {
-		w.logger.Error("Failed to create fsnotify watcher", "error", err)
+		w.logger.Debug("fsnotify watcher creation failed", "error", err)
+		w.logger.Error("Config watcher startup failed: could not create file watcher")
 		return
 	}
 	defer fsWatcher.Close()
@@ -91,11 +92,12 @@ func (w *ConfigWatcher) Watch(ctx context.Context) {
 	// Watch the config file
 	err = fsWatcher.Add(w.configPath)
 	if err != nil {
-		w.logger.Error("Failed to watch config file", "error", err, "path", w.configPath)
+		w.logger.Debug("File watch add failed", "error", err, "path", w.configPath)
+		w.logger.Error("Config watcher startup failed: could not watch config file", "path", w.configPath)
 		return
 	}
 
-	w.logger.Info("Watching configuration file", "path", w.configPath)
+	w.logger.Debug("Config file watch started", "path", w.configPath)
 
 	// Debounce timer to handle multiple rapid events
 	var debounceTimer *time.Timer
@@ -104,7 +106,7 @@ func (w *ConfigWatcher) Watch(ctx context.Context) {
 	for {
 		select {
 		case <-ctx.Done():
-			w.logger.Info("Configuration watch stopped")
+			w.logger.Debug("Config file watch stopped")
 			if debounceTimer != nil {
 				debounceTimer.Stop()
 			}
@@ -112,13 +114,13 @@ func (w *ConfigWatcher) Watch(ctx context.Context) {
 
 		case event, ok := <-fsWatcher.Events:
 			if !ok {
-				w.logger.Warn("fsnotify events channel closed")
+				w.logger.Warn("File watch stopped: events channel closed unexpectedly")
 				return
 			}
 
 			// Only care about write and create events
 			if event.Op&fsnotify.Write == fsnotify.Write || event.Op&fsnotify.Create == fsnotify.Create {
-				w.logger.Debug("Config file changed", "event", event.Op.String())
+				w.logger.Debug("Config file change detected", "event", event.Op.String())
 
 				// Reset debounce timer
 				if debounceTimer != nil {
@@ -139,10 +141,10 @@ func (w *ConfigWatcher) Watch(ctx context.Context) {
 
 		case err, ok := <-fsWatcher.Errors:
 			if !ok {
-				w.logger.Warn("fsnotify errors channel closed")
+				w.logger.Warn("File watch stopped: errors channel closed unexpectedly")
 				return
 			}
-			w.logger.Error("fsnotify error", "error", err)
+			w.logger.Error("File watch error", "error", err)
 		}
 	}
 }
@@ -162,34 +164,36 @@ func (w *ConfigWatcher) checkAndReload() {
 	// Load new configuration
 	newConfig, err := w.loader.Load()
 	if err != nil {
-		w.logger.Error("Failed to load configuration", "error", err)
+		w.logger.Debug("Config load failed", "error", err)
+		w.logger.Error("Config reload failed: could not load configuration file")
 		return
 	}
 
 	// Calculate new hash
 	newHash, err := calculateConfigHash(newConfig)
 	if err != nil {
-		w.logger.Error("Failed to calculate config hash", "error", err)
+		w.logger.Debug("Hash calculation failed", "error", err)
+		w.logger.Error("Config reload failed: could not calculate config hash")
 		return
 	}
 
 	// Check if configuration has changed
 	if newHash == w.lastHash {
-		w.logger.Debug("Configuration unchanged")
+		w.logger.Debug("Config file changed but content unchanged")
 		return
 	}
 
-	w.logger.Info("Configuration changed, reloading middleware")
+	w.logger.Debug("Config content change detected, starting reload")
 
 	// Reload middleware
 	if err := w.manager.Reload(newConfig); err != nil {
-		w.logger.Error("Failed to reload middleware", "error", err)
+		// Error already logged by manager
 		return
 	}
 
 	// Update last hash
 	w.lastHash = newHash
-	w.logger.Info("Configuration reloaded successfully")
+	// Success already logged by manager
 }
 
 // calculateConfigHash calculates a hash of the configuration for change detection.

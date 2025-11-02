@@ -60,8 +60,8 @@ func (p *CustomProvider) Config() *oauth2.Config {
 	return p.config
 }
 
-// GetUserEmail retrieves the user's email from the custom provider
-func (p *CustomProvider) GetUserEmail(ctx context.Context, token *oauth2.Token) (string, error) {
+// GetUserInfo retrieves the user's information from the custom provider
+func (p *CustomProvider) GetUserInfo(ctx context.Context, token *oauth2.Token) (*UserInfo, error) {
 	// Create HTTP client with custom transport if insecure skip verify is enabled
 	var httpClient *http.Client
 	if p.insecureSkipVerify {
@@ -76,26 +76,54 @@ func (p *CustomProvider) GetUserEmail(ctx context.Context, token *oauth2.Token) 
 
 	resp, err := client.Get(p.userInfoURL)
 	if err != nil {
-		return "", fmt.Errorf("failed to get user info: %w", err)
+		return nil, fmt.Errorf("failed to get user info: %w", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
-		return "", fmt.Errorf("failed to get user info: status %d", resp.StatusCode)
+		return nil, fmt.Errorf("failed to get user info: status %d", resp.StatusCode)
 	}
 
-	var userInfo struct {
+	var apiUserInfo struct {
 		Email         string `json:"email"`
 		VerifiedEmail bool   `json:"email_verified"`
+		Name          string `json:"name"`
+		PreferredName string `json:"preferred_username"`
+		GivenName     string `json:"given_name"`
+		FamilyName    string `json:"family_name"`
 	}
 
-	if err := json.NewDecoder(resp.Body).Decode(&userInfo); err != nil {
-		return "", fmt.Errorf("failed to decode user info: %w", err)
+	if err := json.NewDecoder(resp.Body).Decode(&apiUserInfo); err != nil {
+		return nil, fmt.Errorf("failed to decode user info: %w", err)
 	}
 
-	if userInfo.Email == "" {
-		return "", ErrEmailNotFound
+	if apiUserInfo.Email == "" {
+		return nil, ErrEmailNotFound
 	}
 
+	// Try to get name from various fields
+	name := apiUserInfo.Name
+	if name == "" {
+		name = apiUserInfo.PreferredName
+	}
+	if name == "" && apiUserInfo.GivenName != "" {
+		name = apiUserInfo.GivenName
+		if apiUserInfo.FamilyName != "" {
+			name += " " + apiUserInfo.FamilyName
+		}
+	}
+
+	return &UserInfo{
+		Email: apiUserInfo.Email,
+		Name:  name,
+	}, nil
+}
+
+// GetUserEmail retrieves the user's email from the custom provider (deprecated, use GetUserInfo)
+func (p *CustomProvider) GetUserEmail(ctx context.Context, token *oauth2.Token) (string, error) {
+	userInfo, err := p.GetUserInfo(ctx, token)
+	if err != nil {
+		return "", err
+	}
 	return userInfo.Email, nil
 }

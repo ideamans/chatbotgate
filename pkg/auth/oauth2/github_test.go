@@ -30,8 +30,15 @@ func TestNewGitHubProvider(t *testing.T) {
 		t.Errorf("ClientSecret = %s, want test-client-secret", config.ClientSecret)
 	}
 
-	if len(config.Scopes) != 1 || config.Scopes[0] != "user:email" {
-		t.Errorf("Scopes = %v, want [user:email]", config.Scopes)
+	expectedScopes := []string{"user:email", "read:user"}
+	if len(config.Scopes) != len(expectedScopes) {
+		t.Errorf("Scopes length = %d, want %d", len(config.Scopes), len(expectedScopes))
+	}
+	for i, scope := range expectedScopes {
+		if i >= len(config.Scopes) || config.Scopes[i] != scope {
+			t.Errorf("Scopes = %v, want %v", config.Scopes, expectedScopes)
+			break
+		}
 	}
 }
 

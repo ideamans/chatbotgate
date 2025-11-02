@@ -96,20 +96,48 @@ func checkTTY() bool {
 	return (fileInfo.Mode() & os.ModeCharDevice) != 0
 }
 
-// formatMessage formats a log message with module and level
+// formatMessage formats a log message with level, path, module, and message
+// Format: LEVEL  @path [module] message key=value
+// The "path" key is treated specially and displayed as @path
 func (l *SimpleLogger) formatMessage(level Level, msg string, args ...interface{}) string {
-	// Build message
-	message := msg
+	var pathValue string
+	var pairs []string
+
+	// Extract path and build key-value pairs
 	if len(args) > 0 {
-		// Format key-value pairs
-		var pairs []string
 		for i := 0; i < len(args); i += 2 {
 			if i+1 < len(args) {
-				pairs = append(pairs, fmt.Sprintf("%v=%v", args[i], args[i+1]))
+				key := fmt.Sprintf("%v", args[i])
+				value := fmt.Sprintf("%v", args[i+1])
+
+				// Special handling for "path" key
+				if key == "path" {
+					pathValue = value
+				} else {
+					pairs = append(pairs, fmt.Sprintf("%s=%s", key, value))
+				}
 			}
 		}
-		if len(pairs) > 0 {
-			message = fmt.Sprintf("%s %s", msg, strings.Join(pairs, " "))
+	}
+
+	// Build message with key-value pairs
+	message := msg
+	if len(pairs) > 0 {
+		message = fmt.Sprintf("%s %s", msg, strings.Join(pairs, " "))
+	}
+
+	// Format level (left-aligned, 5 characters for consistent formatting)
+	levelPart := fmt.Sprintf("%-5s", level.String())
+	if l.useColors {
+		levelPart = l.colorizeLevel(level, levelPart)
+	}
+
+	// Format path if present
+	pathPart := ""
+	if pathValue != "" {
+		pathPart = fmt.Sprintf("@%s ", pathValue)
+		if l.useColors {
+			pathPart = colorMagenta + pathPart + colorReset
 		}
 	}
 
@@ -119,13 +147,7 @@ func (l *SimpleLogger) formatMessage(level Level, msg string, args ...interface{
 		modulePart = colorCyan + modulePart + colorReset
 	}
 
-	// Format level
-	levelPart := level.String()
-	if l.useColors {
-		levelPart = l.colorizeLevel(level, levelPart)
-	}
-
-	return fmt.Sprintf("%s %s: %s", modulePart, levelPart, message)
+	return fmt.Sprintf("%s %s%s %s", levelPart, pathPart, modulePart, message)
 }
 
 // colorizeLevel applies color to log level
@@ -185,10 +207,18 @@ func (l *SimpleLogger) Fatal(msg string, args ...interface{}) {
 	l.log(LevelFatal, msg, args...)
 }
 
-// WithModule creates a new logger with a different module name
+// WithModule creates a new logger with a hierarchical component name.
+// If the current logger already has a component (module), the new component
+// is appended with "/" as a separator (e.g., "proxy/middleware/session").
+// This allows tracing the origin of log messages through component hierarchy.
 func (l *SimpleLogger) WithModule(module string) Logger {
+	newModule := module
+	if l.module != "" {
+		// Append to existing component hierarchy
+		newModule = l.module + "/" + module
+	}
 	return &SimpleLogger{
-		module:    module,
+		module:    newModule,
 		level:     l.level,
 		logger:    l.logger,
 		isTTY:     l.isTTY,
@@ -198,11 +228,12 @@ func (l *SimpleLogger) WithModule(module string) Logger {
 
 // Color codes
 const (
-	colorReset  = "\033[0m"
-	colorRed    = "\033[31m"
-	colorGreen  = "\033[32m"
-	colorYellow = "\033[33m"
-	colorCyan   = "\033[36m"
-	colorGray   = "\033[90m"
-	colorBold   = "\033[1m"
+	colorReset   = "\033[0m"
+	colorRed     = "\033[31m"
+	colorGreen   = "\033[32m"
+	colorYellow  = "\033[33m"
+	colorMagenta = "\033[35m"
+	colorCyan    = "\033[36m"
+	colorGray    = "\033[90m"
+	colorBold    = "\033[1m"
 )

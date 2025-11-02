@@ -13,6 +13,7 @@ type MockProvider struct {
 	name      string
 	config    *oauth2.Config
 	userEmail string
+	userName  string
 	err       error
 }
 
@@ -22,6 +23,16 @@ func (m *MockProvider) Name() string {
 
 func (m *MockProvider) Config() *oauth2.Config {
 	return m.config
+}
+
+func (m *MockProvider) GetUserInfo(ctx context.Context, token *oauth2.Token) (*UserInfo, error) {
+	if m.err != nil {
+		return nil, m.err
+	}
+	return &UserInfo{
+		Email: m.userEmail,
+		Name:  m.userName,
+	}, nil
 }
 
 func (m *MockProvider) GetUserEmail(ctx context.Context, token *oauth2.Token) (string, error) {

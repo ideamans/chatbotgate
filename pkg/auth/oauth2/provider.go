@@ -15,9 +15,17 @@ var (
 	ErrEmailNotFound = errors.New("user email not found in OAuth2 response")
 )
 
+// UserInfo represents user information from OAuth2 provider
+type UserInfo struct {
+	Email string // User's email address
+	Name  string // User's display name (optional)
+}
+
 // Provider is an interface for OAuth2 providers
 type Provider interface {
 	Name() string
 	Config() *oauth2.Config
+	GetUserInfo(ctx context.Context, token *oauth2.Token) (*UserInfo, error)
+	// Deprecated: Use GetUserInfo instead
 	GetUserEmail(ctx context.Context, token *oauth2.Token) (string, error)
 }

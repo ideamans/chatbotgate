@@ -36,6 +36,7 @@ test.describe('OAuth2 flow', () => {
     ]);
 
     await expect(page.locator('[data-test="app-user-email"]')).toContainText(TEST_EMAIL);
+    await expect(page.locator('[data-test="app-user-name"]')).toContainText('Test User');
 
     await Promise.all([
       page.waitForURL(/\/_auth\/logout/),
@@ -116,6 +117,9 @@ test.describe('OAuth2 flow', () => {
     // Should be on the protected page (not an error page)
     await expect(page.locator('body')).not.toContainText(/Email Address Required|メールアドレスが必要です/i);
     await expect(page.locator('body')).not.toContainText(/Forbidden|アクセスが拒否されました/i);
+
+    // Name should still be displayed even without email
+    await expect(page.locator('[data-test="app-user-name"]')).toContainText('No Email User');
   });
 
   test('should show error when OAuth2 provider does not provide email and whitelist is configured', async ({
