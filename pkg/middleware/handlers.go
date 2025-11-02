@@ -472,7 +472,8 @@ func (m *Middleware) handleOAuth2Callback(w http.ResponseWriter, r *http.Request
 	// Verify state
 	state := r.URL.Query().Get("state")
 	if state != stateCookie.Value {
-		m.logger.Error("State mismatch")
+		m.logger.Debug("State verification failed", "expected", stateCookie.Value, "actual", state)
+		m.logger.Error("OAuth2 authentication failed: state mismatch")
 		http.Error(w, "Invalid state", http.StatusBadRequest)
 		return
 	}
@@ -480,7 +481,7 @@ func (m *Middleware) handleOAuth2Callback(w http.ResponseWriter, r *http.Request
 	// Get authorization code
 	code := r.URL.Query().Get("code")
 	if code == "" {
-		m.logger.Error("Authorization code not found")
+		m.logger.Error("OAuth2 authentication failed: authorization code not found")
 		http.Error(w, "Authorization code not found", http.StatusBadRequest)
 		return
 	}
@@ -496,35 +497,39 @@ func (m *Middleware) handleOAuth2Callback(w http.ResponseWriter, r *http.Request
 	}
 
 	// Try to get user email from OAuth2 provider
-	// We always try to fetch the email for setting in request headers,
+	// We always try to fetch the user info (email and name) for setting in request headers,
 	// regardless of whether authorization check is required
-	email, err := m.oauthManager.GetUserEmail(r.Context(), providerName, token)
+	userInfo, err := m.oauthManager.GetUserInfo(r.Context(), providerName, token)
+
+	var email, name string
+	if userInfo != nil {
+		email = userInfo.Email
+		name = userInfo.Name
+	}
 
 	// Check if email-based authorization is required
 	if m.authzChecker.RequiresEmail() {
 		// Whitelist configured - email is required for authorization
 		if err != nil {
-			m.logger.Error("Failed to get user email (required for authorization)", "error", err, "provider", providerName)
+			m.logger.Debug("Email fetch failed", "error", err, "provider", providerName)
+			m.logger.Error("OAuth2 authentication failed: email required for authorization but could not be retrieved", "provider", providerName)
 			m.handleEmailFetchError(w, r)
 			return
 		}
 
 		// Check authorization
 		if !m.authzChecker.IsAllowed(email) {
-			m.logger.Warn("User not authorized", "email", email, "provider", providerName)
+			m.logger.Info("OAuth2 authentication denied: user not authorized", "email", email, "provider", providerName)
 			m.handleForbidden(w, r)
 			return
 		}
-
-		m.logger.Info("User authorized", "email", email, "provider", providerName)
 	} else {
 		// No whitelist configured - authentication alone is sufficient
 		// Email is not required for authorization, but we still try to get it for headers
 		if err != nil {
-			m.logger.Warn("Failed to get user email (not required, will proceed without it)", "error", err, "provider", providerName)
+			m.logger.Debug("Email fetch failed (not required for authorization)", "error", err, "provider", providerName)
+			m.logger.Warn("Proceeding without user email", "provider", providerName)
 			email = "" // Clear email if fetch failed when not required
-		} else {
-			m.logger.Info("User authenticated", "email", email, "provider", providerName)
 		}
 	}
 
@@ -544,6 +549,7 @@ func (m *Middleware) handleOAuth2Callback(w http.ResponseWriter, r *http.Request
 	sess := &session.Session{
 		ID:            sessionID,
 		Email:         email,
+		Name:          name,
 		Provider:      providerName,
 		CreatedAt:     time.Now(),
 		ExpiresAt:     time.Now().Add(duration),
@@ -552,7 +558,8 @@ func (m *Middleware) handleOAuth2Callback(w http.ResponseWriter, r *http.Request
 
 	// Store session
 	if err := m.sessionStore.Set(sessionID, sess); err != nil {
-		m.logger.Error("Failed to store session", "error", err)
+		m.logger.Debug("Session store failed", "error", err)
+		m.logger.Error("OAuth2 authentication failed: could not store session")
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
@@ -582,7 +589,8 @@ func (m *Middleware) handleOAuth2Callback(w http.ResponseWriter, r *http.Request
 		MaxAge: -1,
 	})
 
-	m.logger.Info("User authenticated", "email", email, "provider", providerName)
+	// Log success after all session/cookie operations succeed
+	m.logger.Info("OAuth2 authentication successful", "email", email, "name", name, "provider", providerName)
 
 	// Redirect to original URL or home
 	http.Redirect(w, r, m.getRedirectURL(w, r), http.StatusFound)
@@ -616,7 +624,7 @@ func (m *Middleware) handleEmailSend(w http.ResponseWriter, r *http.Request) {
 
 	// Check authorization before sending
 	if !m.authzChecker.IsAllowed(email) {
-		m.logger.Warn("User not authorized for email login", "email", email)
+		m.logger.Info("Email authentication denied: user not authorized", "email", email)
 		m.handleForbidden(w, r)
 		return
 	}
@@ -624,10 +632,12 @@ func (m *Middleware) handleEmailSend(w http.ResponseWriter, r *http.Request) {
 	// Send login link
 	err := m.emailHandler.SendLoginLink(email, lang)
 	if err != nil {
-		m.logger.Error("Failed to send login link", "email", email, "error", err)
+		m.logger.Debug("Email send failed", "email", email, "error", err)
+		m.logger.Error("Email authentication failed: could not send login link", "email", email)
 		http.Error(w, t("error.internal"), http.StatusInternalServerError)
 		return
 	}
+	m.logger.Info("Login link sent", "email", email)
 
 	// Use embedded CSS
 	prefix := m.config.Server.GetAuthPathPrefix()
@@ -680,7 +690,8 @@ func (m *Middleware) handleEmailVerify(w http.ResponseWriter, r *http.Request) {
 	// Verify token
 	email, err := m.emailHandler.VerifyToken(token)
 	if err != nil {
-		m.logger.Error("Failed to verify token", "error", err)
+		m.logger.Debug("Token verification failed", "error", err)
+		m.logger.Error("Email authentication failed: invalid or expired token")
 		theme := i18n.DetectTheme(r)
 
 		// Use embedded CSS
@@ -723,13 +734,13 @@ func (m *Middleware) handleEmailVerify(w http.ResponseWriter, r *http.Request) {
 	// Check authorization if whitelist is configured
 	if m.authzChecker.RequiresEmail() {
 		if !m.authzChecker.IsAllowed(email) {
-			m.logger.Warn("User not authorized for email login", "email", email)
+			m.logger.Info("Email authentication denied: user not authorized", "email", email)
 			m.handleForbidden(w, r)
 			return
 		}
-		m.logger.Info("User authorized via email", "email", email)
+		m.logger.Debug("User authorized", "email", email)
 	} else {
-		m.logger.Info("No whitelist configured, skipping authorization check for email login", "email", email)
+		m.logger.Debug("No whitelist configured, skipping authorization check", "email", email)
 	}
 
 	// Create session
@@ -756,7 +767,8 @@ func (m *Middleware) handleEmailVerify(w http.ResponseWriter, r *http.Request) {
 
 	// Store session
 	if err := m.sessionStore.Set(sessionID, sess); err != nil {
-		m.logger.Error("Failed to store session", "error", err)
+		m.logger.Debug("Session store failed", "error", err)
+		m.logger.Error("Email authentication failed: could not store session")
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
@@ -772,7 +784,7 @@ func (m *Middleware) handleEmailVerify(w http.ResponseWriter, r *http.Request) {
 		SameSite: http.SameSiteLaxMode,
 	})
 
-	m.logger.Info("User authenticated via email", "email", email)
+	m.logger.Info("Email authentication successful", "email", email)
 
 	// Redirect to original URL or home
 	http.Redirect(w, r, m.getRedirectURL(w, r), http.StatusFound)

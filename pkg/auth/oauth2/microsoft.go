@@ -42,44 +42,58 @@ func (p *MicrosoftProvider) Config() *oauth2.Config {
 	return p.config
 }
 
-// GetUserEmail retrieves the user's email from Microsoft Graph API
-func (p *MicrosoftProvider) GetUserEmail(ctx context.Context, token *oauth2.Token) (string, error) {
+// GetUserInfo retrieves the user's information from Microsoft Graph API
+func (p *MicrosoftProvider) GetUserInfo(ctx context.Context, token *oauth2.Token) (*UserInfo, error) {
 	client := p.config.Client(ctx, token)
 
 	resp, err := client.Get("https://graph.microsoft.com/v1.0/me")
 	if err != nil {
-		return "", fmt.Errorf("failed to get user info: %w", err)
+		return nil, fmt.Errorf("failed to get user info: %w", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
-		return "", fmt.Errorf("failed to get user info: status %d", resp.StatusCode)
+		return nil, fmt.Errorf("failed to get user info: status %d", resp.StatusCode)
 	}
 
-	var userInfo struct {
-		Mail                string `json:"mail"`
-		UserPrincipalName   string `json:"userPrincipalName"`
-		PreferredUsername   string `json:"preferredUsername"`
+	var apiUserInfo struct {
+		Mail              string `json:"mail"`
+		UserPrincipalName string `json:"userPrincipalName"`
+		PreferredUsername string `json:"preferredUsername"`
+		DisplayName       string `json:"displayName"`
 	}
 
-	if err := json.NewDecoder(resp.Body).Decode(&userInfo); err != nil {
-		return "", fmt.Errorf("failed to decode user info: %w", err)
+	if err := json.NewDecoder(resp.Body).Decode(&apiUserInfo); err != nil {
+		return nil, fmt.Errorf("failed to decode user info: %w", err)
 	}
 
+	var email string
 	// Try mail field first (most reliable)
-	if userInfo.Mail != "" {
-		return userInfo.Mail, nil
+	if apiUserInfo.Mail != "" {
+		email = apiUserInfo.Mail
+	} else if apiUserInfo.UserPrincipalName != "" {
+		// Fallback to userPrincipalName
+		email = apiUserInfo.UserPrincipalName
+	} else if apiUserInfo.PreferredUsername != "" {
+		// Last resort: preferredUsername
+		email = apiUserInfo.PreferredUsername
 	}
 
-	// Fallback to userPrincipalName
-	if userInfo.UserPrincipalName != "" {
-		return userInfo.UserPrincipalName, nil
+	if email == "" {
+		return nil, ErrEmailNotFound
 	}
 
-	// Last resort: preferredUsername
-	if userInfo.PreferredUsername != "" {
-		return userInfo.PreferredUsername, nil
-	}
+	return &UserInfo{
+		Email: email,
+		Name:  apiUserInfo.DisplayName,
+	}, nil
+}
 
-	return "", ErrEmailNotFound
+// GetUserEmail retrieves the user's email from Microsoft Graph API (deprecated, use GetUserInfo)
+func (p *MicrosoftProvider) GetUserEmail(ctx context.Context, token *oauth2.Token) (string, error) {
+	userInfo, err := p.GetUserInfo(ctx, token)
+	if err != nil {
+		return "", err
+	}
+	return userInfo.Email, nil
 }

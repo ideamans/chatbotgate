@@ -6,6 +6,7 @@ import "time"
 type Session struct {
 	ID           string
 	Email        string
+	Name         string // User's display name from OAuth2 provider
 	Provider     string
 	CreatedAt    time.Time
 	ExpiresAt    time.Time

@@ -59,10 +59,17 @@ func (l *TestLogger) Fatal(msg string, args ...interface{}) {
 	}
 }
 
-// WithModule creates a new logger with a different module name
+// WithModule creates a new logger with a hierarchical component name.
+// If the current logger already has a component (module), the new component
+// is appended with "/" as a separator (e.g., "proxy/middleware/session").
 func (l *TestLogger) WithModule(module string) Logger {
+	newModule := module
+	if l.module != "" {
+		// Append to existing component hierarchy
+		newModule = l.module + "/" + module
+	}
 	return &TestLogger{
-		module: module,
+		module: newModule,
 		t:      l.t,
 	}
 }

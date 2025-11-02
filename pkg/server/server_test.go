@@ -37,7 +37,8 @@ func (m *MockAuthzChecker) IsAllowed(email string) bool {
 type MockOAuth2Provider struct {
 	name      string
 	userEmail string
-	emailErr  error // If set, GetUserEmail will return this error
+	userName  string
+	emailErr  error // If set, GetUserInfo will return this error
 }
 
 func (m *MockOAuth2Provider) Name() string {
@@ -54,6 +55,16 @@ func (m *MockOAuth2Provider) Config() *oauth2lib.Config {
 			TokenURL: "http://provider.test/token",
 		},
 	}
+}
+
+func (m *MockOAuth2Provider) GetUserInfo(ctx context.Context, token *oauth2lib.Token) (*oauth2.UserInfo, error) {
+	if m.emailErr != nil {
+		return nil, m.emailErr
+	}
+	return &oauth2.UserInfo{
+		Email: m.userEmail,
+		Name:  m.userName,
+	}, nil
 }
 
 func (m *MockOAuth2Provider) GetUserEmail(ctx context.Context, token *oauth2lib.Token) (string, error) {

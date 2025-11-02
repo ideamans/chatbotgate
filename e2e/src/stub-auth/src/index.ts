@@ -35,6 +35,7 @@ type AuthorizationCode = {
   clientId: string;
   redirectUri: string;
   userEmail: string;
+  userName: string;
   scope?: string;
   createdAt: Date;
   codeChallenge?: string;
@@ -46,6 +47,7 @@ type AccessToken = {
   token: string;
   clientId: string;
   userEmail: string;
+  userName: string;
   scope?: string;
   createdAt: Date;
   expiresAt: Date;
@@ -296,6 +298,7 @@ app.post(
       clientId: authRequest.clientId,
       redirectUri: authRequest.redirectUri,
       userEmail: req.session.user!.email,
+      userName: req.session.user!.name,
       scope: authRequest.scope,
       createdAt: new Date(),
       codeChallenge: authRequest.codeChallenge,
@@ -381,6 +384,7 @@ app.post(
       token: accessToken,
       clientId: validatedClient.clientId,
       userEmail: authCode.userEmail,
+      userName: authCode.userName,
       scope: authCode.scope,
       createdAt,
       expiresAt,
@@ -436,6 +440,7 @@ app.get(
     if (sessionToken.userEmail === NO_EMAIL_USER_EMAIL) {
       res.json({
         sub: sessionToken.userEmail,
+        name: sessionToken.userName,
         // No email field - simulating provider that doesn't provide email
       });
     } else {
@@ -443,6 +448,7 @@ app.get(
         sub: sessionToken.userEmail,
         email: sessionToken.userEmail,
         email_verified: true,
+        name: sessionToken.userName,
       });
     }
   })
@@ -462,7 +468,7 @@ app.get(
       id_token_signing_alg_values_supported: ['RS256'],
       scopes_supported: ['openid', 'email', 'profile'],
       token_endpoint_auth_methods_supported: ['client_secret_post', 'client_secret_basic'],
-      claims_supported: ['sub', 'email', 'email_verified'],
+      claims_supported: ['sub', 'email', 'email_verified', 'name'],
     });
   })
 );

@@ -125,7 +125,7 @@ func (m *Middleware) requireAuth(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Session is valid, add auth headers and call next handler
-	addAuthHeaders(r, sess.Email, sess.Provider)
+	addAuthHeaders(r, sess.Email, sess.Name, sess.Provider)
 
 	if m.next != nil {
 		m.next.ServeHTTP(w, r)
@@ -163,9 +163,12 @@ func (m *Middleware) redirectToLogin(w http.ResponseWriter, r *http.Request) {
 }
 
 // addAuthHeaders adds authentication headers to the request
-func addAuthHeaders(r *http.Request, email, provider string) {
+func addAuthHeaders(r *http.Request, email, name, provider string) {
 	r.Header.Set("X-Forwarded-User", email)
 	r.Header.Set("X-Forwarded-Email", email)
+	if name != "" {
+		r.Header.Set("X-Forwarded-Name", name)
+	}
 	r.Header.Set("X-Auth-Provider", provider)
 	r.Header.Set("X-Authenticated", "true")
 }

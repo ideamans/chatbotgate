@@ -127,6 +127,31 @@ func TestSimpleLogger_Log(t *testing.T) {
 				"host=localhost",
 			},
 		},
+		{
+			name:    "message with path",
+			logFunc: logger.Info,
+			msg:     "authentication successful",
+			args:    []interface{}{"path", "/_auth/login", "email", "user@example.com"},
+			contains: []string{
+				"@/_auth/login",
+				"[test]",
+				"INFO",
+				"authentication successful",
+				"email=user@example.com",
+			},
+		},
+		{
+			name:    "message with path only",
+			logFunc: logger.Debug,
+			msg:     "handling request",
+			args:    []interface{}{"path", "/api/users"},
+			contains: []string{
+				"@/api/users",
+				"[test]",
+				"DEBUG",
+				"handling request",
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -217,8 +242,57 @@ func TestSimpleLogger_WithModule(t *testing.T) {
 	subLogger.Info("test message")
 	output := buf.String()
 
-	if !strings.Contains(output, "[submodule]") {
-		t.Errorf("expected [submodule] in output, got: %s", output)
+	// Test hierarchical component naming: main -> main/submodule
+	if !strings.Contains(output, "[main/submodule]") {
+		t.Errorf("expected [main/submodule] in output (hierarchical component), got: %s", output)
+	}
+}
+
+func TestSimpleLogger_WithModule_Hierarchy(t *testing.T) {
+	var buf bytes.Buffer
+	logger := &SimpleLogger{
+		module:    "main",
+		level:     LevelInfo,
+		logger:    log.New(&buf, "", 0),
+		isTTY:     false,
+		useColors: false,
+	}
+
+	// Create nested hierarchy: main -> main/manager -> main/manager/middleware
+	managerLogger := logger.WithModule("manager")
+	middlewareLogger := managerLogger.WithModule("middleware")
+
+	middlewareLogger.Info("test message")
+	output := buf.String()
+
+	// Test multi-level hierarchical component naming
+	if !strings.Contains(output, "[main/manager/middleware]") {
+		t.Errorf("expected [main/manager/middleware] in output (multi-level hierarchy), got: %s", output)
+	}
+}
+
+func TestSimpleLogger_WithModule_EmptyParent(t *testing.T) {
+	var buf bytes.Buffer
+	logger := &SimpleLogger{
+		module:    "", // Empty parent component
+		level:     LevelInfo,
+		logger:    log.New(&buf, "", 0),
+		isTTY:     false,
+		useColors: false,
+	}
+
+	subLogger := logger.WithModule("component")
+
+	subLogger.Info("test message")
+	output := buf.String()
+
+	// When parent is empty, should just use the new component name
+	if !strings.Contains(output, "[component]") {
+		t.Errorf("expected [component] in output (no parent), got: %s", output)
+	}
+	// Should not have a leading slash
+	if strings.Contains(output, "[/component]") {
+		t.Errorf("unexpected leading slash in output: %s", output)
 	}
 }
 

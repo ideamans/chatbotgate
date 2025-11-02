@@ -39,6 +39,7 @@ app.get('/health', (_req, res) => {
 app.get('/', (req, res) => {
   const isAuthenticated = req.header('x-authenticated') === 'true';
   const forwardedEmail = req.header('x-forwarded-email') || '';
+  const forwardedName = req.header('x-forwarded-name') || '';
   const forwardedProvider = req.header('x-auth-provider') ?? 'unknown';
   const forwardedUser = req.header('x-forwarded-user') ?? forwardedEmail ?? 'guest';
 
@@ -61,6 +62,7 @@ app.get('/', (req, res) => {
 
   // Email might be empty for OAuth2 providers that don't provide email
   const emailDisplay = forwardedEmail || '(email not provided)';
+  const nameDisplay = forwardedName || '(name not provided)';
 
   const body = `
     <header>
@@ -69,7 +71,8 @@ app.get('/', (req, res) => {
     </header>
     <main>
       <div class="card" data-test="app-content">
-        <p data-test="app-user-name">Welcome, ${forwardedUser}!</p>
+        <p data-test="app-user-name">Name: ${nameDisplay}</p>
+        <p data-test="app-user-login">Login: ${forwardedUser}</p>
         <p data-test="app-auth-provider">Provider: ${forwardedProvider}</p>
         <form method="post" action="/_auth/logout">
           <button type="submit" data-test="oauth-signout">サインアウト</button>

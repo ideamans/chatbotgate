@@ -88,7 +88,7 @@ func New(cfg ManagerConfig) (*MiddlewareManager, error) {
 	}
 
 	manager.current.Store(mw)
-	manager.logger.Info("MiddlewareManager initialized")
+	manager.logger.Info("Middleware manager initialized successfully")
 
 	return manager, nil
 }
@@ -106,22 +106,23 @@ func (m *MiddlewareManager) Reload(newConfig *config.Config) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	m.logger.Info("Reloading middleware configuration")
+	m.logger.Debug("Starting middleware configuration reload")
 
 	// Validate new configuration
 	if errs := middleware.ValidateConfig(newConfig); len(errs) > 0 {
-		// Log each validation error as a warning (not fatal for reload)
-		m.logger.Warn("Configuration validation failed, keeping current configuration")
+		// Log each validation error
 		for _, ve := range errs {
-			m.logger.Warn("Validation error", "field", ve.Field, "message", ve.Message)
+			m.logger.Debug("Configuration validation error", "field", ve.Field, "message", ve.Message)
 		}
+		m.logger.Warn("Configuration reload failed: validation errors detected, keeping current configuration")
 		return errs
 	}
 
 	// Create new middleware instance
 	newMw, err := m.createMiddleware(newConfig)
 	if err != nil {
-		m.logger.Error("Failed to create new middleware", "error", err)
+		m.logger.Debug("Middleware creation failed", "error", err)
+		m.logger.Error("Configuration reload failed: could not create new middleware")
 		return fmt.Errorf("failed to create new middleware: %w", err)
 	}
 
@@ -129,7 +130,7 @@ func (m *MiddlewareManager) Reload(newConfig *config.Config) error {
 	m.current.Store(newMw)
 	m.config = newConfig
 
-	m.logger.Info("Middleware reloaded successfully")
+	m.logger.Info("Configuration reloaded successfully")
 	return nil
 }
 
@@ -199,7 +200,7 @@ func (m *MiddlewareManager) createMiddleware(cfg *config.Config) (*middleware.Mi
 			)
 		case "custom":
 			if providerCfg.AuthURL == "" || providerCfg.TokenURL == "" || providerCfg.UserInfoURL == "" {
-				m.logger.Warn("Custom OAuth2 provider missing required URLs", "provider", providerCfg.Name)
+				m.logger.Warn("Skipping custom OAuth2 provider: missing required URLs", "provider", providerCfg.Name)
 				continue
 			}
 			provider = oauth2.NewCustomProvider(
@@ -213,17 +214,21 @@ func (m *MiddlewareManager) createMiddleware(cfg *config.Config) (*middleware.Mi
 				providerCfg.InsecureSkipVerify,
 			)
 		default:
-			m.logger.Warn("Unknown OAuth2 provider type", "provider", providerCfg.Name, "type", providerType)
+			m.logger.Warn("Skipping OAuth2 provider: unknown provider type", "provider", providerCfg.Name, "type", providerType)
 			continue
 		}
 
 		oauthManager.AddProvider(provider)
-		m.logger.Debug("OAuth2 provider registered", "provider", providerCfg.Name)
+		m.logger.Debug("OAuth2 provider registered", "provider", providerCfg.Name, "type", providerType)
 	}
 
 	// Create authorization checker
 	authzChecker := authz.NewEmailChecker(cfg.Authorization)
-	m.logger.Debug("Authorization checker initialized", "allowed_entries", len(cfg.Authorization.Allowed))
+	if len(cfg.Authorization.Allowed) > 0 {
+		m.logger.Debug("Authorization checker initialized", "allowed_entries", len(cfg.Authorization.Allowed))
+	} else {
+		m.logger.Debug("Authorization checker initialized with no restrictions")
+	}
 
 	// Create email authentication handler if enabled
 	var emailHandler *email.Handler
@@ -251,7 +256,7 @@ func (m *MiddlewareManager) createMiddleware(cfg *config.Config) (*middleware.Mi
 		if err != nil {
 			return nil, fmt.Errorf("failed to create email handler: %w", err)
 		}
-		m.logger.Debug("Email authentication enabled", "sender", cfg.EmailAuth.SenderType)
+		m.logger.Debug("Email authentication handler initialized", "sender", cfg.EmailAuth.SenderType)
 	}
 
 	// Create middleware
