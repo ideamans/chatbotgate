@@ -247,7 +247,7 @@ server:
 
 #### ログ・国際化
 - `github.com/fatih/color` - カラー出力（TTY検出付き）
-- `github.com/ideamans/go-l10n` - 国際化（i18n）対応
+- `pkg/i18n` - 独自実装の国際化（i18n）パッケージ（HTTPリクエストからの言語・テーマ検出、翻訳機能）
 - 標準ライブラリ `log` - ベースロガー
 
 ### フロントエンド
@@ -567,8 +567,8 @@ logging:
   # カラー出力（TTY自動検出、パイプ時は無効化）
   color: true
 
-  # 言語はLANGUAGE/LANG環境変数から自動検出
-  # go-l10nが自動判別（ja: 日本語, en: 英語）
+  # 言語はHTTPリクエストから自動検出
+  # i18nパッケージがクエリパラメータ、Cookie、Accept-Languageヘッダーから判別（ja: 日本語, en: 英語）
 
   # 構造化データの出力（将来実装）
   # structured: false
@@ -842,72 +842,62 @@ TTY（端末）に出力する場合のみカラー表示を有効化。パイ�
 
 ### 国際化（i18n）
 
-`github.com/ideamans/go-l10n` を使用して日英対応。
+`pkg/i18n` パッケージで独自実装した日英対応の国際化システム。
 
 **特徴:**
-- 翻訳ファイルは不要
-- ソースコードに直接翻訳を記述
-- LANGUAGE/LANG環境変数から自動で言語を検出
-- テンプレート（Go template）による動的な値の埋め込み
+- 翻訳ファイルは不要（ソースコードに直接翻訳を記述）
+- HTTPリクエストから言語を自動検出（クエリパラメータ > Cookie > Accept-Languageヘッダー）
+- テーマ切替対応（Auto/Light/Dark）
+- fmt.Sprintf形式での動的な値の埋め込み
+- 日英対応（English, Japanese）
 
-**ログメッセージの翻訳例:**
+**翻訳の定義:**
 ```go
-import "github.com/ideamans/go-l10n"
+import "github.com/ideamans/multi-oauth2-proxy/pkg/i18n"
 
-// 翻訳をソースコードに定義
-var translations = l10n.Translations{
-    "server.started": {
-        "ja": "サーバーを起動しました port={{.port}}",
-        "en": "Server started port={{.port}}",
+// pkg/i18n/i18n.go に defaultTranslations として定義
+var defaultTranslations = i18n.Translations{
+    i18n.English: i18n.Translation{
+        "service.name":        "Multi OAuth2 Proxy",
+        "login.title":         "Login",
+        "login.heading":       "Sign In",
+        "email.sent.message":  "If your email address is authorized, you will receive a login link shortly.",
     },
-    "oauth2.initialized": {
-        "ja": "{{.provider}}認証を初期化しました",
-        "en": "{{.provider}} authentication initialized",
-    },
-    "email.link_sent": {
-        "ja": "ログインリンクを送信しました to={{.to}}",
-        "en": "Login link sent to={{.to}}",
-    },
-    "authz.denied": {
-        "ja": "認可に失敗しました email={{.email}}",
-        "en": "Authorization denied email={{.email}}",
+    i18n.Japanese: i18n.Translation{
+        "service.name":        "Multi OAuth2 Proxy",
+        "login.title":         "ログイン",
+        "login.heading":       "サインイン",
+        "email.sent.message":  "メールアドレスが承認されている場合、まもなくログインリンクが届きます。",
     },
 }
-
-// 使用例
-translator := l10n.New(translations)
-message := translator.T("server.started", map[string]interface{}{
-    "port": 4180,
-})
-logger.Info(message)
 ```
 
-**メールテンプレートの翻訳例:**
+**使用例（Webハンドラー）:**
 ```go
-var emailTemplates = l10n.Translations{
-    "email.subject": {
-        "ja": "ログインリンク - {{.serviceName}}",
-        "en": "Login Link - {{.serviceName}}",
-    },
-    "email.body": {
-        "ja": `以下のリンクをクリックしてログインしてください。
-このリンクは{{.expire}}分間有効です。
+func handleLogin(w http.ResponseWriter, r *http.Request) {
+    // 言語とテーマを自動検出
+    lang := i18n.DetectLanguage(r)
+    theme := i18n.DetectTheme(r)
 
-{{.loginURL}}
+    // 翻訳関数を作成
+    t := func(key string) string { return translator.T(lang, key) }
 
-サービス: {{.serviceName}}
-
-このメールに心当たりがない場合は、無視してください。`,
-        "en": `Click the link below to log in.
-This link is valid for {{.expire}} minutes.
-
-{{.loginURL}}
-
-Service: {{.serviceName}}
-
-If you did not request this email, please ignore it.`,
-    },
+    // HTMLテンプレートで使用
+    html := `<h1>` + t("login.heading") + `</h1>`
 }
+```
+
+**使用例（メール送信）:**
+```go
+// 動的な値の埋め込み（fmt.Sprintf形式）
+subject := fmt.Sprintf(translator.T(lang, "email.login.subject"), serviceName)
+// "Login Link - My Service" または "ログインリンク - My Service"
+```
+
+**Webページでの言語・テーマ切替:**
+- クエリパラメータ: `?lang=ja&theme=dark`
+- Cookie経由: JavaScriptで `setCookie("lang", "ja", 365)`
+- Accept-Languageヘッダー: ブラウザの言語設定から自動検出（フォールバック）
 ```
 
 ### ロガーインターフェース
@@ -1728,7 +1718,7 @@ function changeLanguage(lang) {
 ### その他
 - [water.css](https://watercss.kognise.dev/)
 - [lego - Let's Encrypt Client](https://go-acme.github.io/lego/)
-- [github.com/ideamans/go-l10n](https://github.com/ideamans/go-l10n)
+- [Hermes - Email Template Library](https://github.com/matcornic/hermes) (フォーク版: github.com/ideamans/hermes)
 
 ## ライセンス
 
