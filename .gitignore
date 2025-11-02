@@ -35,8 +35,9 @@ go.work
 Thumbs.db
 
 # Application binary
-multi-oauth2-proxy
+/multi-oauth2-proxy
 cmd/multi-oauth2-proxy/multi-oauth2-proxy
+bin/
 
 # Config files with secrets (example files are OK)
 config.yaml
