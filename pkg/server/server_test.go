@@ -13,6 +13,7 @@ import (
 	"github.com/ideamans/multi-oauth2-proxy/pkg/authz"
 	"github.com/ideamans/multi-oauth2-proxy/pkg/config"
 	"github.com/ideamans/multi-oauth2-proxy/pkg/i18n"
+	"github.com/ideamans/multi-oauth2-proxy/pkg/kvs"
 	"github.com/ideamans/multi-oauth2-proxy/pkg/logging"
 	"github.com/ideamans/multi-oauth2-proxy/pkg/proxy"
 	"github.com/ideamans/multi-oauth2-proxy/pkg/session"
@@ -563,6 +564,10 @@ func setupTestServerWithEmail(t *testing.T) (*Server, *session.MemoryStore) {
 	authzChecker := &MockAuthzChecker{allowed: true}
 	translator := i18n.NewTranslator()
 
+	// Create KVS stores for testing
+	tokenKVS, _ := kvs.NewMemoryStore("token:", kvs.MemoryConfig{CleanupInterval: 1 * time.Minute})
+	rateLimitKVS, _ := kvs.NewMemoryStore("ratelimit:", kvs.MemoryConfig{CleanupInterval: 1 * time.Minute})
+
 	// Create email handler
 	emailHandler, err := email.NewHandler(
 		cfg.EmailAuth,
@@ -572,6 +577,8 @@ func setupTestServerWithEmail(t *testing.T) (*Server, *session.MemoryStore) {
 		authzChecker,
 		translator,
 		cfg.Session.CookieSecret,
+		tokenKVS,
+		rateLimitKVS,
 	)
 	if err != nil {
 		t.Fatalf("Failed to create email handler: %v", err)

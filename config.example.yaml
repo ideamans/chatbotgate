@@ -144,3 +144,61 @@ logging:
   level: "info"         # debug, info, warn, error
   module_level: "debug" # Log level for sub-modules
   color: true           # Enable colored output (auto-detects TTY)
+
+# KVS (Key-Value Store) configuration
+# Used for session storage, OTP tokens, and rate limiting
+#
+# Design: Single shared KVS backend with namespace isolation (recommended),
+# or dedicated backends for each use case (optional overrides).
+kvs:
+  # Default KVS configuration (shared by all use cases)
+  # Sessions, tokens, and rate limits will use this backend with different namespace prefixes
+  default:
+    type: "memory"  # "memory", "leveldb", or "redis"
+
+    # Memory-specific config (used when type: "memory")
+    memory:
+      cleanup_interval: "5m"  # How often to clean up expired keys
+
+    # LevelDB-specific config (used when type: "leveldb")
+    # leveldb:
+    #   path: "/var/lib/multi-oauth2-proxy/kvs"  # Storage path (empty = OS cache/temp dir)
+    #   sync_writes: false  # Enable for safer writes (slower performance)
+    #   cleanup_interval: "5m"  # Background cleanup for expired keys
+
+    # Redis-specific config (used when type: "redis")
+    # redis:
+    #   addr: "localhost:6379"
+    #   password: ""
+    #   db: 0
+    #   pool_size: 0  # 0 = default (10 * CPU cores)
+
+  # Namespace prefixes for shared KVS (optional, defaults shown below)
+  # These prefixes isolate different data types when using a shared backend
+  namespaces:
+    session: "session:"     # Prefix for session keys
+    token: "token:"         # Prefix for OTP token keys
+    ratelimit: "ratelimit:" # Prefix for rate limit bucket keys
+
+  # Optional: Override session storage with dedicated backend
+  # If not specified, uses default KVS with "session:" prefix
+  # session:
+  #   type: "redis"
+  #   redis:
+  #     addr: "localhost:6379"
+  #     db: 1
+  #     pool_size: 20
+
+  # Optional: Override token storage with dedicated backend
+  # If not specified, uses default KVS with "token:" prefix
+  # token:
+  #   type: "memory"
+  #   memory:
+  #     cleanup_interval: "1m"
+
+  # Optional: Override rate limit storage with dedicated backend
+  # If not specified, uses default KVS with "ratelimit:" prefix
+  # ratelimit:
+  #   type: "leveldb"
+  #   leveldb:
+  #     path: "/var/lib/multi-oauth2-proxy/ratelimit"

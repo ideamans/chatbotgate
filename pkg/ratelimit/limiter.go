@@ -1,30 +1,32 @@
 package ratelimit
 
 import (
-	"sync"
+	"context"
+	"encoding/json"
 	"time"
+
+	"github.com/ideamans/multi-oauth2-proxy/pkg/kvs"
 )
 
-// Limiter implements a simple token bucket rate limiter
+// Limiter implements a simple token bucket rate limiter backed by KVS
 type Limiter struct {
-	buckets map[string]*bucket
-	mu      sync.RWMutex
-	rate    int           // tokens per interval
+	kvs      kvs.Store
+	rate     int           // tokens per interval
 	interval time.Duration
 }
 
 // bucket represents a token bucket for a specific key
 type bucket struct {
-	tokens     int
-	lastRefill time.Time
+	Tokens     int       `json:"tokens"`
+	LastRefill time.Time `json:"last_refill"`
 }
 
-// NewLimiter creates a new rate limiter
+// NewLimiter creates a new rate limiter backed by KVS
 // rate: number of allowed requests
 // interval: time window for the rate
-func NewLimiter(rate int, interval time.Duration) *Limiter {
+func NewLimiter(rate int, interval time.Duration, kvsStore kvs.Store) *Limiter {
 	return &Limiter{
-		buckets:  make(map[string]*bucket),
+		kvs:      kvsStore,
 		rate:     rate,
 		interval: interval,
 	}
@@ -32,38 +34,61 @@ func NewLimiter(rate int, interval time.Duration) *Limiter {
 
 // Allow checks if a request is allowed for the given key
 func (l *Limiter) Allow(key string) bool {
-	l.mu.Lock()
-	defer l.mu.Unlock()
+	ctx := context.Background()
 
 	// Handle zero rate case
 	if l.rate <= 0 {
 		return false
 	}
 
-	b, exists := l.buckets[key]
-	if !exists {
+	// Try to get existing bucket
+	data, err := l.kvs.Get(ctx, key)
+	var b bucket
+
+	if err != nil {
 		// First request for this key
-		l.buckets[key] = &bucket{
-			tokens:     l.rate - 1,
-			lastRefill: time.Now(),
+		b = bucket{
+			Tokens:     l.rate - 1,
+			LastRefill: time.Now(),
+		}
+		// Store and return true
+		if jsonData, err := json.Marshal(b); err == nil {
+			_ = l.kvs.Set(ctx, key, jsonData, 0) // No TTL
+		}
+		return true
+	}
+
+	// Unmarshal existing bucket
+	if err := json.Unmarshal(data, &b); err != nil {
+		// Corrupted data, treat as new bucket
+		b = bucket{
+			Tokens:     l.rate - 1,
+			LastRefill: time.Now(),
+		}
+		if jsonData, err := json.Marshal(b); err == nil {
+			_ = l.kvs.Set(ctx, key, jsonData, 0)
 		}
 		return true
 	}
 
 	// Refill tokens based on time elapsed
 	now := time.Now()
-	elapsed := now.Sub(b.lastRefill)
+	elapsed := now.Sub(b.LastRefill)
 
 	if elapsed >= l.interval {
 		// Full refill
 		intervalsElapsed := int(elapsed / l.interval)
-		b.tokens = l.rate
-		b.lastRefill = b.lastRefill.Add(time.Duration(intervalsElapsed) * l.interval)
+		b.Tokens = l.rate
+		b.LastRefill = b.LastRefill.Add(time.Duration(intervalsElapsed) * l.interval)
 	}
 
 	// Check if tokens available
-	if b.tokens > 0 {
-		b.tokens--
+	if b.Tokens > 0 {
+		b.Tokens--
+		// Update bucket
+		if jsonData, err := json.Marshal(b); err == nil {
+			_ = l.kvs.Set(ctx, key, jsonData, 0) // No TTL
+		}
 		return true
 	}
 
@@ -72,20 +97,38 @@ func (l *Limiter) Allow(key string) bool {
 
 // Reset clears the rate limit for a specific key
 func (l *Limiter) Reset(key string) {
-	l.mu.Lock()
-	defer l.mu.Unlock()
-	delete(l.buckets, key)
+	ctx := context.Background()
+	_ = l.kvs.Delete(ctx, key)
 }
 
 // Cleanup removes old buckets that haven't been used recently
 func (l *Limiter) Cleanup(maxAge time.Duration) {
-	l.mu.Lock()
-	defer l.mu.Unlock()
+	ctx := context.Background()
+
+	// Get all keys
+	keys, err := l.kvs.List(ctx, "")
+	if err != nil {
+		return
+	}
 
 	now := time.Now()
-	for key, b := range l.buckets {
-		if now.Sub(b.lastRefill) > maxAge {
-			delete(l.buckets, key)
+	for _, key := range keys {
+		// Get bucket data
+		data, err := l.kvs.Get(ctx, key)
+		if err != nil {
+			continue
+		}
+
+		var b bucket
+		if err := json.Unmarshal(data, &b); err != nil {
+			// Delete corrupted data
+			_ = l.kvs.Delete(ctx, key)
+			continue
+		}
+
+		// Delete if too old
+		if now.Sub(b.LastRefill) > maxAge {
+			_ = l.kvs.Delete(ctx, key)
 		}
 	}
 }

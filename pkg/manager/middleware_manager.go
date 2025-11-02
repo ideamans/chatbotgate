@@ -11,6 +11,7 @@ import (
 	"github.com/ideamans/multi-oauth2-proxy/pkg/authz"
 	"github.com/ideamans/multi-oauth2-proxy/pkg/config"
 	"github.com/ideamans/multi-oauth2-proxy/pkg/i18n"
+	"github.com/ideamans/multi-oauth2-proxy/pkg/kvs"
 	"github.com/ideamans/multi-oauth2-proxy/pkg/logging"
 	"github.com/ideamans/multi-oauth2-proxy/pkg/middleware"
 	"github.com/ideamans/multi-oauth2-proxy/pkg/proxy"
@@ -27,6 +28,8 @@ type MiddlewareManager struct {
 	// Shared resources that are NOT reloaded
 	sessionStore session.Store
 	proxyHandler *proxy.Handler
+	tokenKVS     kvs.Store
+	rateLimitKVS kvs.Store
 
 	// Server configuration (host/port)
 	host string
@@ -46,6 +49,8 @@ type ManagerConfig struct {
 	Port         int
 	SessionStore session.Store
 	ProxyHandler *proxy.Handler
+	TokenKVS     kvs.Store
+	RateLimitKVS kvs.Store
 	Logger       logging.Logger
 }
 
@@ -75,6 +80,8 @@ func New(cfg ManagerConfig) (*MiddlewareManager, error) {
 	manager := &MiddlewareManager{
 		sessionStore: cfg.SessionStore,
 		proxyHandler: cfg.ProxyHandler,
+		tokenKVS:     cfg.TokenKVS,
+		rateLimitKVS: cfg.RateLimitKVS,
 		host:         cfg.Host,
 		port:         cfg.Port,
 		config:       cfg.Config,
@@ -252,6 +259,8 @@ func (m *MiddlewareManager) createMiddleware(cfg *config.Config) (*middleware.Mi
 			authzChecker,
 			translator,
 			cfg.Session.CookieSecret,
+			m.tokenKVS,
+			m.rateLimitKVS,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create email handler: %w", err)

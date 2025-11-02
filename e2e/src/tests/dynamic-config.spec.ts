@@ -59,7 +59,7 @@ test.describe('Dynamic Configuration Reload', () => {
     // Step 4: Check logs for reload message
     const logsAfter = getContainerLogs();
     const reloadCountAfter = (logsAfter.match(/Configuration reloaded successfully/g) || []).length;
-    const hasReloadMessage = logsAfter.includes('Configuration changed, reloading middleware');
+    const hasReloadMessage = logsAfter.includes('Config content change detected, starting reload');
 
     // Verify that config reload was detected
     expect(hasReloadMessage).toBe(true);

@@ -1,6 +1,10 @@
 package config
 
-import "time"
+import (
+	"time"
+
+	"github.com/ideamans/multi-oauth2-proxy/pkg/kvs"
+)
 
 // Config represents the application configuration
 type Config struct {
@@ -12,6 +16,7 @@ type Config struct {
 	EmailAuth     EmailAuthConfig     `yaml:"email_auth" json:"email_auth"`
 	Authorization AuthorizationConfig `yaml:"authorization" json:"authorization"`
 	Logging       LoggingConfig       `yaml:"logging" json:"logging"`
+	KVS           KVSConfig           `yaml:"kvs" json:"kvs"` // KVS storage configuration
 }
 
 // ServiceConfig contains service-level settings
@@ -144,6 +149,49 @@ type LoggingConfig struct {
 	Level       string `yaml:"level" json:"level"`
 	ModuleLevel string `yaml:"module_level" json:"module_level"`
 	Color       bool   `yaml:"color" json:"color"`
+}
+
+// KVSConfig contains the unified KVS configuration with optional overrides.
+// This design allows sharing a single KVS backend across multiple use cases
+// with namespace isolation, while still supporting dedicated backends when needed.
+type KVSConfig struct {
+	// Default KVS configuration (shared by all use cases)
+	Default kvs.Config `yaml:"default" json:"default"`
+
+	// Optional override for session storage
+	// If nil, uses Default with session namespace prefix
+	Session *kvs.Config `yaml:"session,omitempty" json:"session,omitempty"`
+
+	// Optional override for token storage
+	// If nil, uses Default with token namespace prefix
+	Token *kvs.Config `yaml:"token,omitempty" json:"token,omitempty"`
+
+	// Optional override for rate limit storage
+	// If nil, uses Default with ratelimit namespace prefix
+	RateLimit *kvs.Config `yaml:"ratelimit,omitempty" json:"ratelimit,omitempty"`
+
+	// Namespace prefixes for shared KVS (has defaults)
+	Namespaces NamespaceConfig `yaml:"namespaces" json:"namespaces"`
+}
+
+// NamespaceConfig defines the key prefixes for each use case when sharing a KVS
+type NamespaceConfig struct {
+	Session   string `yaml:"session" json:"session"`     // Default: "session:"
+	Token     string `yaml:"token" json:"token"`       // Default: "token:"
+	RateLimit string `yaml:"ratelimit" json:"ratelimit"`   // Default: "ratelimit:"
+}
+
+// SetDefaults sets default namespace prefixes if not specified
+func (n *NamespaceConfig) SetDefaults() {
+	if n.Session == "" {
+		n.Session = "session:"
+	}
+	if n.Token == "" {
+		n.Token = "token:"
+	}
+	if n.RateLimit == "" {
+		n.RateLimit = "ratelimit:"
+	}
 }
 
 // Validate checks if the configuration is valid

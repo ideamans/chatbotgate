@@ -97,10 +97,6 @@ func (p *CustomProvider) GetUserInfo(ctx context.Context, token *oauth2.Token) (
 		return nil, fmt.Errorf("failed to decode user info: %w", err)
 	}
 
-	if apiUserInfo.Email == "" {
-		return nil, ErrEmailNotFound
-	}
-
 	// Try to get name from various fields
 	name := apiUserInfo.Name
 	if name == "" {
@@ -113,8 +109,10 @@ func (p *CustomProvider) GetUserInfo(ctx context.Context, token *oauth2.Token) (
 		}
 	}
 
+	// Email is optional - some providers don't provide it
+	// Authorization layer will check if email is required based on whitelist configuration
 	return &UserInfo{
-		Email: apiUserInfo.Email,
+		Email: apiUserInfo.Email, // May be empty
 		Name:  name,
 	}, nil
 }
@@ -124,6 +122,10 @@ func (p *CustomProvider) GetUserEmail(ctx context.Context, token *oauth2.Token) 
 	userInfo, err := p.GetUserInfo(ctx, token)
 	if err != nil {
 		return "", err
+	}
+	// Email is required for this deprecated method
+	if userInfo.Email == "" {
+		return "", ErrEmailNotFound
 	}
 	return userInfo.Email, nil
 }

@@ -3,7 +3,17 @@ package email
 import (
 	"testing"
 	"time"
+
+	"github.com/ideamans/multi-oauth2-proxy/pkg/kvs"
 )
+
+// createTestTokenStore creates a token store with memory-based KVS for testing
+func createTestTokenStore(secret string) *TokenStore {
+	kvsStore, _ := kvs.NewMemoryStore("token:", kvs.MemoryConfig{
+		CleanupInterval: 1 * time.Minute,
+	})
+	return NewTokenStore(secret, kvsStore)
+}
 
 func TestToken_IsValid(t *testing.T) {
 	now := time.Now()
@@ -58,7 +68,7 @@ func TestToken_IsValid(t *testing.T) {
 }
 
 func TestTokenStore_GenerateToken(t *testing.T) {
-	store := NewTokenStore("test-secret")
+	store := createTestTokenStore("test-secret")
 
 	email := "user@example.com"
 	duration := 15 * time.Minute
@@ -79,7 +89,7 @@ func TestTokenStore_GenerateToken(t *testing.T) {
 }
 
 func TestTokenStore_VerifyToken(t *testing.T) {
-	store := NewTokenStore("test-secret")
+	store := createTestTokenStore("test-secret")
 
 	email := "user@example.com"
 	token, err := store.GenerateToken(email, 15*time.Minute)
@@ -105,7 +115,7 @@ func TestTokenStore_VerifyToken(t *testing.T) {
 }
 
 func TestTokenStore_VerifyToken_NotFound(t *testing.T) {
-	store := NewTokenStore("test-secret")
+	store := createTestTokenStore("test-secret")
 
 	_, err := store.VerifyToken("nonexistent-token")
 	if err != ErrTokenNotFound {
@@ -114,7 +124,7 @@ func TestTokenStore_VerifyToken_NotFound(t *testing.T) {
 }
 
 func TestTokenStore_VerifyToken_Expired(t *testing.T) {
-	store := NewTokenStore("test-secret")
+	store := createTestTokenStore("test-secret")
 
 	email := "user@example.com"
 	token, err := store.GenerateToken(email, 1*time.Millisecond)
@@ -122,17 +132,18 @@ func TestTokenStore_VerifyToken_Expired(t *testing.T) {
 		t.Fatalf("GenerateToken() error = %v", err)
 	}
 
-	// Wait for token to expire
+	// Wait for token to expire (KVS will auto-delete)
 	time.Sleep(10 * time.Millisecond)
 
 	_, err = store.VerifyToken(token)
-	if err != ErrTokenExpired {
-		t.Errorf("VerifyToken() error = %v, want ErrTokenExpired", err)
+	// With KVS, expired tokens are auto-deleted by TTL, so we get ErrTokenNotFound
+	if err != ErrTokenNotFound {
+		t.Errorf("VerifyToken() error = %v, want ErrTokenNotFound (expired tokens are auto-deleted by KVS TTL)", err)
 	}
 }
 
 func TestTokenStore_DeleteToken(t *testing.T) {
-	store := NewTokenStore("test-secret")
+	store := createTestTokenStore("test-secret")
 
 	email := "user@example.com"
 	token, err := store.GenerateToken(email, 15*time.Minute)
@@ -151,7 +162,7 @@ func TestTokenStore_DeleteToken(t *testing.T) {
 }
 
 func TestTokenStore_CleanupExpired(t *testing.T) {
-	store := NewTokenStore("test-secret")
+	store := createTestTokenStore("test-secret")
 
 	// Create an expired token
 	store.GenerateToken("expired@example.com", 1*time.Millisecond)
@@ -172,7 +183,7 @@ func TestTokenStore_CleanupExpired(t *testing.T) {
 }
 
 func TestTokenStore_MultipleTokens(t *testing.T) {
-	store := NewTokenStore("test-secret")
+	store := createTestTokenStore("test-secret")
 
 	// Generate multiple tokens
 	token1, _ := store.GenerateToken("user1@example.com", 15*time.Minute)

@@ -14,6 +14,7 @@ Multi OAuth2 Proxy provides authentication as a service with three flexible depl
 
 - ✅ **Multiple OAuth2 Providers**: Google, GitHub, Microsoft, and custom OIDC
 - ✅ **Email Authentication**: Passwordless magic links via SMTP or SendGrid
+- ✅ **Flexible Storage**: Unified KVS abstraction (Memory, LevelDB, Redis) for sessions, tokens, and rate limiting
 - ✅ **Flexible Architecture**: Use as library, middleware, or standalone proxy
 - ✅ **Multi-tenant Support**: Host-based routing for different backends
 - ✅ **Configuration Formats**: YAML, JSON, or programmatic Go configuration
@@ -76,6 +77,11 @@ proxy:
 session:
   cookie_secret: "your-random-32-char-secret-here"  # Generate with: openssl rand -base64 32
 
+# KVS storage (sessions, tokens, rate limiting)
+kvs:
+  default:
+    type: "memory"  # or "leveldb" / "redis" for persistence
+
 oauth2:
   providers:
     - name: "google"
@@ -84,9 +90,8 @@ oauth2:
       enabled: true
 
 authorization:
-  allowed_emails:
+  allowed:
     - "user@example.com"
-  allowed_domains:
     - "@yourcompany.com"
 ```
 
@@ -210,6 +215,18 @@ See [`examples/config_file_server.go`](examples/config_file_server.go) and [`exa
 │  │   • Headers: X-Forwarded-User, etc.        │    │
 │  └────────────────────────────────────────────┘    │
 └─────────────────────────────────────────────────────┘
+
+                        ↕
+        ┌───────────────────────────────┐
+        │  Unified KVS Abstraction      │
+        │  ┌─────────────────────────┐  │
+        │  │ session:* (Sessions)    │  │
+        │  │ token:* (OTP Tokens)    │  │
+        │  │ ratelimit:* (Buckets)   │  │
+        │  └─────────────────────────┘  │
+        │                               │
+        │  Memory / LevelDB / Redis     │
+        └───────────────────────────────┘
 ```
 
 ### Project Structure
@@ -234,11 +251,17 @@ multi-oauth2-proxy/
 │   │   └── email/              # Email authentication
 │   ├── authz/                  # Authorization checks
 │   ├── config/                 # Configuration (YAML/JSON)
+│   ├── kvs/                    # 🆕 Unified KVS abstraction
+│   │   ├── kvs.go              #     Store interface
+│   │   ├── memory.go           #     In-memory store
+│   │   ├── leveldb.go          #     LevelDB persistent store
+│   │   ├── redis.go            #     Redis distributed store
+│   │   └── namespaced.go       #     Namespace wrapper
 │   ├── proxy/                  # Reverse proxy with WebSocket support
-│   ├── session/                # Session management (memory/Redis)
+│   ├── session/                # Session management (uses KVS)
 │   ├── i18n/                   # Internationalization
 │   ├── logging/                # Logging
-│   └── ratelimit/              # Rate limiting
+│   └── ratelimit/              # Rate limiting (uses KVS)
 ├── examples/                   # 🆕 Usage examples
 │   ├── README.md               #     Documentation
 │   ├── middleware_only.go      #     Middleware library example
@@ -308,16 +331,66 @@ session:
   cookie_secure: false             # Set true for HTTPS
   cookie_httponly: true            # HttpOnly flag
   cookie_samesite: "lax"           # SameSite policy
-
-  store_type: "memory"             # Session store: "memory" or "redis"
-
-  # Redis configuration (when store_type: "redis")
-  redis:
-    address: "localhost:6379"
-    password: ""
-    db: 0
-    key_prefix: "oauth2_proxy:"
 ```
+
+#### KVS (Key-Value Store) Configuration
+
+Multi OAuth2 Proxy uses a unified KVS abstraction for sessions, OTP tokens, and rate limiting. You can use a single shared backend or dedicated backends for each purpose:
+
+```yaml
+kvs:
+  # Default KVS (shared by all use cases with namespace isolation)
+  default:
+    type: "memory"  # "memory", "leveldb", or "redis"
+
+    # Memory-specific config
+    memory:
+      cleanup_interval: "5m"
+
+    # LevelDB-specific config (persistent, single-server)
+    # leveldb:
+    #   path: "/var/lib/multi-oauth2-proxy/kvs"  # Empty = OS cache/temp dir
+    #   sync_writes: false
+    #   cleanup_interval: "5m"
+
+    # Redis-specific config (distributed, multi-server)
+    # redis:
+    #   addr: "localhost:6379"
+    #   password: ""
+    #   db: 0
+    #   pool_size: 0  # 0 = default (10 * CPU cores)
+
+  # Namespace prefixes (optional, defaults shown)
+  namespaces:
+    session: "session:"      # Session keys
+    token: "token:"          # OTP token keys
+    ratelimit: "ratelimit:"  # Rate limit bucket keys
+
+  # Optional: Override with dedicated backends
+  # session:
+  #   type: "redis"
+  #   redis:
+  #     addr: "localhost:6379"
+  #     db: 1
+
+  # token:
+  #   type: "memory"
+  #   memory:
+  #     cleanup_interval: "1m"
+
+  # ratelimit:
+  #   type: "leveldb"
+  #   leveldb:
+  #     path: "/var/lib/multi-oauth2-proxy/ratelimit"
+```
+
+**KVS Design Benefits:**
+
+- 🔄 **Single Backend**: One Redis/LevelDB connection serves all purposes
+- 🏷️ **Namespace Isolation**: Logical separation with key prefixes
+- ⚡ **Efficient Cleanup**: Each namespace scans only its own keys
+- 🎯 **Flexibility**: Override specific use cases with dedicated backends
+- 📊 **Scalability**: Shared backend or independent scaling per use case
 
 #### OAuth2 Providers
 
@@ -621,8 +694,9 @@ Visit `http://localhost:3000` to see the design system catalog.
 - **Phase 2** ✅ (Complete): Email auth + Security - 63.1% coverage
 - **Phase 3** ✅ (Complete): Multi-provider + i18n - 69.9% coverage
 - **Phase 4** ✅ (Complete): Middleware architecture + JSON config
-- **Phase 5** (Planned): Redis sessions, Prometheus metrics, structured logging
-- **Phase 6** (Planned): SSL/TLS automation, MFA, WebAuthn
+- **Phase 5** ✅ (Complete): Unified KVS abstraction (Memory/LevelDB/Redis)
+- **Phase 6** (Planned): Prometheus metrics, structured logging
+- **Phase 7** (Planned): SSL/TLS automation, MFA, WebAuthn
 
 See [PLAN.md](PLAN.md) for detailed design documentation.
 

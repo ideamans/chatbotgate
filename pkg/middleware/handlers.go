@@ -517,6 +517,13 @@ func (m *Middleware) handleOAuth2Callback(w http.ResponseWriter, r *http.Request
 			return
 		}
 
+		// Check if email was actually provided by the OAuth2 provider
+		if email == "" {
+			m.logger.Error("OAuth2 authentication failed: email required for authorization but not provided by OAuth2 provider", "provider", providerName)
+			m.handleEmailFetchError(w, r)
+			return
+		}
+
 		// Check authorization
 		if !m.authzChecker.IsAllowed(email) {
 			m.logger.Info("OAuth2 authentication denied: user not authorized", "email", email, "provider", providerName)
