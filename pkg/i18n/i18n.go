@@ -164,6 +164,7 @@ var defaultTranslations = Translations{
 		"login.email.link":      "Or login with Email",
 		"login.email.heading":   "Login with Email",
 		"login.email.label":     "Email Address",
+		"login.email.save":      "Save",
 		"login.email.submit":    "Send Login Link",
 		"login.back":            "Back to login options",
 
@@ -232,6 +233,7 @@ var defaultTranslations = Translations{
 		"login.email.link":      "またはメールでログイン",
 		"login.email.heading":   "メールでログイン",
 		"login.email.label":     "メールアドレス",
+		"login.email.save":      "保存",
 		"login.email.submit":    "ログインリンクを送信",
 		"login.back":            "ログイン方法の選択に戻る",
 

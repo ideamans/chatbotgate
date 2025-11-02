@@ -215,11 +215,29 @@ func (m *Middleware) handleLogin(w http.ResponseWriter, r *http.Request) {
 			html += `<div class="auth-divider"><span>` + t("login.or") + `</span></div>`
 		}
 
+		// Get saved email from cookie
+		savedEmail := ""
+		if cookie, err := r.Cookie("saved_email"); err == nil {
+			savedEmail = cookie.Value
+		}
+		emailValue := ""
+		saveChecked := ""
+		if savedEmail != "" {
+			emailValue = ` value="` + savedEmail + `"`
+			saveChecked = ` checked`
+		}
+
 		html += `
 		<form method="POST" action="` + emailSendPath + `">
 			<div class="form-group">
-				<label class="label" for="email">` + t("login.email.label") + `</label>
-				<input type="email" id="email" name="email" class="input" placeholder="you@example.com" required>
+				<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-xs);">
+					<label class="label" for="email" style="margin-bottom: 0;">` + t("login.email.label") + `</label>
+					<label style="display: flex; align-items: center; gap: 0.25rem; cursor: pointer; font-size: 0.875rem; color: var(--color-text-secondary);">
+						<input type="checkbox" name="save_email" value="1" style="cursor: pointer;"` + saveChecked + `>
+						<span>` + t("login.email.save") + `</span>
+					</label>
+				</div>
+				<input type="email" id="email" name="email" class="input" placeholder="you@example.com"` + emailValue + ` required>
 			</div>
 			<button type="submit" class="btn btn-primary provider-btn">
 				<img src="` + emailIconPath + `" alt="Email">
@@ -582,6 +600,32 @@ func (m *Middleware) handleEmailSend(w http.ResponseWriter, r *http.Request) {
 		m.logger.Error("Failed to send login link", "email", email, "error", err)
 		http.Error(w, t("error.internal"), http.StatusInternalServerError)
 		return
+	}
+
+	// Handle save email checkbox
+	saveEmail := r.FormValue("save_email")
+	if saveEmail == "1" {
+		// Save email to cookie (1 year)
+		http.SetCookie(w, &http.Cookie{
+			Name:     "saved_email",
+			Value:    email,
+			Path:     "/",
+			MaxAge:   365 * 24 * 60 * 60, // 1 year
+			HttpOnly: false,               // Allow JavaScript access for form pre-filling
+			Secure:   r.TLS != nil,        // Secure if HTTPS
+			SameSite: http.SameSiteLaxMode,
+		})
+	} else {
+		// Delete saved email cookie
+		http.SetCookie(w, &http.Cookie{
+			Name:     "saved_email",
+			Value:    "",
+			Path:     "/",
+			MaxAge:   -1, // Delete cookie
+			HttpOnly: false,
+			Secure:   r.TLS != nil,
+			SameSite: http.SameSiteLaxMode,
+		})
 	}
 
 	// Use embedded CSS

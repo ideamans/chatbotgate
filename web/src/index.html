@@ -307,6 +307,33 @@
   &lt;label class="label"&gt;Email Address&lt;/label&gt;
   &lt;input type="email" class="input" placeholder="you@example.com"&gt;
 &lt;/div&gt;</div>
+
+      <h3>Input Field with Checkbox (Email Save)</h3>
+      <p style="color: var(--color-text-secondary); margin-bottom: var(--spacing-md);">
+        Label with a checkbox on the right side for optional features like "Save email".
+      </p>
+      <div class="component-demo">
+        <div class="form-group">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-xs);">
+            <label class="label" for="email-save-demo" style="margin-bottom: 0;">Email Address</label>
+            <label style="display: flex; align-items: center; gap: 0.25rem; cursor: pointer; font-size: 0.875rem; color: var(--color-text-secondary);">
+              <input type="checkbox" name="save_email" value="1" style="cursor: pointer;">
+              <span>Save</span>
+            </label>
+          </div>
+          <input type="email" id="email-save-demo" class="input" placeholder="you@example.com">
+        </div>
+      </div>
+      <div class="code-block">&lt;div class="form-group"&gt;
+  &lt;div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-xs);"&gt;
+    &lt;label class="label" for="email" style="margin-bottom: 0;"&gt;Email Address&lt;/label&gt;
+    &lt;label style="display: flex; align-items: center; gap: 0.25rem; cursor: pointer; font-size: 0.875rem; color: var(--color-text-secondary);"&gt;
+      &lt;input type="checkbox" name="save_email" value="1" style="cursor: pointer;"&gt;
+      &lt;span&gt;Save&lt;/span&gt;
+    &lt;/label&gt;
+  &lt;/div&gt;
+  &lt;input type="email" id="email" class="input" placeholder="you@example.com"&gt;
+&lt;/div&gt;</div>
     </section>
 
     <!-- Cards Section -->
@@ -377,7 +404,7 @@
         <div class="auth-container" style="min-height: auto;">
           <div class="card auth-card">
             <div class="auth-header">
-              <img src="/icons/oidc.svg" alt="Icon" class="auth-icon">
+              <img src="/icons/chatbotgate.svg" alt="Icon" class="auth-icon">
               <h1 class="auth-title">Multi OAuth2 Proxy</h1>
             </div>
             <p class="auth-description">Select a sign-in method to continue</p>
@@ -402,22 +429,22 @@
       <h4 style="font-size: 1rem; font-weight: 600; margin-top: var(--spacing-lg); margin-bottom: var(--spacing-sm);">Size Classes</h4>
       <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--spacing-md); margin-bottom: var(--spacing-lg);">
         <div style="text-align: center;">
-          <img src="/icons/oidc.svg" alt="Logo" class="auth-logo auth-logo-sm">
+          <img src="/icons/chatbotgate.svg" alt="Logo" class="auth-logo auth-logo-sm">
           <p style="font-size: 0.75rem; color: var(--color-text-muted);">Small (100px)</p>
           <code style="font-size: 0.75rem;">auth-logo-sm</code>
         </div>
         <div style="text-align: center;">
-          <img src="/icons/oidc.svg" alt="Logo" class="auth-logo auth-logo-md">
+          <img src="/icons/chatbotgate.svg" alt="Logo" class="auth-logo auth-logo-md">
           <p style="font-size: 0.75rem; color: var(--color-text-muted);">Medium (150px)</p>
           <code style="font-size: 0.75rem;">auth-logo-md</code>
         </div>
         <div style="text-align: center;">
-          <img src="/icons/oidc.svg" alt="Logo" class="auth-logo auth-logo-lg">
+          <img src="/icons/chatbotgate.svg" alt="Logo" class="auth-logo auth-logo-lg">
           <p style="font-size: 0.75rem; color: var(--color-text-muted);">Large (200px - default)</p>
           <code style="font-size: 0.75rem;">auth-logo-lg</code>
         </div>
         <div style="text-align: center;">
-          <img src="/icons/oidc.svg" alt="Logo" class="auth-logo auth-logo-xl">
+          <img src="/icons/chatbotgate.svg" alt="Logo" class="auth-logo auth-logo-xl">
           <p style="font-size: 0.75rem; color: var(--color-text-muted);">Extra Large (300px)</p>
           <code style="font-size: 0.75rem;">auth-logo-xl</code>
         </div>
@@ -427,7 +454,7 @@
       <div class="component-demo">
         <div class="auth-container" style="min-height: auto;">
           <div class="card auth-card">
-            <img src="/icons/oidc.svg" alt="Logo" class="auth-logo">
+            <img src="/icons/chatbotgate.svg" alt="Logo" class="auth-logo">
             <h1 class="auth-title">Multi OAuth2 Proxy</h1>
             <p class="auth-description">Select a sign-in method to continue</p>
             <button class="btn btn-secondary provider-btn">
@@ -505,7 +532,13 @@
 
             <form>
               <div class="form-group">
-                <label class="label" for="email">Email Address</label>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-xs);">
+                  <label class="label" for="email" style="margin-bottom: 0;">Email Address</label>
+                  <label style="display: flex; align-items: center; gap: 0.25rem; cursor: pointer; font-size: 0.875rem; color: var(--color-text-secondary);">
+                    <input type="checkbox" name="save_email" value="1" style="cursor: pointer;">
+                    <span>Save</span>
+                  </label>
+                </div>
                 <input type="email" id="email" class="input" placeholder="you@example.com">
               </div>
               <button type="submit" class="btn btn-primary provider-btn">
