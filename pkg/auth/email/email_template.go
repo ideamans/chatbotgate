@@ -2,8 +2,10 @@ package email
 
 import (
 	"fmt"
+	"time"
 
 	hermes "github.com/ideamans/hermes"
+	"github.com/ideamans/multi-oauth2-proxy/pkg/i18n"
 )
 
 // EmailTemplate generates HTML emails using Hermes
@@ -27,15 +29,29 @@ func NewEmailTemplate(serviceName, logoURL, logoWidth, iconURL, baseURL string) 
 }
 
 // GenerateLoginEmail generates HTML and plain text for login link email
-func (t *EmailTemplate) GenerateLoginEmail(loginURL string, validMinutes int) (htmlBody, textBody string, err error) {
+func (t *EmailTemplate) GenerateLoginEmail(loginURL string, validMinutes int, lang i18n.Language, translator *i18n.Translator) (htmlBody, textBody string, err error) {
+	// Translation helper
+	tr := func(key string, args ...interface{}) string {
+		text := translator.T(lang, key)
+		if len(args) > 0 {
+			return fmt.Sprintf(text, args...)
+		}
+		return text
+	}
+	// Get current year for copyright
+	currentYear := time.Now().Year()
+
 	h := hermes.Hermes{
 		Product: hermes.Product{
-			Name:      t.serviceName,
-			Link:      t.baseURL,
-			Logo:      t.logoURL,
-			LogoWidth: t.logoWidth,
-			Icon:      t.iconURL,
-			Copyright: "", // No copyright footer
+			Name:          t.serviceName,
+			Link:          t.baseURL,
+			Logo:          t.logoURL,
+			LogoWidth:     t.logoWidth,
+			Icon:          t.iconURL,
+			Copyright:     fmt.Sprintf("© %d %s", currentYear, t.serviceName),
+			HideSignature: true, // Hide signature line
+			HideGreeting:  true, // Hide default greeting
+			TroubleText:   tr("email.login.trouble", tr("email.login.button")),
 		},
 	}
 
@@ -43,21 +59,22 @@ func (t *EmailTemplate) GenerateLoginEmail(loginURL string, validMinutes int) (h
 		Body: hermes.Body{
 			Name: "", // No personalization
 			Intros: []string{
-				fmt.Sprintf("Click the button below to log in to %s.", t.serviceName),
-				fmt.Sprintf("This link is valid for %d minutes.", validMinutes),
+				tr("email.login.greeting"),
+				tr("email.login.intro1", t.serviceName),
+				tr("email.login.intro2", validMinutes),
 			},
 			Actions: []hermes.Action{
 				{
-					Instructions: "Please click the button below to complete your login:",
+					Instructions: tr("email.login.instructions"),
 					Button: hermes.Button{
 						Color: "#3B82F6", // Primary blue color
-						Text:  "Log In",
+						Text:  tr("email.login.button"),
 						Link:  loginURL,
 					},
 				},
 			},
 			Outros: []string{
-				"If you did not request this email, please ignore it.",
+				tr("email.login.outro"),
 			},
 		},
 	}

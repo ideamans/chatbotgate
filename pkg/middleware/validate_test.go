@@ -429,31 +429,6 @@ func TestValidateConfig_EmailAuthValidation(t *testing.T) {
 			expectedField: "email_auth.token.expire",
 			expectedError: "invalid duration format",
 		},
-		{
-			name: "SendGrid with OTP file mode - no API key required",
-			modifyConfig: func(cfg *config.Config) {
-				cfg.EmailAuth.Enabled = true
-				cfg.EmailAuth.SenderType = "sendgrid"
-				cfg.EmailAuth.SendGrid.APIKey = "" // Empty API key
-				cfg.EmailAuth.SendGrid.From = ""   // Empty from
-				cfg.EmailAuth.OTPOutputFile = "/tmp/otp.jsonl" // OTP file mode
-			},
-			expectedField: "",
-			expectedError: "",
-		},
-		{
-			name: "SMTP with OTP file mode - no SMTP config required",
-			modifyConfig: func(cfg *config.Config) {
-				cfg.EmailAuth.Enabled = true
-				cfg.EmailAuth.SenderType = "smtp"
-				cfg.EmailAuth.SMTP.Host = ""           // Empty host
-				cfg.EmailAuth.SMTP.Port = 0            // No port
-				cfg.EmailAuth.SMTP.From = ""           // Empty from
-				cfg.EmailAuth.OTPOutputFile = "/tmp/otp.jsonl" // OTP file mode
-			},
-			expectedField: "",
-			expectedError: "",
-		},
 	}
 
 	for _, tt := range tests {

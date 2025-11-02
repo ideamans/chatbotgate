@@ -1,14 +1,12 @@
 package email
 
 import (
-	"encoding/json"
 	"errors"
-	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/ideamans/multi-oauth2-proxy/pkg/config"
+	"github.com/ideamans/multi-oauth2-proxy/pkg/i18n"
 )
 
 // MockAuthzChecker is a mock authorization checker
@@ -35,6 +33,11 @@ func testServiceConfig() config.ServiceConfig {
 	}
 }
 
+// testTranslator returns a default Translator for testing
+func testTranslator() *i18n.Translator {
+	return i18n.NewTranslator()
+}
+
 func TestNewHandler(t *testing.T) {
 	cfg := config.EmailAuthConfig{
 		Enabled:    true,
@@ -51,7 +54,7 @@ func TestNewHandler(t *testing.T) {
 
 	authzChecker := &MockAuthzChecker{allowed: true}
 
-	handler, err := NewHandler(cfg, testServiceConfig(), "http://localhost:4180", "/_auth", authzChecker, "test-secret")
+	handler, err := NewHandler(cfg, testServiceConfig(), "http://localhost:4180", "/_auth", authzChecker, testTranslator(), "test-secret")
 	if err != nil {
 		t.Fatalf("NewHandler() error = %v", err)
 	}
@@ -69,7 +72,7 @@ func TestNewHandler_InvalidSenderType(t *testing.T) {
 
 	authzChecker := &MockAuthzChecker{allowed: true}
 
-	_, err := NewHandler(cfg, testServiceConfig(), "http://localhost:4180", "/_auth", authzChecker, "test-secret")
+	_, err := NewHandler(cfg, testServiceConfig(), "http://localhost:4180", "/_auth", authzChecker, testTranslator(), "test-secret")
 	if err == nil {
 		t.Error("NewHandler() should return error for invalid sender type")
 	}
@@ -92,12 +95,12 @@ func TestHandler_SendLoginLink(t *testing.T) {
 	authzChecker := &MockAuthzChecker{allowed: true}
 	mockSender := &MockSender{}
 
-	handler, _ := NewHandler(cfg, testServiceConfig(), "http://localhost:4180", "/_auth", authzChecker, "test-secret")
+	handler, _ := NewHandler(cfg, testServiceConfig(), "http://localhost:4180", "/_auth", authzChecker, testTranslator(), "test-secret")
 	handler.sender = mockSender // Replace with mock
 
 	email := "user@example.com"
 
-	err := handler.SendLoginLink(email)
+	err := handler.SendLoginLink(email, i18n.English)
 	if err != nil {
 		t.Fatalf("SendLoginLink() error = %v", err)
 	}
@@ -139,12 +142,12 @@ func TestHandler_SendLoginLink_NotAuthorized(t *testing.T) {
 	authzChecker := &MockAuthzChecker{allowed: false}
 	mockSender := &MockSender{}
 
-	handler, _ := NewHandler(cfg, testServiceConfig(), "http://localhost:4180", "/_auth", authzChecker, "test-secret")
+	handler, _ := NewHandler(cfg, testServiceConfig(), "http://localhost:4180", "/_auth", authzChecker, testTranslator(), "test-secret")
 	handler.sender = mockSender
 
 	email := "unauthorized@example.com"
 
-	err := handler.SendLoginLink(email)
+	err := handler.SendLoginLink(email, i18n.English)
 	if err == nil {
 		t.Error("SendLoginLink() should return error for unauthorized email")
 	}
@@ -169,20 +172,20 @@ func TestHandler_SendLoginLink_RateLimit(t *testing.T) {
 	authzChecker := &MockAuthzChecker{allowed: true}
 	mockSender := &MockSender{}
 
-	handler, _ := NewHandler(cfg, testServiceConfig(), "http://localhost:4180", "/_auth", authzChecker, "test-secret")
+	handler, _ := NewHandler(cfg, testServiceConfig(), "http://localhost:4180", "/_auth", authzChecker, testTranslator(), "test-secret")
 	handler.sender = mockSender
 
 	email := "user@example.com"
 
 	// Send 3 emails (should succeed)
 	for i := 0; i < 3; i++ {
-		if err := handler.SendLoginLink(email); err != nil {
+		if err := handler.SendLoginLink(email, i18n.English); err != nil {
 			t.Fatalf("request %d should succeed", i+1)
 		}
 	}
 
 	// 4th should be rate limited
-	err := handler.SendLoginLink(email)
+	err := handler.SendLoginLink(email, i18n.English)
 	if err == nil {
 		t.Error("4th request should be rate limited")
 	}
@@ -206,12 +209,12 @@ func TestHandler_SendLoginLink_SendFails(t *testing.T) {
 		},
 	}
 
-	handler, _ := NewHandler(cfg, testServiceConfig(), "http://localhost:4180", "/_auth", authzChecker, "test-secret")
+	handler, _ := NewHandler(cfg, testServiceConfig(), "http://localhost:4180", "/_auth", authzChecker, testTranslator(), "test-secret")
 	handler.sender = mockSender
 
 	email := "user@example.com"
 
-	err := handler.SendLoginLink(email)
+	err := handler.SendLoginLink(email, i18n.English)
 	if err == nil {
 		t.Error("SendLoginLink() should return error when send fails")
 	}
@@ -231,13 +234,13 @@ func TestHandler_VerifyToken(t *testing.T) {
 	authzChecker := &MockAuthzChecker{allowed: true}
 	mockSender := &MockSender{}
 
-	handler, _ := NewHandler(cfg, testServiceConfig(), "http://localhost:4180", "/_auth", authzChecker, "test-secret")
+	handler, _ := NewHandler(cfg, testServiceConfig(), "http://localhost:4180", "/_auth", authzChecker, testTranslator(), "test-secret")
 	handler.sender = mockSender
 
 	email := "user@example.com"
 
 	// Send login link
-	handler.SendLoginLink(email)
+	handler.SendLoginLink(email, i18n.English)
 
 	// Extract token from HTML email body
 	call := mockSender.HTMLCalls[0]
@@ -264,149 +267,5 @@ func TestHandler_VerifyToken(t *testing.T) {
 	_, err = handler.VerifyToken(token)
 	if err == nil {
 		t.Error("second VerifyToken() should fail")
-	}
-}
-
-func TestHandler_SendLoginLink_OTPFile(t *testing.T) {
-	// Create temporary directory for test
-	tempDir, err := os.MkdirTemp("", "otp-test-")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(tempDir)
-
-	otpFile := filepath.Join(tempDir, "otp.json")
-
-	cfg := config.EmailAuthConfig{
-		Enabled:       true,
-		SenderType:    "smtp", // Required but won't be used
-		OTPOutputFile: otpFile,
-		SMTP: config.SMTPConfig{
-			Host: "smtp.example.com",
-			Port: 587,
-			From: "noreply@example.com",
-		},
-		Token: config.EmailTokenConfig{
-			Expire: "15m",
-		},
-	}
-
-	authzChecker := &MockAuthzChecker{allowed: true}
-	mockSender := &MockSender{}
-
-	handler, _ := NewHandler(cfg, testServiceConfig(), "http://localhost:4180", "/_auth", authzChecker, "test-secret")
-	handler.sender = mockSender
-
-	email := "user@example.com"
-
-	// Send login link
-	err = handler.SendLoginLink(email)
-	if err != nil {
-		t.Fatalf("SendLoginLink() error = %v", err)
-	}
-
-	// Verify no email was sent (should use OTP file instead)
-	if len(mockSender.HTMLCalls) != 0 {
-		t.Error("no HTML email should be sent when OTP file is configured")
-	}
-
-	// Read OTP file
-	data, err := os.ReadFile(otpFile)
-	if err != nil {
-		t.Fatalf("Failed to read OTP file: %v", err)
-	}
-
-	// Parse JSON record
-	var record OTPRecord
-	if err := json.Unmarshal(data[:len(data)-1], &record); err != nil { // Remove trailing newline
-		t.Fatalf("Failed to unmarshal OTP record: %v", err)
-	}
-
-	// Verify record
-	if record.Email != email {
-		t.Errorf("Email = %s, want %s", record.Email, email)
-	}
-
-	if record.Token == "" {
-		t.Error("Token should not be empty")
-	}
-
-	expectedLoginURL := "http://localhost:4180/_auth/email/verify?token=" + record.Token
-	if record.LoginURL != expectedLoginURL {
-		t.Errorf("LoginURL = %s, want %s", record.LoginURL, expectedLoginURL)
-	}
-
-	if record.ExpiresAt.IsZero() {
-		t.Error("ExpiresAt should not be zero")
-	}
-
-	// Verify token can be used for authentication
-	verifiedEmail, err := handler.VerifyToken(record.Token)
-	if err != nil {
-		t.Fatalf("VerifyToken() error = %v", err)
-	}
-
-	if verifiedEmail != email {
-		t.Errorf("VerifyToken() email = %s, want %s", verifiedEmail, email)
-	}
-}
-
-func TestHandler_SendLoginLink_OTPFile_MultipleUsers(t *testing.T) {
-	// Create temporary directory for test
-	tempDir, err := os.MkdirTemp("", "otp-test-")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(tempDir)
-
-	otpFile := filepath.Join(tempDir, "otp.json")
-
-	cfg := config.EmailAuthConfig{
-		Enabled:       true,
-		SenderType:    "smtp",
-		OTPOutputFile: otpFile,
-		SMTP: config.SMTPConfig{
-			Host: "smtp.example.com",
-			Port: 587,
-			From: "noreply@example.com",
-		},
-		Token: config.EmailTokenConfig{
-			Expire: "15m",
-		},
-	}
-
-	authzChecker := &MockAuthzChecker{allowed: true}
-	handler, _ := NewHandler(cfg, testServiceConfig(), "http://localhost:4180", "/_auth", authzChecker, "test-secret")
-
-	// Send login links for multiple users
-	users := []string{"user1@example.com", "user2@example.com", "user3@example.com"}
-	for _, email := range users {
-		if err := handler.SendLoginLink(email); err != nil {
-			t.Fatalf("SendLoginLink() error = %v", err)
-		}
-	}
-
-	// Read OTP file
-	data, err := os.ReadFile(otpFile)
-	if err != nil {
-		t.Fatalf("Failed to read OTP file: %v", err)
-	}
-
-	// Count lines (JSON Lines format)
-	lines := 0
-	start := 0
-	for i, b := range data {
-		if b == '\n' {
-			lines++
-			var record OTPRecord
-			if err := json.Unmarshal(data[start:i], &record); err != nil {
-				t.Fatalf("Failed to unmarshal line %d: %v", lines, err)
-			}
-			start = i + 1
-		}
-	}
-
-	if lines != len(users) {
-		t.Errorf("Expected %d lines, got %d", len(users), lines)
 	}
 }

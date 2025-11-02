@@ -95,12 +95,11 @@ type OAuth2Provider struct {
 
 // EmailAuthConfig contains email authentication settings
 type EmailAuthConfig struct {
-	Enabled       bool             `yaml:"enabled" json:"enabled"`
-	SenderType    string           `yaml:"sender_type" json:"sender_type"`     // "smtp" or "sendgrid"
-	SMTP          SMTPConfig       `yaml:"smtp" json:"smtp"`
-	SendGrid      SendGridConfig   `yaml:"sendgrid" json:"sendgrid"`
-	Token         EmailTokenConfig `yaml:"token" json:"token"`
-	OTPOutputFile string           `yaml:"otp_output_file" json:"otp_output_file"` // Optional: output OTP to file instead of sending email (for E2E testing)
+	Enabled    bool             `yaml:"enabled" json:"enabled"`
+	SenderType string           `yaml:"sender_type" json:"sender_type"` // "smtp" or "sendgrid"
+	SMTP       SMTPConfig       `yaml:"smtp" json:"smtp"`
+	SendGrid   SendGridConfig   `yaml:"sendgrid" json:"sendgrid"`
+	Token      EmailTokenConfig `yaml:"token" json:"token"`
 }
 
 // SMTPConfig contains SMTP server settings

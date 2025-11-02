@@ -577,7 +577,7 @@ func (m *Middleware) handleEmailSend(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Send login link
-	err := m.emailHandler.SendLoginLink(email)
+	err := m.emailHandler.SendLoginLink(email, lang)
 	if err != nil {
 		m.logger.Error("Failed to send login link", "email", email, "error", err)
 		http.Error(w, t("error.internal"), http.StatusInternalServerError)

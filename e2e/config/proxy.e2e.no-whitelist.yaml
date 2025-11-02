@@ -33,14 +33,18 @@ oauth2:
 
 email_auth:
   enabled: true
-  sender_type: "sendgrid"
-  sendgrid:
-    api_key: ""
+  sender_type: "smtp"
+  smtp:
+    host: "mailpit"
+    port: 1025
+    username: ""
+    password: ""
     from: "noreply@example.com"
-    from_name: "multi-oauth2-proxy"
+    from_name: "multi-oauth2-proxy E2E"
+    insecure_skip_verify: true
   token:
     expire: "3m"
-  otp_output_file: "/otp/passwordless-otp.jsonl"
+  # otp_output_file: "/otp/passwordless-otp.jsonl"  # Commented out to use Mailpit instead
 
 # No authorization whitelist configured - all authenticated users are allowed
 authorization:

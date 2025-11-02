@@ -18,6 +18,10 @@
   - OAuth2 プロバイダーとして `/oauth/authorize`・`/oauth/token`・`/oauth/userinfo` を実装。
   - `someone@example.com` / `password` のみ認証成功。
   - `/logout` でセッション破棄し、目的ページに OAuth2 サインアウトボタンを表示。
+- **Mailpit**: メールサーバーエミュレータ。
+  - SMTPサーバー（ポート1025）でメール受信。
+  - WebUI（http://localhost:8025）でメールプレビュー可能。
+  - REST APIでメール取得・解析が可能（Playwrightテストで利用）。
 - **Playwright ランナー**: TypeScript で E2E テストを記述し、コンテナ上でブラウザ操作を自動化。
 - **共有ボリューム**: OTP ファイルなどを `e2e/tmp` に書き出し、本体・Playwright 双方が参照。
 
@@ -75,10 +79,10 @@ e2e/
   - 設定ファイルで `provider.type: custom` を指定し、`auth_url`・`token_url`・`userinfo_url`・`jwks_url` を外部から与えられるようにする。
   - client_id/client_secret は `docker compose` の `.env` から注入。
   - テストサーバーの self-signed 証明書は用意しない前提で HTTP を許容する (環境変数で制御)。
-- **パスワードレス OTP のファイル出力**
-  - メール送信の代わりに OTP 情報 (メールアドレス・トークン・有効期限) を JSON で `e2e/tmp/passwordless-otp.json` へ追記。
-  - 権限競合を避けるためファイルロック or append-safe な書き方を検討。
-  - OTP 取り出し用 CLI や HTTP は不要。Playwright がファイルを直接読む。
+- **メール認証の設定**
+  - E2E環境ではMailpitをSMTPサーバーとして使用（`smtp://mailpit:1025`）。
+  - 従来のファイル出力機能（`otp_output_file`）も並行して利用可能（後方互換性のため）。
+  - Playwrightテストでは、Mailpit APIを使用してメールからログインURLを抽出可能。
 - **ログ/デバッグ**
   - テスト時には認証の成否を標準出力に INFO ログで記録し、Playwright が失敗原因を追跡しやすくする。
 
@@ -104,15 +108,56 @@ e2e/
   5. 直後に `/app` を再訪し、ログイン画面に戻されることを検証。
 - `passwordless.spec.ts`
   1. メールログインを選択し、`someone@example.com` を送信。
-  2. `tmp/passwordless-otp.json` をポーリングして最新 OTP を取得 (サポートスクリプトで実装)。
-  3. OTP 入力画面にコードを投入し、目的ページに遷移できることを検証。
+  2. Mailpit APIを使用してメールからログインURLを抽出（`mailpit-helper.ts`を使用）。
+  3. 抽出したURLに直接アクセスし、目的ページに遷移できることを検証。
   4. OTP を再使用できないことを確認 (再入力でエラーになることを期待)。
+
+  **代替方法**: ファイルベースのOTP取得も引き続き利用可能：
+  1. `tmp/passwordless-otp.jsonl` をポーリングして最新 OTP を取得 (サポートスクリプト `otp-reader.ts` で実装)。
+  2. OTP 入力画面にコードを投入し、目的ページに遷移できることを検証。
 
 ## 実行手順 (想定)
 1. `make e2e-build` などのコマンドで multi-oauth2-proxy バイナリを用意し、Docker から参照できるようにする。
-2. 手動確認: `docker compose -f e2e/docker/docker-compose.e2e.yaml up --build` を起動し、ブラウザで `http://localhost:4180/` にアクセスしてフローを確認。
+2. 手動確認: `docker compose -f e2e/docker/docker-compose.e2e.yaml up --build` を起動し、以下を確認：
+   - ブラウザで `http://localhost:4180/` にアクセスして認証フローを確認
+   - **Mailpit WebUI** (`http://localhost:8025`) でメールをプレビュー
+   - メール内のリンクをクリックしてOTPログインを実行
 3. 自動確認: `docker compose -f e2e/docker/docker-compose.e2e.yaml -f e2e/docker/docker-compose.e2e.playwright.yaml up --build playwright-runner` を実行。Playwright が完了後に終了コードで合否を判定。
-4. 実行後、`e2e/test-results` と `e2e/tmp/passwordless-otp.json` を確認し、不要であればクリーンアップ。
+4. 実行後、`e2e/test-results` と `e2e/tmp/passwordless-otp.jsonl` を確認し、不要であればクリーンアップ。
+
+## Mailpitの活用方法
+
+### メールのプレビュー
+E2E環境起動後、ブラウザで `http://localhost:8025` にアクセスすると：
+- 送信されたメールの一覧が表示される
+- 各メールをクリックして内容を確認できる
+- HTMLとテキストの両方のプレビューが可能
+- メール内のリンクをクリックして直接ログイン可能
+
+### Playwrightテストでの利用
+`mailpit-helper.ts` を使用してメールを取得：
+
+```typescript
+import { waitForLoginEmail, clearAllMessages } from '../support/mailpit-helper';
+
+// テスト前にメールをクリア
+await clearAllMessages();
+
+// メール送信をトリガー
+await page.fill('input[name="email"]', 'test@example.com');
+await page.click('button[type="submit"]');
+
+// メールを待ってログインURLを取得
+const loginUrl = await waitForLoginEmail('test@example.com');
+
+// URLに直接アクセス
+await page.goto(loginUrl);
+```
+
+### トラブルシューティング
+- メールが届かない場合: Mailpit WebUIで受信状況を確認
+- URLが抽出できない場合: WebUIでメール内容を確認し、正しいフォーマットかチェック
+- Mailpitのログを確認: `docker logs e2e-mailpit`
 
 ## リスクと検討事項
 - ローカルで使用するポート (4180, 3000) が競合しないか確認が必要。

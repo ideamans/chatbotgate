@@ -5,7 +5,7 @@ go 1.24.7
 require (
 	github.com/alicebob/miniredis/v2 v2.35.0
 	github.com/fsnotify/fsnotify v1.9.0
-	github.com/ideamans/hermes v1.3.4
+	github.com/ideamans/hermes v1.3.5
 	github.com/redis/go-redis/v9 v9.16.0
 	github.com/sendgrid/sendgrid-go v3.16.1+incompatible
 	golang.org/x/oauth2 v0.32.0

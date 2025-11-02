@@ -245,6 +245,7 @@ func (m *MiddlewareManager) createMiddleware(cfg *config.Config) (*middleware.Mi
 			emailBaseURL,
 			authPrefix,
 			authzChecker,
+			translator,
 			cfg.Session.CookieSecret,
 		)
 		if err != nil {
