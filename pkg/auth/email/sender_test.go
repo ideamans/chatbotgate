@@ -3,7 +3,7 @@ package email
 import (
 	"testing"
 
-	"github.com/ideamans/multi-oauth2-proxy/pkg/config"
+	"github.com/ideamans/chatbotgate/pkg/config"
 )
 
 func TestNewSMTPSender(t *testing.T) {

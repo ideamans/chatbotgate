@@ -1,5 +1,5 @@
 service:
-  name: "multi-oauth2-proxy e2e"
+  name: "chatbotgate e2e"
   description: "E2E verification environment"
 
 server:
@@ -40,7 +40,7 @@ email_auth:
     username: ""
     password: ""
     from: "noreply@example.com"
-    from_name: "multi-oauth2-proxy E2E"
+    from_name: "chatbotgate E2E"
     insecure_skip_verify: true
   token:
     expire: "3m"

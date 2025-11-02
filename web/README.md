@@ -1,6 +1,6 @@
-# Multi OAuth2 Proxy - Design System
+# ChatbotGate - Design System
 
-This directory contains the frontend design system and assets for the Multi OAuth2 Proxy authentication pages.
+This directory contains the frontend design system and assets for the ChatbotGate authentication pages.
 
 ## Tech Stack
 

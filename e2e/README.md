@@ -1,10 +1,10 @@
 # E2E Harness
 
-This directory contains the end-to-end test harness for `multi-oauth2-proxy`.
+This directory contains the end-to-end test harness for `chatbotgate`.
 
 ## Components
 
-- `src/target-app/`: Express ベースの保護対象アプリ (ポート 3000)。`multi-oauth2-proxy` の背後で動作します。
+- `src/target-app/`: Express ベースの保護対象アプリ (ポート 3000)。`chatbotgate` の背後で動作します。
 - `src/stub-auth/`: OAuth2/OIDC スタブプロバイダー (ポート 3001)。ブラウザから `http://localhost:3001` で直接ログイン画面を確認できます。
 - `config/`: プロキシ・ターゲットアプリ・スタブプロバイダー向けの環境設定。
 - `docker/`: Dockerfile および Compose スタック (`make dev`, `make test`)。
@@ -35,6 +35,6 @@ make test HEADLESS=false
 
 ### ポート割り当て
 
-- `4180`: multi-oauth2-proxy (フロントエンド)
+- `4180`: chatbotgate (フロントエンド)
 - `3000`: 保護対象アプリ (`target-app`)
 - `3001`: OAuth2 プロバイダー (`stub-auth`) — `http://localhost:3001` で直接アクセス可能

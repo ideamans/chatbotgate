@@ -9,12 +9,12 @@ import (
 
 	stdoauth2 "golang.org/x/oauth2"
 
-	"github.com/ideamans/multi-oauth2-proxy/pkg/auth/oauth2"
-	"github.com/ideamans/multi-oauth2-proxy/pkg/authz"
-	"github.com/ideamans/multi-oauth2-proxy/pkg/config"
-	"github.com/ideamans/multi-oauth2-proxy/pkg/i18n"
-	"github.com/ideamans/multi-oauth2-proxy/pkg/logging"
-	"github.com/ideamans/multi-oauth2-proxy/pkg/session"
+	"github.com/ideamans/chatbotgate/pkg/auth/oauth2"
+	"github.com/ideamans/chatbotgate/pkg/authz"
+	"github.com/ideamans/chatbotgate/pkg/config"
+	"github.com/ideamans/chatbotgate/pkg/i18n"
+	"github.com/ideamans/chatbotgate/pkg/logging"
+	"github.com/ideamans/chatbotgate/pkg/session"
 )
 
 // mockProvider is a mock implementation of oauth2.Provider

@@ -13,7 +13,7 @@ build-web: ## Build CSS and web assets
 	cd web && yarn build
 
 build-go: ## Build Go binary
-	go build -o bin/multi-oauth2-proxy ./cmd/multi-oauth2-proxy
+	go build -o bin/chatbotgate ./cmd/chatbotgate
 
 build: build-web build-go ## Build everything (web + go)
 
@@ -29,4 +29,4 @@ clean: ## Clean build artifacts
 	rm -rf web/node_modules/
 
 run: build ## Build and run the server
-	./bin/multi-oauth2-proxy
+	./bin/chatbotgate

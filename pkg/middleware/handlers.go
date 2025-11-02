@@ -7,10 +7,10 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/ideamans/multi-oauth2-proxy/pkg/assets"
-	"github.com/ideamans/multi-oauth2-proxy/pkg/auth/oauth2"
-	"github.com/ideamans/multi-oauth2-proxy/pkg/i18n"
-	"github.com/ideamans/multi-oauth2-proxy/pkg/session"
+	"github.com/ideamans/chatbotgate/pkg/assets"
+	"github.com/ideamans/chatbotgate/pkg/auth/oauth2"
+	"github.com/ideamans/chatbotgate/pkg/i18n"
+	"github.com/ideamans/chatbotgate/pkg/session"
 )
 
 // handleHealth handles the health check endpoint

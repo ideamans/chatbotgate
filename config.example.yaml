@@ -1,9 +1,9 @@
-# multi-oauth2-proxy configuration example
+# chatbotgate configuration example
 # Copy this file to config.yaml and customize for your environment
 
 # Service information
 service:
-  name: "Multi OAuth2 Proxy"
+  name: "ChatbotGate"
   description: "Authentication proxy for multiple OAuth2 providers"
   # Optional: Icon URL for auth header (48px icon, appears to the left of title)
   # icon_url: "https://example.com/icon.svg"
@@ -114,7 +114,7 @@ email_auth:
     username: "your-email@gmail.com"
     password: "your-app-password"
     from: "noreply@example.com"
-    from_name: "Multi OAuth2 Proxy"
+    from_name: "ChatbotGate"
     tls: false
     starttls: true
 
@@ -122,7 +122,7 @@ email_auth:
   # sendgrid:
   #   api_key: "SG.xxxxxxxxxxxxxxxxxxxx"
   #   from: "noreply@example.com"
-  #   from_name: "Multi OAuth2 Proxy"
+  #   from_name: "ChatbotGate"
 
   # Token expiration
   token:
@@ -162,7 +162,7 @@ kvs:
 
     # LevelDB-specific config (used when type: "leveldb")
     # leveldb:
-    #   path: "/var/lib/multi-oauth2-proxy/kvs"  # Storage path (empty = OS cache/temp dir)
+    #   path: "/var/lib/chatbotgate/kvs"  # Storage path (empty = OS cache/temp dir)
     #   sync_writes: false  # Enable for safer writes (slower performance)
     #   cleanup_interval: "5m"  # Background cleanup for expired keys
 
@@ -204,4 +204,4 @@ kvs:
   # ratelimit:
   #   type: "leveldb"
   #   leveldb:
-  #     path: "/var/lib/multi-oauth2-proxy/ratelimit"
+  #     path: "/var/lib/chatbotgate/ratelimit"

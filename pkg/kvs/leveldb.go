@@ -41,7 +41,7 @@ func NewLevelDBStore(namespace string, cfg LevelDBConfig) (*LevelDBStore, error)
 			// Fallback to temp directory
 			cacheDir = os.TempDir()
 		}
-		basePath = filepath.Join(cacheDir, "multi-oauth2-proxy", "kvs")
+		basePath = filepath.Join(cacheDir, "chatbotgate", "kvs")
 	}
 
 	// Append namespace to create isolated directory

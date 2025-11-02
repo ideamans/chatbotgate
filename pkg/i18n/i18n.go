@@ -152,7 +152,7 @@ func normalizeTheme(theme string) Theme {
 var defaultTranslations = Translations{
 	English: Translation{
 		// Service
-		"service.name":        "Multi OAuth2 Proxy",
+		"service.name":        "ChatbotGate",
 		"service.description": "Authentication proxy for multiple OAuth2 providers",
 
 		// Login page
@@ -221,7 +221,7 @@ var defaultTranslations = Translations{
 
 	Japanese: Translation{
 		// Service
-		"service.name":        "Multi OAuth2 Proxy",
+		"service.name":        "ChatbotGate",
 		"service.description": "複数のOAuth2プロバイダーに対応した認証プロキシ",
 
 		// Login page

@@ -17,7 +17,7 @@ LICENSE
 *~
 
 # Build artifacts
-multi-oauth2-proxy
+chatbotgate
 *.exe
 *.test
 *.out

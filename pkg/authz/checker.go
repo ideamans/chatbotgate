@@ -3,7 +3,7 @@ package authz
 import (
 	"strings"
 
-	"github.com/ideamans/multi-oauth2-proxy/pkg/config"
+	"github.com/ideamans/chatbotgate/pkg/config"
 )
 
 // Checker is an interface for authorization checking

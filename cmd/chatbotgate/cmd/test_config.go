@@ -1,0 +1,89 @@
+package cmd
+
+import (
+	"fmt"
+
+	"github.com/ideamans/chatbotgate/pkg/config"
+	"github.com/spf13/cobra"
+)
+
+// testConfigCmd represents the test-config command
+var testConfigCmd = &cobra.Command{
+	Use:   "test-config",
+	Short: "Validate the configuration file",
+	Long: `Test and validate the configuration file without starting the server.
+
+This command will:
+- Load the configuration file from the specified path
+- Parse the YAML/JSON content
+- Validate all required fields
+- Check for common configuration errors
+- Report any issues found
+
+If the configuration is valid, the command exits with status 0.
+If there are validation errors, the command exits with status 1.`,
+	RunE: runTestConfig,
+}
+
+func init() {
+	rootCmd.AddCommand(testConfigCmd)
+}
+
+func runTestConfig(cmd *cobra.Command, args []string) error {
+	fmt.Printf("Testing configuration file: %s\n", cfgFile)
+
+	// Load configuration
+	loader := config.NewFileLoader(cfgFile)
+	cfg, err := loader.Load()
+	if err != nil {
+		return fmt.Errorf("failed to load configuration: %w", err)
+	}
+
+	fmt.Println("✓ Configuration file loaded successfully")
+
+	// Validate configuration
+	if err := cfg.Validate(); err != nil {
+		return fmt.Errorf("configuration validation failed: %w", err)
+	}
+
+	fmt.Println("✓ Configuration validation passed")
+
+	// Print summary
+	fmt.Println("\nConfiguration Summary:")
+	fmt.Printf("  Service Name: %s\n", cfg.Service.Name)
+	fmt.Printf("  Upstream: %s\n", cfg.Proxy.Upstream)
+
+	// Count enabled OAuth2 providers
+	enabledProviders := 0
+	for _, p := range cfg.OAuth2.Providers {
+		if p.Enabled {
+			enabledProviders++
+		}
+	}
+	fmt.Printf("  OAuth2 Providers: %d enabled\n", enabledProviders)
+
+	if cfg.EmailAuth.Enabled {
+		fmt.Printf("  Email Auth: enabled (%s)\n", cfg.EmailAuth.SenderType)
+	} else {
+		fmt.Println("  Email Auth: disabled")
+	}
+
+	// KVS configuration
+	fmt.Printf("  Default KVS: %s\n", cfg.KVS.Default.Type)
+	if cfg.KVS.Session != nil {
+		fmt.Printf("  Session KVS: %s (dedicated)\n", cfg.KVS.Session.Type)
+	} else {
+		fmt.Printf("  Session KVS: %s (shared with namespace: %s)\n", cfg.KVS.Default.Type, cfg.KVS.Namespaces.Session)
+	}
+
+	// Authorization
+	allowedCount := len(cfg.Authorization.Allowed)
+	if allowedCount > 0 {
+		fmt.Printf("  Allowed Users/Domains: %d entries\n", allowedCount)
+	} else {
+		fmt.Println("  Allowed Users/Domains: none (all authenticated users allowed)")
+	}
+
+	fmt.Println("\n✓ Configuration is valid and ready to use")
+	return nil
+}

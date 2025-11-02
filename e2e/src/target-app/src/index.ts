@@ -51,7 +51,7 @@ app.get('/', (req, res) => {
       </header>
       <main>
         <div class="card">
-          <p>このページは multi-oauth2-proxy の背後で保護されています。<br/>プロキシ経由でアクセスするとユーザー情報が表示されます。</p>
+          <p>このページは ChatbotGate の背後で保護されています。<br/>プロキシ経由でアクセスするとユーザー情報が表示されます。</p>
           <p><a href="/_auth/login" data-test="app-login-link">認証ページへ移動</a></p>
         </div>
       </main>

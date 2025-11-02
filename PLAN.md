@@ -1,4 +1,4 @@
-# multi-oauth2-proxy 設計書
+# chatbotgate 設計書
 
 ## 概要
 
@@ -258,14 +258,14 @@ server:
 
 ### 設計コンセプト
 
-multi-oauth2-proxyは**ミドルウェア中心の設計**を採用しています。
+chatbotgateは**ミドルウェア中心の設計**を採用しています。
 これにより、以下の3つの使用モードをサポートします：
 
 #### モード1: ライブラリとして使用（Middleware-Only）
 ```
 Your Go Application
   ↓
-import "github.com/ideamans/multi-oauth2-proxy/pkg/middleware"
+import "github.com/ideamans/chatbotgate/pkg/middleware"
   ↓
 authMiddleware := middleware.New(config)
 http.ListenAndServe(":8080", authMiddleware.Wrap(yourHandler))
@@ -275,7 +275,7 @@ http.ListenAndServe(":8080", authMiddleware.Wrap(yourHandler))
 ```
 ┌─────────┐      ┌────────────────────┐      ┌──────────┐
 │ Client  │─────▶│ Caddy/nginx/etc   │─────▶│ Backend  │
-└─────────┘      │ + multi-oauth2     │      └──────────┘
+└─────────┘      │ + chatbotgate     │      └──────────┘
                  │   (middleware)     │
                  └────────────────────┘
 ```
@@ -286,7 +286,7 @@ http.ListenAndServe(":8080", authMiddleware.Wrap(yourHandler))
 #### モード3: スタンドアロンプロキシとして使用（All-in-One）
 ```
 ┌─────────┐      ┌────────────────────────┐      ┌──────────┐
-│ Client  │─────▶│ multi-oauth2-proxy     │─────▶│ Backend  │
+│ Client  │─────▶│ chatbotgate     │─────▶│ Backend  │
 └─────────┘      │ (middleware + proxy)   │      └──────────┘
                  └────────────────────────┘
 ```
@@ -330,9 +330,9 @@ http.ListenAndServe(":8080", authMiddleware.Wrap(yourHandler))
 ### モジュール構成（ミドルウェア中心）
 
 ```
-multi-oauth2-proxy/
+chatbotgate/
 ├── cmd/
-│   └── multi-oauth2-proxy/     # メインエントリポイント
+│   └── chatbotgate/     # メインエントリポイント
 │       └── main.go             # モード選択（library/server/proxy）
 │
 ├── pkg/
@@ -432,7 +432,7 @@ multi-oauth2-proxy/
 ```yaml
 # サービス設定
 service:
-  name: "Multi OAuth2 Proxy"  # サービス名（GUIとメールに表示）
+  name: "ChatbotGate"  # サービス名（GUIとメールに表示）
   description: "統合認証サービス"  # サービス説明（GUIに表示）
 
 # サーバー設定
@@ -522,7 +522,7 @@ email_auth:
     username: "your-email@gmail.com"
     password: "your-app-password"
     from: "noreply@example.com"
-    from_name: "Multi OAuth2 Proxy"  # 送信者名（オプション）
+    from_name: "ChatbotGate"  # 送信者名（オプション）
     # TLS設定
     tls: true
     # STARTTLS設定
@@ -532,7 +532,7 @@ email_auth:
   sendgrid:
     api_key: "SG.xxxxxxxxxxxxxxxxxxxx"  # SendGrid APIキー
     from: "noreply@example.com"
-    from_name: "Multi OAuth2 Proxy"  # 送信者名（オプション）
+    from_name: "ChatbotGate"  # 送信者名（オプション）
 
   token:
     expire: "15m"  # トークン有効期限
@@ -611,10 +611,10 @@ service:
 **例:**
 ```bash
 # 日本語でサーバーを起動
-LANGUAGE=ja ./multi-oauth2-proxy
+LANGUAGE=ja ./chatbotgate
 
 # 英語でサーバーを起動
-LANGUAGE=en ./multi-oauth2-proxy
+LANGUAGE=en ./chatbotgate
 ```
 
 **GUIとメールの連動:**
@@ -822,7 +822,7 @@ TTY（端末）に出力する場合のみカラー表示を有効化。パイ�
 
 | パッケージ | モジュール名 |
 |-----------|-------------|
-| `cmd/multi-oauth2-proxy` | `main` |
+| `cmd/chatbotgate` | `main` |
 | `pkg/server` | `server` |
 | `pkg/auth/oauth2` | `oauth2` |
 | `pkg/auth/email` | `email` |
@@ -853,18 +853,18 @@ TTY（端末）に出力する場合のみカラー表示を有効化。パイ�
 
 **翻訳の定義:**
 ```go
-import "github.com/ideamans/multi-oauth2-proxy/pkg/i18n"
+import "github.com/ideamans/chatbotgate/pkg/i18n"
 
 // pkg/i18n/i18n.go に defaultTranslations として定義
 var defaultTranslations = i18n.Translations{
     i18n.English: i18n.Translation{
-        "service.name":        "Multi OAuth2 Proxy",
+        "service.name":        "ChatbotGate",
         "login.title":         "Login",
         "login.heading":       "Sign In",
         "email.sent.message":  "If your email address is authorized, you will receive a login link shortly.",
     },
     i18n.Japanese: i18n.Translation{
-        "service.name":        "Multi OAuth2 Proxy",
+        "service.name":        "ChatbotGate",
         "login.title":         "ログイン",
         "login.heading":       "サインイン",
         "email.sent.message":  "メールアドレスが承認されている場合、まもなくログインリンクが届きます。",
@@ -1519,7 +1519,7 @@ jobs:
     - 任意のOAuth2/OIDCエンドポイント対応
     - InsecureSkipVerify対応（HTTP接続許可）
   - [x] `pkg/auth/oauth2/custom_test.go` - カスタムプロバイダーのテスト
-  - [x] `cmd/multi-oauth2-proxy/main.go` - カスタムプロバイダーの初期化処理追加
+  - [x] `cmd/chatbotgate/main.go` - カスタムプロバイダーの初期化処理追加
 
 - [x] パスワードレス認証のOTPファイル出力機能
   - [x] `pkg/config/config.go` - EmailAuthConfig構造体の拡張
@@ -1560,7 +1560,7 @@ jobs:
   - [x] `pkg/session/redis.go` - Redisベースのセッションストア実装
   - [x] `pkg/session/redis_test.go` - Redisストアのテスト（miniredis使用）
   - [x] `pkg/config/config.go` - Redisセッション設定の追加
-  - [x] `cmd/multi-oauth2-proxy/main.go` - ストアタイプに応じた初期化
+  - [x] `cmd/chatbotgate/main.go` - ストアタイプに応じた初期化
 - [x] ヘルスチェック・Readinessプローブ（Phase 1で実装済み）
 - [x] Docker/Kubernetes対応
   - [x] `Dockerfile` - マルチステージビルド
@@ -1727,7 +1727,7 @@ function changeLanguage(lang) {
 ```
 MIT License
 
-Copyright (c) 2025 multi-oauth2-proxy contributors
+Copyright (c) 2025 chatbotgate contributors
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -1758,8 +1758,8 @@ SOFTWARE.
 
 1. **フォークとクローン**
    ```bash
-   git clone https://github.com/yourusername/multi-oauth2-proxy.git
-   cd multi-oauth2-proxy
+   git clone https://github.com/yourusername/chatbotgate.git
+   cd chatbotgate
    ```
 
 2. **ブランチを作成**

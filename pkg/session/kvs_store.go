@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/ideamans/multi-oauth2-proxy/pkg/kvs"
+	"github.com/ideamans/chatbotgate/pkg/kvs"
 )
 
 // KVSStore implements session storage using a KVS backend.

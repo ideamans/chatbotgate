@@ -5,7 +5,7 @@ import (
 	"time"
 
 	hermes "github.com/ideamans/hermes"
-	"github.com/ideamans/multi-oauth2-proxy/pkg/i18n"
+	"github.com/ideamans/chatbotgate/pkg/i18n"
 )
 
 // EmailTemplate generates HTML emails using Hermes

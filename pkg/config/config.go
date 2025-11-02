@@ -3,7 +3,7 @@ package config
 import (
 	"time"
 
-	"github.com/ideamans/multi-oauth2-proxy/pkg/kvs"
+	"github.com/ideamans/chatbotgate/pkg/kvs"
 )
 
 // Config represents the application configuration

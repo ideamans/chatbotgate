@@ -3,13 +3,13 @@ package middleware
 import (
 	"net/http"
 
-	"github.com/ideamans/multi-oauth2-proxy/pkg/auth/email"
-	"github.com/ideamans/multi-oauth2-proxy/pkg/auth/oauth2"
-	"github.com/ideamans/multi-oauth2-proxy/pkg/authz"
-	"github.com/ideamans/multi-oauth2-proxy/pkg/config"
-	"github.com/ideamans/multi-oauth2-proxy/pkg/i18n"
-	"github.com/ideamans/multi-oauth2-proxy/pkg/logging"
-	"github.com/ideamans/multi-oauth2-proxy/pkg/session"
+	"github.com/ideamans/chatbotgate/pkg/auth/email"
+	"github.com/ideamans/chatbotgate/pkg/auth/oauth2"
+	"github.com/ideamans/chatbotgate/pkg/authz"
+	"github.com/ideamans/chatbotgate/pkg/config"
+	"github.com/ideamans/chatbotgate/pkg/i18n"
+	"github.com/ideamans/chatbotgate/pkg/logging"
+	"github.com/ideamans/chatbotgate/pkg/session"
 )
 
 // Middleware is the core authentication middleware

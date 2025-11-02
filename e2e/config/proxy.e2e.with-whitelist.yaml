@@ -1,5 +1,5 @@
 service:
-  name: "multi-oauth2-proxy e2e (with whitelist)"
+  name: "chatbotgate e2e (with whitelist)"
   description: "E2E verification environment with whitelist"
 
 server:
@@ -42,7 +42,7 @@ email_auth:
     username: ""
     password: ""
     from: "noreply@example.com"
-    from_name: "multi-oauth2-proxy E2E (WL)"
+    from_name: "chatbotgate E2E (WL)"
     insecure_skip_verify: true
   token:
     expire: "3m"

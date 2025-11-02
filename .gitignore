@@ -35,8 +35,8 @@ go.work
 Thumbs.db
 
 # Application binary
-/multi-oauth2-proxy
-cmd/multi-oauth2-proxy/multi-oauth2-proxy
+/chatbotgate
+cmd/chatbotgate/chatbotgate
 bin/
 
 # Config files with secrets (example files are OK)
