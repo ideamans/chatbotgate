@@ -8,10 +8,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ideamans/multi-oauth2-proxy/pkg/config"
-	"github.com/ideamans/multi-oauth2-proxy/pkg/logging"
-	"github.com/ideamans/multi-oauth2-proxy/pkg/manager"
-	"github.com/ideamans/multi-oauth2-proxy/pkg/session"
+	"github.com/ideamans/chatbotgate/pkg/config"
+	"github.com/ideamans/chatbotgate/pkg/logging"
+	"github.com/ideamans/chatbotgate/pkg/manager"
+	"github.com/ideamans/chatbotgate/pkg/session"
 )
 
 // createTestConfigFile creates a temporary config file for testing

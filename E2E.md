@@ -1,7 +1,7 @@
 # E2Eテスト計画
 
 ## 目的
-- multi-oauth2-proxy が OAuth2 認証およびメールパスワードレス認証の双方で、想定するフローをエンドツーエンドで満たすことを確認する。
+- chatbotgate が OAuth2 認証およびメールパスワードレス認証の双方で、想定するフローをエンドツーエンドで満たすことを確認する。
 - ローカル環境で開発者や Playwright が追加設定なしに動作確認できるコンテナベースの検証環境を用意する。
 
 ## 検証対象の要求事項
@@ -12,7 +12,7 @@
 - 目的のページに OAuth2 サインアウトボタンが表示され、操作するとセッションが破棄される。
 
 ## テスト環境全体像
-- **multi-oauth2-proxy 本体サーバー**: 認証プロキシ。テスト設定ファイルを読み込み、テストサーバーを OAuth2 プロバイダーとして扱う。メール認証の OTP を e2e ディレクトリ配下の一時ファイルへ出力する。
+- **chatbotgate 本体サーバー**: 認証プロキシ。テスト設定ファイルを読み込み、テストサーバーを OAuth2 プロバイダーとして扱う。メール認証の OTP を e2e ディレクトリ配下の一時ファイルへ出力する。
 - **テストサーバー (stub-auth)**: TypeScript/Express で実装する簡易アプリ。
   - 目的ページ (`/app`) とログインフォーム (`/login`) を提供。
   - OAuth2 プロバイダーとして `/oauth/authorize`・`/oauth/token`・`/oauth/userinfo` を実装。
@@ -29,7 +29,7 @@
 ```
 e2e/
   config/
-    proxy.e2e.yaml        # multi-oauth2-proxy 用のテスト設定
+    proxy.e2e.yaml        # chatbotgate 用のテスト設定
     stub-auth.env         # テストサーバー用環境変数
   docker/
     docker-compose.e2e.yaml            # 手動確認用 (proxy + stub)
@@ -51,7 +51,7 @@ e2e/
 ## Docker Compose 設計
 - `docker/docker-compose.e2e.yaml`
   - ネットワーク: `e2e-net`
-  - サービス `proxy-app`: multi-oauth2-proxy をビルドまたはローカルバイナリで起動。`config/proxy.e2e.yaml` をマウントし、`/otp` ボリュームとして `e2e/tmp` をマウント。
+  - サービス `proxy-app`: chatbotgate をビルドまたはローカルバイナリで起動。`config/proxy.e2e.yaml` をマウントし、`/otp` ボリュームとして `e2e/tmp` をマウント。
   - サービス `stub-auth`: `Dockerfile.stub-auth` からビルド。ポート 3000 を公開。セッションはサーバー内メモリ、サインアウト時に Cookie を削除。
   - 共有ボリューム: `otp-files` → `../tmp` へバインド。
 - `docker/docker-compose.e2e.playwright.yaml`
@@ -117,7 +117,7 @@ e2e/
   2. OTP 入力画面にコードを投入し、目的ページに遷移できることを検証。
 
 ## 実行手順 (想定)
-1. `make e2e-build` などのコマンドで multi-oauth2-proxy バイナリを用意し、Docker から参照できるようにする。
+1. `make e2e-build` などのコマンドで chatbotgate バイナリを用意し、Docker から参照できるようにする。
 2. 手動確認: `docker compose -f e2e/docker/docker-compose.e2e.yaml up --build` を起動し、以下を確認：
    - ブラウザで `http://localhost:4180/` にアクセスして認証フローを確認
    - **Mailpit WebUI** (`http://localhost:8025`) でメールをプレビュー
@@ -167,5 +167,5 @@ await page.goto(loginUrl);
 
 ## 次のアクション
 - テストサーバーと Playwright 環境の雛形を `e2e/` に追加。
-- multi-oauth2-proxy 側の設定対応と OTP ファイル出力機能を実装。
+- chatbotgate 側の設定対応と OTP ファイル出力機能を実装。
 - Docker Compose で相互接続を確認し、テストを走らせて調整。

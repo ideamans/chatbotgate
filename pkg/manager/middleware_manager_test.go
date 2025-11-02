@@ -7,10 +7,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ideamans/multi-oauth2-proxy/pkg/config"
-	"github.com/ideamans/multi-oauth2-proxy/pkg/logging"
-	"github.com/ideamans/multi-oauth2-proxy/pkg/proxy"
-	"github.com/ideamans/multi-oauth2-proxy/pkg/session"
+	"github.com/ideamans/chatbotgate/pkg/config"
+	"github.com/ideamans/chatbotgate/pkg/logging"
+	"github.com/ideamans/chatbotgate/pkg/proxy"
+	"github.com/ideamans/chatbotgate/pkg/session"
 )
 
 // createTestConfig creates a minimal valid configuration for testing

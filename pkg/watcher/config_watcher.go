@@ -9,9 +9,9 @@ import (
 	"time"
 
 	"github.com/fsnotify/fsnotify"
-	"github.com/ideamans/multi-oauth2-proxy/pkg/config"
-	"github.com/ideamans/multi-oauth2-proxy/pkg/logging"
-	"github.com/ideamans/multi-oauth2-proxy/pkg/manager"
+	"github.com/ideamans/chatbotgate/pkg/config"
+	"github.com/ideamans/chatbotgate/pkg/logging"
+	"github.com/ideamans/chatbotgate/pkg/manager"
 )
 
 // ConfigWatcher watches configuration changes and triggers middleware reloads.

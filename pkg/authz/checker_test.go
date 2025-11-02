@@ -3,7 +3,7 @@ package authz
 import (
 	"testing"
 
-	"github.com/ideamans/multi-oauth2-proxy/pkg/config"
+	"github.com/ideamans/chatbotgate/pkg/config"
 )
 
 func TestEmailChecker_IsAllowed(t *testing.T) {

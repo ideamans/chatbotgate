@@ -1,6 +1,6 @@
 # Target App
 
-Protected sample application consumed by the end-to-end environment. It renders the user identity forwarded by `multi-oauth2-proxy` and exposes a sign-out button that posts to `/_auth/logout`.
+Protected sample application consumed by the end-to-end environment. It renders the user identity forwarded by `chatbotgate` and exposes a sign-out button that posts to `/_auth/logout`.
 
 ## Usage
 

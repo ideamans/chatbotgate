@@ -1,10 +1,10 @@
-# Multi OAuth2 Proxy - Usage Examples
+# ChatbotGate - Usage Examples
 
-This directory contains examples showing three different ways to use multi-oauth2-proxy.
+This directory contains examples showing three different ways to use chatbotgate.
 
 ## Overview
 
-multi-oauth2-proxy can be used in three different ways:
+chatbotgate can be used in three different ways:
 
 ### 1. Middleware Library (Programming Interface)
 Use only the authentication middleware in your Go application. You provide your own backend handler.
@@ -132,8 +132,8 @@ package main
 
 import (
     "net/http"
-    "github.com/ideamans/multi-oauth2-proxy/pkg/middleware"
-    "github.com/ideamans/multi-oauth2-proxy/pkg/config"
+    "github.com/ideamans/chatbotgate/pkg/middleware"
+    "github.com/ideamans/chatbotgate/pkg/config"
     // ... other imports
 )
 
@@ -162,8 +162,8 @@ func main() {
 package main
 
 import (
-    "github.com/ideamans/multi-oauth2-proxy/pkg/server"
-    "github.com/ideamans/multi-oauth2-proxy/pkg/config"
+    "github.com/ideamans/chatbotgate/pkg/server"
+    "github.com/ideamans/chatbotgate/pkg/config"
     // ... other imports
 )
 
@@ -200,7 +200,7 @@ proxy:
 EOF
 
 # Run the proxy
-./multi-oauth2-proxy -config config.yaml
+./chatbotgate -config config.yaml
 ```
 
 ## Authentication Flow
@@ -226,5 +226,5 @@ All three usage modes follow the same authentication flow:
 ## Support
 
 For questions or issues:
-- GitHub Issues: https://github.com/ideamans/multi-oauth2-proxy/issues
+- GitHub Issues: https://github.com/ideamans/chatbotgate/issues
 - Documentation: See README.md and PLAN.md

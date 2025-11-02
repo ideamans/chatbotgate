@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/ideamans/multi-oauth2-proxy/pkg/authz"
-	"github.com/ideamans/multi-oauth2-proxy/pkg/config"
-	"github.com/ideamans/multi-oauth2-proxy/pkg/i18n"
-	"github.com/ideamans/multi-oauth2-proxy/pkg/kvs"
-	"github.com/ideamans/multi-oauth2-proxy/pkg/ratelimit"
+	"github.com/ideamans/chatbotgate/pkg/authz"
+	"github.com/ideamans/chatbotgate/pkg/config"
+	"github.com/ideamans/chatbotgate/pkg/i18n"
+	"github.com/ideamans/chatbotgate/pkg/kvs"
+	"github.com/ideamans/chatbotgate/pkg/ratelimit"
 )
 
 // Handler manages email authentication

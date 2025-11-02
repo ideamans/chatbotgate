@@ -1,10 +1,10 @@
-# Multi OAuth2 Proxy
+# ChatbotGate
 
 A flexible authentication proxy supporting multiple OAuth2 providers and email authentication. Can be used as a **standalone proxy**, **authentication middleware**, or **Go library**.
 
 ## Overview
 
-Multi OAuth2 Proxy provides authentication as a service with three flexible deployment modes:
+ChatbotGate provides authentication as a service with three flexible deployment modes:
 
 1. **🔧 Middleware Library** - Embed authentication in your Go application
 2. **⚙️ Programmatic Server** - Configure everything in Go code
@@ -39,14 +39,14 @@ Multi OAuth2 Proxy provides authentication as a service with three flexible depl
 
 ```bash
 # Clone the repository
-git clone https://github.com/ideamans/multi-oauth2-proxy.git
-cd multi-oauth2-proxy
+git clone https://github.com/ideamans/chatbotgate.git
+cd chatbotgate
 
 # Build the binary
-go build -o multi-oauth2-proxy ./cmd/multi-oauth2-proxy
+go build -o chatbotgate ./cmd/chatbotgate
 
 # Or install directly
-go install github.com/ideamans/multi-oauth2-proxy/cmd/multi-oauth2-proxy@latest
+go install github.com/ideamans/chatbotgate/cmd/chatbotgate@latest
 ```
 
 ### Quick Start with Config File
@@ -98,9 +98,9 @@ authorization:
 3. **Run the proxy**:
 
 ```bash
-./multi-oauth2-proxy -config config.yaml
+./chatbotgate -config config.yaml
 # or
-./multi-oauth2-proxy -config config.json
+./chatbotgate -config config.json
 ```
 
 4. **Access your application**:
@@ -119,8 +119,8 @@ package main
 
 import (
     "net/http"
-    "github.com/ideamans/multi-oauth2-proxy/pkg/middleware"
-    "github.com/ideamans/multi-oauth2-proxy/pkg/config"
+    "github.com/ideamans/chatbotgate/pkg/middleware"
+    "github.com/ideamans/chatbotgate/pkg/config"
     // ... other imports
 )
 
@@ -153,8 +153,8 @@ Configure the full proxy server in Go code without configuration files:
 package main
 
 import (
-    "github.com/ideamans/multi-oauth2-proxy/pkg/server"
-    "github.com/ideamans/multi-oauth2-proxy/pkg/config"
+    "github.com/ideamans/chatbotgate/pkg/server"
+    "github.com/ideamans/chatbotgate/pkg/config"
     // ... other imports
 )
 
@@ -183,10 +183,10 @@ Standard deployment using YAML or JSON configuration:
 
 ```bash
 # With YAML
-./multi-oauth2-proxy -config config.yaml
+./chatbotgate -config config.yaml
 
 # With JSON
-./multi-oauth2-proxy -config config.json
+./chatbotgate -config config.json
 ```
 
 The format is automatically detected from the file extension (`.yaml`, `.yml`, or `.json`).
@@ -232,9 +232,9 @@ See [`examples/config_file_server.go`](examples/config_file_server.go) and [`exa
 ### Project Structure
 
 ```
-multi-oauth2-proxy/
+chatbotgate/
 ├── cmd/
-│   └── multi-oauth2-proxy/     # CLI application (config file mode)
+│   └── chatbotgate/     # CLI application (config file mode)
 ├── pkg/
 │   ├── middleware/             # 🆕 Core authentication middleware
 │   │   ├── middleware.go       #     Main middleware logic
@@ -335,7 +335,7 @@ session:
 
 #### KVS (Key-Value Store) Configuration
 
-Multi OAuth2 Proxy uses a unified KVS abstraction for sessions, OTP tokens, and rate limiting. You can use a single shared backend or dedicated backends for each purpose:
+ChatbotGate uses a unified KVS abstraction for sessions, OTP tokens, and rate limiting. You can use a single shared backend or dedicated backends for each purpose:
 
 ```yaml
 kvs:
@@ -349,7 +349,7 @@ kvs:
 
     # LevelDB-specific config (persistent, single-server)
     # leveldb:
-    #   path: "/var/lib/multi-oauth2-proxy/kvs"  # Empty = OS cache/temp dir
+    #   path: "/var/lib/chatbotgate/kvs"  # Empty = OS cache/temp dir
     #   sync_writes: false
     #   cleanup_interval: "5m"
 
@@ -385,7 +385,7 @@ kvs:
   # ratelimit:
   #   type: "leveldb"
   #   leveldb:
-  #     path: "/var/lib/multi-oauth2-proxy/ratelimit"
+  #     path: "/var/lib/chatbotgate/ratelimit"
 ```
 
 **KVS Design Benefits:**
@@ -608,13 +608,13 @@ All authentication endpoints are prefixed with `auth_path_prefix` (default: `/_a
 
 ```bash
 # Build for current platform
-go build -o multi-oauth2-proxy ./cmd/multi-oauth2-proxy
+go build -o chatbotgate ./cmd/chatbotgate
 
 # Build for Linux
-GOOS=linux GOARCH=amd64 go build -o multi-oauth2-proxy ./cmd/multi-oauth2-proxy
+GOOS=linux GOARCH=amd64 go build -o chatbotgate ./cmd/chatbotgate
 
 # Build with version
-go build -ldflags "-X main.version=1.0.0" -o multi-oauth2-proxy ./cmd/multi-oauth2-proxy
+go build -ldflags "-X main.version=1.0.0" -o chatbotgate ./cmd/chatbotgate
 ```
 
 ### Testing
@@ -706,7 +706,7 @@ See [PLAN.md](PLAN.md) for detailed design documentation.
 
 ## Comparison with oauth2-proxy
 
-| Feature | multi-oauth2-proxy | oauth2-proxy |
+| Feature | chatbotgate | oauth2-proxy |
 |---------|-------------------|--------------|
 | Multiple OAuth2 providers | ✅ | ✅ |
 | Email authentication | ✅ | ❌ |
@@ -742,6 +742,6 @@ MIT License - see [LICENSE](LICENSE) file for details.
 
 ## Support
 
-- **Issues**: [GitHub Issues](https://github.com/ideamans/multi-oauth2-proxy/issues)
+- **Issues**: [GitHub Issues](https://github.com/ideamans/chatbotgate/issues)
 - **Documentation**: [PLAN.md](PLAN.md) for detailed design
 - **Examples**: [examples/](examples/) directory

@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/ideamans/multi-oauth2-proxy/pkg/logging"
+	"github.com/ideamans/chatbotgate/pkg/logging"
 )
 
 func main() {

@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ideamans/multi-oauth2-proxy/pkg/config"
+	"github.com/ideamans/chatbotgate/pkg/config"
 )
 
 // Helper function to create a valid base configuration

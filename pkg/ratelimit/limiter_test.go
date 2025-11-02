@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ideamans/multi-oauth2-proxy/pkg/kvs"
+	"github.com/ideamans/chatbotgate/pkg/kvs"
 )
 
 // createTestLimiter creates a limiter with memory-based KVS for testing

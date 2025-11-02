@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/ideamans/multi-oauth2-proxy/pkg/kvs"
+	"github.com/ideamans/chatbotgate/pkg/kvs"
 )
 
 // Limiter implements a simple token bucket rate limiter backed by KVS
