@@ -16,6 +16,21 @@ service:
 # Note: host and port are now set via command-line flags (-host, -port)
 # Default values: host=0.0.0.0, port=4180
 server:
+  # Authentication path prefix (default: "/_auth")
+  # All authentication endpoints will use this prefix
+  # auth_path_prefix: "/_auth"
+
+  # Base URL for email links and redirects (optional)
+  # Used for email authentication login links
+  # If not set, defaults to http://host:port (e.g., http://localhost:4180)
+  # Set this when running behind a reverse proxy or using a different external URL
+  # base_url: "https://auth.example.com"
+
+  # OAuth2 callback URL override (optional)
+  # Used for OAuth2 provider callback redirects
+  # If not set, defaults to http://host:port/_auth/oauth2/callback
+  # Set this when the external callback URL differs from the internal URL
+  # callback_url: "https://auth.example.com/_auth/oauth2/callback"
 
 # Proxy configuration
 proxy:
@@ -47,6 +62,8 @@ oauth2:
       client_id: "YOUR-GOOGLE-CLIENT-ID"
       client_secret: "YOUR-GOOGLE-CLIENT-SECRET"
       enabled: true
+      # Optional: Custom icon URL (if not set, uses default Google icon)
+      # icon_url: "https://example.com/custom-google-icon.svg"
 
     # GitHub OAuth2
     - name: "github"
@@ -54,6 +71,8 @@ oauth2:
       client_id: "YOUR-GITHUB-CLIENT-ID"
       client_secret: "YOUR-GITHUB-CLIENT-SECRET"
       enabled: false
+      # Optional: Custom icon URL (if not set, uses default GitHub icon)
+      # icon_url: "https://example.com/custom-github-icon.svg"
 
     # Microsoft OAuth2 (Azure AD)
     - name: "microsoft"
@@ -61,6 +80,25 @@ oauth2:
       client_id: "YOUR-MICROSOFT-CLIENT-ID"
       client_secret: "YOUR-MICROSOFT-CLIENT-SECRET"
       enabled: false
+      # Optional: Custom icon URL (if not set, uses default Microsoft icon)
+      # icon_url: "https://example.com/custom-microsoft-icon.svg"
+
+    # Custom OIDC Provider Example
+    # - name: "custom-oidc"
+    #   type: "custom"
+    #   display_name: "My OIDC Provider"
+    #   client_id: "YOUR-CLIENT-ID"
+    #   client_secret: "YOUR-CLIENT-SECRET"
+    #   enabled: false
+    #   # Custom icon URL is especially useful for custom OIDC providers
+    #   icon_url: "https://your-provider.com/logo.svg"
+    #   auth_url: "https://your-provider.com/oauth/authorize"
+    #   token_url: "https://your-provider.com/oauth/token"
+    #   userinfo_url: "https://your-provider.com/oauth/userinfo"
+    #   # Optional: JWKS URL for token validation
+    #   # jwks_url: "https://your-provider.com/.well-known/jwks.json"
+    #   # Allow HTTP for local testing (default: false, use only for development)
+    #   # insecure_skip_verify: true
 
 # Email authentication configuration (Phase 2)
 email_auth:

@@ -83,6 +83,7 @@ type OAuth2Provider struct {
 	ClientID     string `yaml:"client_id" json:"client_id"`
 	ClientSecret string `yaml:"client_secret" json:"client_secret"`
 	Enabled      bool   `yaml:"enabled" json:"enabled"`
+	IconURL      string `yaml:"icon_url" json:"icon_url"` // Optional custom icon URL (if not set, uses default icon based on provider type)
 
 	// Custom provider settings (only used when Type is "custom")
 	AuthURL            string `yaml:"auth_url" json:"auth_url"`              // Custom authorization endpoint
