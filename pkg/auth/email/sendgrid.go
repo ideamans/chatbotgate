@@ -41,3 +41,22 @@ func (s *SendGridSender) Send(to, subject, body string) error {
 
 	return nil
 }
+
+// SendHTML sends an HTML email with plain text fallback via SendGrid API
+func (s *SendGridSender) SendHTML(to, subject, htmlBody, textBody string) error {
+	from := mail.NewEmail(s.config.FromName, s.config.From)
+	toEmail := mail.NewEmail("", to)
+	message := mail.NewSingleEmail(from, subject, toEmail, textBody, htmlBody)
+
+	response, err := s.client.Send(message)
+	if err != nil {
+		return fmt.Errorf("failed to send HTML email via SendGrid: %w", err)
+	}
+
+	// Check response status
+	if response.StatusCode >= 400 {
+		return fmt.Errorf("SendGrid returned error status: %d %s", response.StatusCode, response.Body)
+	}
+
+	return nil
+}

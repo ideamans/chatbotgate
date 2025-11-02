@@ -553,7 +553,7 @@ func setupTestServerWithEmail(t *testing.T) (*Server, *session.MemoryStore) {
 	// Create email handler
 	emailHandler, err := email.NewHandler(
 		cfg.EmailAuth,
-		cfg.Service.Name,
+		cfg.Service,
 		"http://localhost:4180",
 		cfg.Server.GetAuthPathPrefix(),
 		authzChecker,

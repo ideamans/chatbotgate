@@ -25,6 +25,16 @@ func (m *MockAuthzChecker) IsAllowed(email string) bool {
 	return m.allowed
 }
 
+// testServiceConfig returns a default ServiceConfig for testing
+func testServiceConfig() config.ServiceConfig {
+	return config.ServiceConfig{
+		Name:      "Test Service",
+		LogoURL:   "https://example.com/logo.svg",
+		LogoWidth: "200px",
+		IconURL:   "https://example.com/icon.svg",
+	}
+}
+
 func TestNewHandler(t *testing.T) {
 	cfg := config.EmailAuthConfig{
 		Enabled:    true,
@@ -41,7 +51,7 @@ func TestNewHandler(t *testing.T) {
 
 	authzChecker := &MockAuthzChecker{allowed: true}
 
-	handler, err := NewHandler(cfg, "Test Service", "http://localhost:4180", "/_auth", authzChecker, "test-secret")
+	handler, err := NewHandler(cfg, testServiceConfig(), "http://localhost:4180", "/_auth", authzChecker, "test-secret")
 	if err != nil {
 		t.Fatalf("NewHandler() error = %v", err)
 	}
@@ -59,7 +69,7 @@ func TestNewHandler_InvalidSenderType(t *testing.T) {
 
 	authzChecker := &MockAuthzChecker{allowed: true}
 
-	_, err := NewHandler(cfg, "Test Service", "http://localhost:4180", "/_auth", authzChecker, "test-secret")
+	_, err := NewHandler(cfg, testServiceConfig(), "http://localhost:4180", "/_auth", authzChecker, "test-secret")
 	if err == nil {
 		t.Error("NewHandler() should return error for invalid sender type")
 	}
@@ -82,7 +92,7 @@ func TestHandler_SendLoginLink(t *testing.T) {
 	authzChecker := &MockAuthzChecker{allowed: true}
 	mockSender := &MockSender{}
 
-	handler, _ := NewHandler(cfg, "Test Service", "http://localhost:4180", "/_auth", authzChecker, "test-secret")
+	handler, _ := NewHandler(cfg, testServiceConfig(), "http://localhost:4180", "/_auth", authzChecker, "test-secret")
 	handler.sender = mockSender // Replace with mock
 
 	email := "user@example.com"
@@ -92,12 +102,12 @@ func TestHandler_SendLoginLink(t *testing.T) {
 		t.Fatalf("SendLoginLink() error = %v", err)
 	}
 
-	// Verify email was sent
-	if len(mockSender.Calls) != 1 {
-		t.Fatalf("expected 1 email sent, got %d", len(mockSender.Calls))
+	// Verify HTML email was sent
+	if len(mockSender.HTMLCalls) != 1 {
+		t.Fatalf("expected 1 HTML email sent, got %d", len(mockSender.HTMLCalls))
 	}
 
-	call := mockSender.Calls[0]
+	call := mockSender.HTMLCalls[0]
 	if call.To != email {
 		t.Errorf("email sent to %s, want %s", call.To, email)
 	}
@@ -106,8 +116,12 @@ func TestHandler_SendLoginLink(t *testing.T) {
 		t.Error("subject should contain service name")
 	}
 
-	if !strings.Contains(call.Body, "http://localhost:4180/_auth/email/verify?token=") {
-		t.Error("body should contain verification link")
+	if !strings.Contains(call.HTMLBody, "http://localhost:4180/_auth/email/verify?token=") {
+		t.Error("HTML body should contain verification link")
+	}
+
+	if !strings.Contains(call.TextBody, "http://localhost:4180/_auth/email/verify?token=") {
+		t.Error("text body should contain verification link")
 	}
 }
 
@@ -125,7 +139,7 @@ func TestHandler_SendLoginLink_NotAuthorized(t *testing.T) {
 	authzChecker := &MockAuthzChecker{allowed: false}
 	mockSender := &MockSender{}
 
-	handler, _ := NewHandler(cfg, "Test Service", "http://localhost:4180", "/_auth", authzChecker, "test-secret")
+	handler, _ := NewHandler(cfg, testServiceConfig(), "http://localhost:4180", "/_auth", authzChecker, "test-secret")
 	handler.sender = mockSender
 
 	email := "unauthorized@example.com"
@@ -136,8 +150,8 @@ func TestHandler_SendLoginLink_NotAuthorized(t *testing.T) {
 	}
 
 	// No email should be sent
-	if len(mockSender.Calls) != 0 {
-		t.Error("no email should be sent for unauthorized user")
+	if len(mockSender.HTMLCalls) != 0 {
+		t.Error("no HTML email should be sent for unauthorized user")
 	}
 }
 
@@ -155,7 +169,7 @@ func TestHandler_SendLoginLink_RateLimit(t *testing.T) {
 	authzChecker := &MockAuthzChecker{allowed: true}
 	mockSender := &MockSender{}
 
-	handler, _ := NewHandler(cfg, "Test Service", "http://localhost:4180", "/_auth", authzChecker, "test-secret")
+	handler, _ := NewHandler(cfg, testServiceConfig(), "http://localhost:4180", "/_auth", authzChecker, "test-secret")
 	handler.sender = mockSender
 
 	email := "user@example.com"
@@ -187,12 +201,12 @@ func TestHandler_SendLoginLink_SendFails(t *testing.T) {
 
 	authzChecker := &MockAuthzChecker{allowed: true}
 	mockSender := &MockSender{
-		SendFunc: func(to, subject, body string) error {
+		SendHTMLFunc: func(to, subject, htmlBody, textBody string) error {
 			return errors.New("send failed")
 		},
 	}
 
-	handler, _ := NewHandler(cfg, "Test Service", "http://localhost:4180", "/_auth", authzChecker, "test-secret")
+	handler, _ := NewHandler(cfg, testServiceConfig(), "http://localhost:4180", "/_auth", authzChecker, "test-secret")
 	handler.sender = mockSender
 
 	email := "user@example.com"
@@ -217,7 +231,7 @@ func TestHandler_VerifyToken(t *testing.T) {
 	authzChecker := &MockAuthzChecker{allowed: true}
 	mockSender := &MockSender{}
 
-	handler, _ := NewHandler(cfg, "Test Service", "http://localhost:4180", "/_auth", authzChecker, "test-secret")
+	handler, _ := NewHandler(cfg, testServiceConfig(), "http://localhost:4180", "/_auth", authzChecker, "test-secret")
 	handler.sender = mockSender
 
 	email := "user@example.com"
@@ -225,12 +239,12 @@ func TestHandler_VerifyToken(t *testing.T) {
 	// Send login link
 	handler.SendLoginLink(email)
 
-	// Extract token from email body
-	call := mockSender.Calls[0]
-	// Parse token from body (simplified)
-	body := call.Body
+	// Extract token from HTML email body
+	call := mockSender.HTMLCalls[0]
+	// Parse token from HTML body (simplified)
+	body := call.HTMLBody
 	tokenStart := strings.Index(body, "token=") + 6
-	tokenEnd := strings.IndexAny(body[tokenStart:], "\n ")
+	tokenEnd := strings.IndexAny(body[tokenStart:], "\"& ")
 	if tokenEnd == -1 {
 		tokenEnd = len(body) - tokenStart
 	}
@@ -280,7 +294,7 @@ func TestHandler_SendLoginLink_OTPFile(t *testing.T) {
 	authzChecker := &MockAuthzChecker{allowed: true}
 	mockSender := &MockSender{}
 
-	handler, _ := NewHandler(cfg, "Test Service", "http://localhost:4180", "/_auth", authzChecker, "test-secret")
+	handler, _ := NewHandler(cfg, testServiceConfig(), "http://localhost:4180", "/_auth", authzChecker, "test-secret")
 	handler.sender = mockSender
 
 	email := "user@example.com"
@@ -292,8 +306,8 @@ func TestHandler_SendLoginLink_OTPFile(t *testing.T) {
 	}
 
 	// Verify no email was sent (should use OTP file instead)
-	if len(mockSender.Calls) != 0 {
-		t.Error("no email should be sent when OTP file is configured")
+	if len(mockSender.HTMLCalls) != 0 {
+		t.Error("no HTML email should be sent when OTP file is configured")
 	}
 
 	// Read OTP file
@@ -362,7 +376,7 @@ func TestHandler_SendLoginLink_OTPFile_MultipleUsers(t *testing.T) {
 	}
 
 	authzChecker := &MockAuthzChecker{allowed: true}
-	handler, _ := NewHandler(cfg, "Test Service", "http://localhost:4180", "/_auth", authzChecker, "test-secret")
+	handler, _ := NewHandler(cfg, testServiceConfig(), "http://localhost:4180", "/_auth", authzChecker, "test-secret")
 
 	// Send login links for multiple users
 	users := []string{"user1@example.com", "user2@example.com", "user3@example.com"}

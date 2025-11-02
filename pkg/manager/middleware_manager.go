@@ -241,7 +241,7 @@ func (m *MiddlewareManager) createMiddleware(cfg *config.Config) (*middleware.Mi
 		var err error
 		emailHandler, err = email.NewHandler(
 			cfg.EmailAuth,
-			cfg.Service.Name,
+			cfg.Service,
 			emailBaseURL,
 			authPrefix,
 			authzChecker,

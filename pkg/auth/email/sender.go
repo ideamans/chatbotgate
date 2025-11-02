@@ -4,6 +4,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"net/smtp"
+	"strings"
 
 	"github.com/ideamans/multi-oauth2-proxy/pkg/config"
 )
@@ -11,6 +12,7 @@ import (
 // Sender is an interface for sending emails
 type Sender interface {
 	Send(to, subject, body string) error
+	SendHTML(to, subject, htmlBody, textBody string) error
 }
 
 // SMTPSender sends emails via SMTP
@@ -113,4 +115,62 @@ func (s *SMTPSender) sendWithTLS(addr string, auth smtp.Auth, from string, to []
 	}
 
 	return client.Quit()
+}
+
+// SendHTML sends an HTML email with plain text fallback via SMTP
+func (s *SMTPSender) SendHTML(to, subject, htmlBody, textBody string) error {
+	from := s.config.From
+	fromHeader := s.config.From
+	if s.config.FromName != "" {
+		fromHeader = fmt.Sprintf("%s <%s>", s.config.FromName, s.config.From)
+	}
+
+	// Build multipart message
+	var builder strings.Builder
+	boundary := "----=_Part_MultiOAuth2Proxy"
+
+	// Headers
+	builder.WriteString(fmt.Sprintf("From: %s\r\n", fromHeader))
+	builder.WriteString(fmt.Sprintf("To: %s\r\n", to))
+	builder.WriteString(fmt.Sprintf("Subject: %s\r\n", subject))
+	builder.WriteString("MIME-Version: 1.0\r\n")
+	builder.WriteString(fmt.Sprintf("Content-Type: multipart/alternative; boundary=\"%s\"\r\n", boundary))
+	builder.WriteString("\r\n")
+
+	// Plain text part
+	builder.WriteString(fmt.Sprintf("--%s\r\n", boundary))
+	builder.WriteString("Content-Type: text/plain; charset=UTF-8\r\n")
+	builder.WriteString("Content-Transfer-Encoding: 8bit\r\n")
+	builder.WriteString("\r\n")
+	builder.WriteString(textBody)
+	builder.WriteString("\r\n\r\n")
+
+	// HTML part
+	builder.WriteString(fmt.Sprintf("--%s\r\n", boundary))
+	builder.WriteString("Content-Type: text/html; charset=UTF-8\r\n")
+	builder.WriteString("Content-Transfer-Encoding: 8bit\r\n")
+	builder.WriteString("\r\n")
+	builder.WriteString(htmlBody)
+	builder.WriteString("\r\n\r\n")
+
+	// End boundary
+	builder.WriteString(fmt.Sprintf("--%s--\r\n", boundary))
+
+	message := builder.String()
+	addr := fmt.Sprintf("%s:%d", s.config.Host, s.config.Port)
+
+	// Setup authentication
+	var auth smtp.Auth
+	if s.config.Username != "" {
+		auth = smtp.PlainAuth("", s.config.Username, s.config.Password, s.config.Host)
+	}
+
+	// Send based on TLS/STARTTLS configuration
+	if s.config.TLS {
+		// Use TLS from the start
+		return s.sendWithTLS(addr, auth, from, []string{to}, []byte(message))
+	}
+
+	// Use STARTTLS or plain connection
+	return smtp.SendMail(addr, auth, from, []string{to}, []byte(message))
 }

@@ -16,6 +16,7 @@ type Handler struct {
 	authzChecker   authz.Checker
 	limiter        *ratelimit.Limiter
 	fileWriter     *FileWriter
+	emailTemplate  *EmailTemplate
 	config         config.EmailAuthConfig
 	serviceName    string
 	baseURL        string
@@ -25,12 +26,13 @@ type Handler struct {
 // NewHandler creates a new email authentication handler
 func NewHandler(
 	cfg config.EmailAuthConfig,
-	serviceName string,
+	serviceCfg config.ServiceConfig,
 	baseURL string,
 	authPathPrefix string,
 	authzChecker authz.Checker,
 	cookieSecret string,
 ) (*Handler, error) {
+	serviceName := serviceCfg.Name
 	// Create token store
 	tokenStore := NewTokenStore(cookieSecret)
 
@@ -54,12 +56,26 @@ func NewHandler(
 		fileWriter = NewFileWriter(cfg.OTPOutputFile)
 	}
 
+	// Create email template
+	logoWidth := serviceCfg.LogoWidth
+	if logoWidth == "" {
+		logoWidth = "200px" // Default logo width
+	}
+	emailTemplate := NewEmailTemplate(
+		serviceName,
+		serviceCfg.LogoURL,
+		logoWidth,
+		serviceCfg.IconURL,
+		baseURL,
+	)
+
 	return &Handler{
 		tokenStore:     tokenStore,
 		sender:         sender,
 		authzChecker:   authzChecker,
 		limiter:        limiter,
 		fileWriter:     fileWriter,
+		emailTemplate:  emailTemplate,
 		config:         cfg,
 		serviceName:    serviceName,
 		baseURL:        baseURL,
@@ -105,20 +121,17 @@ func (h *Handler) SendLoginLink(email string) error {
 		return nil
 	}
 
-	// Compose email
+	// Generate HTML email using Hermes template
+	htmlBody, textBody, err := h.emailTemplate.GenerateLoginEmail(loginURL, int(duration.Minutes()))
+	if err != nil {
+		// Clean up token if generation fails
+		h.tokenStore.DeleteToken(token)
+		return fmt.Errorf("failed to generate email: %w", err)
+	}
+
+	// Send HTML email
 	subject := fmt.Sprintf("Login Link - %s", h.serviceName)
-	body := fmt.Sprintf(`Click the link below to log in to %s.
-This link is valid for %d minutes.
-
-%s
-
-If you did not request this email, please ignore it.`,
-		h.serviceName,
-		int(duration.Minutes()),
-		loginURL)
-
-	// Send email
-	if err := h.sender.Send(email, subject, body); err != nil {
+	if err := h.sender.SendHTML(email, subject, htmlBody, textBody); err != nil {
 		// Clean up token if send fails
 		h.tokenStore.DeleteToken(token)
 		return fmt.Errorf("failed to send email: %w", err)
