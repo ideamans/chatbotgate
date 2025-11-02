@@ -21,8 +21,7 @@ service:
   description: "Test Description"
 
 server:
-  host: "127.0.0.1"
-  port: 8080
+  auth_path_prefix: "/_auth"
 
 proxy:
   upstream: "http://localhost:9090"
@@ -59,9 +58,6 @@ logging:
 				if cfg.Service.Name != "Test Service" {
 					t.Errorf("Service.Name = %s, want Test Service", cfg.Service.Name)
 				}
-				if cfg.Server.Port != 8080 {
-					t.Errorf("Server.Port = %d, want 8080", cfg.Server.Port)
-				}
 				if cfg.Proxy.Upstream != "http://localhost:9090" {
 					t.Errorf("Proxy.Upstream = %s, want http://localhost:9090", cfg.Proxy.Upstream)
 				}
@@ -80,7 +76,7 @@ service:
   name: "Test Service"
 
 server:
-  port: 4180
+  auth_path_prefix: "/_auth"
 
 proxy:
   upstream: "http://localhost:8080"
@@ -99,9 +95,6 @@ authorization:
 `,
 			wantErr: false,
 			validate: func(t *testing.T, cfg *Config) {
-				if cfg.Server.Host != "0.0.0.0" {
-					t.Errorf("Server.Host = %s, want 0.0.0.0 (default)", cfg.Server.Host)
-				}
 				if cfg.Session.CookieName != "_oauth2_proxy" {
 					t.Errorf("Session.CookieName = %s, want _oauth2_proxy (default)", cfg.Session.CookieName)
 				}
@@ -124,7 +117,7 @@ this is not valid yaml: [
 			name: "invalid configuration - no service name",
 			content: `
 server:
-  port: 4180
+  auth_path_prefix: "/_auth"
 
 proxy:
   upstream: "http://localhost:8080"
@@ -190,8 +183,7 @@ func TestFileLoader_Load_JSON(t *testing.T) {
     "description": "Test Description"
   },
   "server": {
-    "host": "127.0.0.1",
-    "port": 8080
+    "auth_path_prefix": "/_auth"
   },
   "proxy": {
     "upstream": "http://localhost:9090"
@@ -230,9 +222,6 @@ func TestFileLoader_Load_JSON(t *testing.T) {
 				if cfg.Service.Name != "Test Service" {
 					t.Errorf("Service.Name = %s, want Test Service", cfg.Service.Name)
 				}
-				if cfg.Server.Port != 8080 {
-					t.Errorf("Server.Port = %d, want 8080", cfg.Server.Port)
-				}
 				if cfg.Proxy.Upstream != "http://localhost:9090" {
 					t.Errorf("Proxy.Upstream = %s, want http://localhost:9090", cfg.Proxy.Upstream)
 				}
@@ -248,7 +237,7 @@ func TestFileLoader_Load_JSON(t *testing.T) {
 			name: "JSON with defaults",
 			content: `{
   "service": {"name": "Test Service"},
-  "server": {"port": 4180},
+  "server": {"auth_path_prefix": "/_auth"},
   "proxy": {"upstream": "http://localhost:8080"},
   "session": {
     "cookie_secret": "this-is-a-very-long-secret-key-for-testing-purposes"
@@ -262,9 +251,6 @@ func TestFileLoader_Load_JSON(t *testing.T) {
 }`,
 			wantErr: false,
 			validate: func(t *testing.T, cfg *Config) {
-				if cfg.Server.Host != "0.0.0.0" {
-					t.Errorf("Server.Host = %s, want 0.0.0.0 (default)", cfg.Server.Host)
-				}
 				if cfg.Session.CookieName != "_oauth2_proxy" {
 					t.Errorf("Session.CookieName = %s, want _oauth2_proxy (default)", cfg.Session.CookieName)
 				}

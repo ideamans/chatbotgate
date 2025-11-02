@@ -6,9 +6,6 @@ var (
 	// ErrServiceNameRequired is returned when service name is not provided
 	ErrServiceNameRequired = errors.New("service name is required")
 
-	// ErrInvalidPort is returned when port is invalid
-	ErrInvalidPort = errors.New("port must be between 1 and 65535")
-
 	// ErrUpstreamRequired is returned when upstream is not provided
 	ErrUpstreamRequired = errors.New("proxy upstream is required")
 

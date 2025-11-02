@@ -13,9 +13,9 @@ service:
   # logo_width: "200px"
 
 # HTTP server configuration
+# Note: host and port are now set via command-line flags (-host, -port)
+# Default values: host=0.0.0.0, port=4180
 server:
-  host: "0.0.0.0"
-  port: 4180
 
 # Proxy configuration
 proxy:

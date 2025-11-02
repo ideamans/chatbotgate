@@ -66,14 +66,6 @@ func (l *FileLoader) Load() (*Config, error) {
 
 // applyDefaults sets default values for optional fields
 func applyDefaults(cfg *Config) {
-	if cfg.Server.Host == "" {
-		cfg.Server.Host = "0.0.0.0"
-	}
-
-	if cfg.Server.Port == 0 {
-		cfg.Server.Port = 4180
-	}
-
 	if cfg.Session.CookieName == "" {
 		cfg.Session.CookieName = "_oauth2_proxy"
 	}

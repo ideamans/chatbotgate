@@ -20,6 +20,8 @@ import (
 // Server represents a simplified HTTP server that wraps the auth middleware
 type Server struct {
 	config       *config.Config
+	host         string
+	port         int
 	handler      http.Handler
 	httpServer   *http.Server
 	logger       logging.Logger
@@ -31,6 +33,8 @@ type Server struct {
 // 2. Server mode (without proxyHandler): Auth middleware only
 func New(
 	cfg *config.Config,
+	host string,
+	port int,
 	sessionStore session.Store,
 	oauthManager *oauth2.Manager,
 	emailHandler *email.Handler,
@@ -65,6 +69,8 @@ func New(
 
 	return &Server{
 		config:  cfg,
+		host:    host,
+		port:    port,
 		handler: handler,
 		logger:  logger.WithModule("server"),
 	}
@@ -72,7 +78,7 @@ func New(
 
 // Start starts the HTTP server
 func (s *Server) Start() error {
-	addr := fmt.Sprintf("%s:%d", s.config.Server.Host, s.config.Server.Port)
+	addr := fmt.Sprintf("%s:%d", s.host, s.port)
 
 	s.httpServer = &http.Server{
 		Addr:         addr,

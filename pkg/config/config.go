@@ -23,10 +23,8 @@ type ServiceConfig struct {
 	LogoWidth   string `yaml:"logo_width" json:"logo_width"`   // Logo width (e.g., "100px", "150px", "200px", default: "200px")
 }
 
-// ServerConfig contains HTTP server settings
+// ServerConfig contains authentication server settings
 type ServerConfig struct {
-	Host           string `yaml:"host" json:"host"`
-	Port           int    `yaml:"port" json:"port"`
 	AuthPathPrefix string `yaml:"auth_path_prefix" json:"auth_path_prefix"` // Path prefix for authentication endpoints (default: "/_auth")
 	CallbackURL    string `yaml:"callback_url" json:"callback_url"`         // Optional: Override OAuth2 callback URL (useful when behind reverse proxy or different external port)
 	BaseURL        string `yaml:"base_url" json:"base_url"`                 // Optional: Override base URL for email links and redirects (e.g., "http://localhost:4181")
@@ -152,10 +150,6 @@ type LoggingConfig struct {
 func (c *Config) Validate() error {
 	if c.Service.Name == "" {
 		return ErrServiceNameRequired
-	}
-
-	if c.Server.Port <= 0 || c.Server.Port > 65535 {
-		return ErrInvalidPort
 	}
 
 	if c.Proxy.Upstream == "" {

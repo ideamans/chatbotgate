@@ -3,8 +3,6 @@ service:
   description: "E2E verification environment"
 
 server:
-  host: 0.0.0.0
-  port: 4180
   auth_path_prefix: "/_auth"
 
 proxy:
