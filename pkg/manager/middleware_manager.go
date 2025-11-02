@@ -61,13 +61,24 @@ func New(cfg ManagerConfig) (*MiddlewareManager, error) {
 		return nil, fmt.Errorf("logger is required")
 	}
 
+	logger := cfg.Logger.WithModule("manager")
+
+	// Validate configuration before creating middleware
+	if errs := middleware.ValidateConfig(cfg.Config); len(errs) > 0 {
+		// Log each validation error
+		for _, ve := range errs {
+			logger.Error("Configuration validation error", "field", ve.Field, "message", ve.Message)
+		}
+		return nil, errs
+	}
+
 	manager := &MiddlewareManager{
 		sessionStore: cfg.SessionStore,
 		proxyHandler: cfg.ProxyHandler,
 		host:         cfg.Host,
 		port:         cfg.Port,
 		config:       cfg.Config,
-		logger:       cfg.Logger.WithModule("manager"),
+		logger:       logger,
 	}
 
 	// Create initial middleware instance
@@ -98,9 +109,13 @@ func (m *MiddlewareManager) Reload(newConfig *config.Config) error {
 	m.logger.Info("Reloading middleware configuration")
 
 	// Validate new configuration
-	if err := newConfig.Validate(); err != nil {
-		m.logger.Error("Invalid configuration", "error", err)
-		return fmt.Errorf("invalid configuration: %w", err)
+	if errs := middleware.ValidateConfig(newConfig); len(errs) > 0 {
+		// Log each validation error as a warning (not fatal for reload)
+		m.logger.Warn("Configuration validation failed, keeping current configuration")
+		for _, ve := range errs {
+			m.logger.Warn("Validation error", "field", ve.Field, "message", ve.Message)
+		}
+		return errs
 	}
 
 	// Create new middleware instance

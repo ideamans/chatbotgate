@@ -114,7 +114,7 @@ this is not valid yaml: [
 			wantErr: true,
 		},
 		{
-			name: "invalid configuration - no service name",
+			name: "incomplete configuration - loads successfully (validation is done by manager)",
 			content: `
 server:
   auth_path_prefix: "/_auth"
@@ -130,7 +130,14 @@ oauth2:
     - name: "google"
       enabled: true
 `,
-			wantErr: true,
+			wantErr: false,
+			validate: func(t *testing.T, cfg *Config) {
+				// Service name is empty, but loader doesn't validate
+				// Validation is performed by the middleware manager
+				if cfg.Service.Name != "" {
+					t.Errorf("Service.Name = %s, want empty", cfg.Service.Name)
+				}
+			},
 		},
 	}
 

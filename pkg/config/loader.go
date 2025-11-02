@@ -56,10 +56,8 @@ func (l *FileLoader) Load() (*Config, error) {
 	// Apply defaults
 	applyDefaults(&cfg)
 
-	// Validate configuration
-	if err := cfg.Validate(); err != nil {
-		return nil, fmt.Errorf("invalid configuration: %w", err)
-	}
+	// Note: Detailed validation is performed by the middleware manager
+	// This allows for better error reporting with multiple validation errors
 
 	return &cfg, nil
 }
