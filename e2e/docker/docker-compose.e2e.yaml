@@ -4,7 +4,7 @@ services:
       context: ../..
       dockerfile: Dockerfile
     container_name: e2e-proxy-app
-    command: ["-config", "/config/proxy.e2e.yaml", "-host", "0.0.0.0", "-port", "4180"]
+    command: ["serve", "--config", "/config/proxy.e2e.yaml", "--host", "0.0.0.0", "--port", "4180"]
     ports:
       - "4180:4180"
     depends_on:
@@ -24,7 +24,7 @@ services:
       context: ../..
       dockerfile: Dockerfile
     container_name: e2e-proxy-app-with-whitelist
-    command: ["-config", "/config/proxy.e2e.with-whitelist.yaml", "-host", "0.0.0.0", "-port", "4180"]
+    command: ["serve", "--config", "/config/proxy.e2e.with-whitelist.yaml", "--host", "0.0.0.0", "--port", "4180"]
     ports:
       - "4181:4180"  # Map external 4181 to internal 4180
     depends_on:
