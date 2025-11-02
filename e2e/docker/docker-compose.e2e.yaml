@@ -30,7 +30,7 @@ services:
       - target-app
       - stub-auth
     volumes:
-      - ../config/proxy.e2e.with-whitelist.yaml:/config/proxy.e2e.with-whitelist.yaml:ro
+      - ../config/proxy.e2e.with-whitelist.yaml:/config/proxy.e2e.with-whitelist.yaml
       - otp-files:/otp
     environment:
       - LANGUAGE=en
