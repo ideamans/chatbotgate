@@ -137,8 +137,8 @@ app.get('*', (req, res) => {
 
   // Extract forwarding data from headers (individual headers)
   let headerData: UserInfo | null = null;
-  const forwardedUserHeader = req.header('x-forwarded-user');
-  const forwardedEmailHeader = req.header('x-forwarded-email');
+  const forwardedUserHeader = req.header('x-chatbotgate-user');
+  const forwardedEmailHeader = req.header('x-chatbotgate-email');
 
   if (forwardedUserHeader || forwardedEmailHeader) {
     headerData = {};
@@ -165,11 +165,11 @@ app.get('*', (req, res) => {
   infoSections += `<p data-test="auth-provider">Provider (X-Auth-Provider): ${authProvider}</p>`;
   infoSections += '</div>';
 
-  // 2. Forwarding Headers (X-Forwarded-*)
+  // 2. Forwarding Headers (X-ChatbotGate-*)
   if (headerData) {
     infoSections += '<div class="card">';
-    infoSections += '<h2>2. Forwarding Headers (X-Forwarded-*)</h2>';
-    infoSections += '<p><strong>Source:</strong> X-Forwarded-User and X-Forwarded-Email headers</p>';
+    infoSections += '<h2>2. Forwarding Headers (X-ChatbotGate-*)</h2>';
+    infoSections += '<p><strong>Source:</strong> X-ChatbotGate-User and X-ChatbotGate-Email headers</p>';
     infoSections += '<p><strong>Note:</strong> Only sent when <code>forwarding.header.enabled: true</code></p>';
     infoSections += '<p><strong>Encryption:</strong> Can be encrypted or plain text depending on configuration</p>';
     infoSections += `<p data-test="forwarding-header-username">Username: ${headerData.username || '(empty)'}</p>`;
@@ -177,8 +177,8 @@ app.get('*', (req, res) => {
     infoSections += '</div>';
   } else {
     infoSections += '<div class="card">';
-    infoSections += '<h2>2. Forwarding Headers (X-Forwarded-*)</h2>';
-    infoSections += '<p><strong>Source:</strong> X-Forwarded-User and X-Forwarded-Email headers</p>';
+    infoSections += '<h2>2. Forwarding Headers (X-ChatbotGate-*)</h2>';
+    infoSections += '<p><strong>Source:</strong> X-ChatbotGate-User and X-ChatbotGate-Email headers</p>';
     infoSections += '<p><strong>Note:</strong> Only sent when <code>forwarding.header.enabled: true</code></p>';
     infoSections += '<p data-test="forwarding-header-not-present">(Headers not present or decryption failed)</p>';
     infoSections += '</div>';
@@ -217,7 +217,7 @@ app.get('*', (req, res) => {
         <p>This page shows user information from different sources:</p>
         <ul>
           <li><strong>X-Authenticated, X-Auth-Provider</strong>: Authentication status (always plain text)</li>
-          <li><strong>X-Forwarded-*</strong>: User info forwarding via headers (configured in <code>forwarding.header</code>)</li>
+          <li><strong>X-ChatbotGate-*</strong>: User info forwarding via headers (configured in <code>forwarding.header</code>)</li>
           <li><strong>chatbotgate.*</strong>: User info forwarding via querystring (configured in <code>forwarding.querystring</code>)</li>
         </ul>
         <p><strong>Current user</strong>: ${emailDisplay} (${nameDisplay}), Provider: ${authProvider}</p>

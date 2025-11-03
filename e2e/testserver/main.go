@@ -26,8 +26,8 @@ type UserData struct {
 
 // RawHeaders contains raw header values
 type RawHeaders struct {
-	ForwardedUser  string `json:"X-Forwarded-User,omitempty"`
-	ForwardedEmail string `json:"X-Forwarded-Email,omitempty"`
+	ForwardedUser  string `json:"X-ChatbotGate-User,omitempty"`
+	ForwardedEmail string `json:"X-ChatbotGate-Email,omitempty"`
 }
 
 var encryptionKey string
@@ -61,8 +61,8 @@ func handleHealth(w http.ResponseWriter, r *http.Request) {
 func handleRoot(w http.ResponseWriter, r *http.Request) {
 	response := UserInfoResponse{
 		RawHeaders: RawHeaders{
-			ForwardedUser:  r.Header.Get("X-Forwarded-User"),
-			ForwardedEmail: r.Header.Get("X-Forwarded-Email"),
+			ForwardedUser:  r.Header.Get("X-ChatbotGate-User"),
+			ForwardedEmail: r.Header.Get("X-ChatbotGate-Email"),
 		},
 	}
 
@@ -102,8 +102,8 @@ func handleRoot(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Extract header data from individual headers
-	forwardedUser := r.Header.Get("X-Forwarded-User")
-	forwardedEmail := r.Header.Get("X-Forwarded-Email")
+	forwardedUser := r.Header.Get("X-ChatbotGate-User")
+	forwardedEmail := r.Header.Get("X-ChatbotGate-Email")
 
 	if forwardedUser != "" || forwardedEmail != "" {
 		// Try to decrypt individual fields

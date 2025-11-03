@@ -83,12 +83,12 @@ func TestAddAuthHeaders(t *testing.T) {
 	AddAuthHeaders(req, email, provider)
 
 	// Check headers
-	if got := req.Header.Get("X-Forwarded-User"); got != email {
-		t.Errorf("X-Forwarded-User = %s, want %s", got, email)
+	if got := req.Header.Get("X-ChatbotGate-User"); got != email {
+		t.Errorf("X-ChatbotGate-User = %s, want %s", got, email)
 	}
 
-	if got := req.Header.Get("X-Forwarded-Email"); got != email {
-		t.Errorf("X-Forwarded-Email = %s, want %s", got, email)
+	if got := req.Header.Get("X-ChatbotGate-Email"); got != email {
+		t.Errorf("X-ChatbotGate-Email = %s, want %s", got, email)
 	}
 
 	if got := req.Header.Get("X-Auth-Provider"); got != provider {
@@ -100,7 +100,7 @@ func TestHandler_ProxyRequest(t *testing.T) {
 	// Create a test backend that echoes headers
 	backend := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Echo back the auth headers
-		w.Header().Set("X-Echo-User", r.Header.Get("X-Forwarded-User"))
+		w.Header().Set("X-Echo-User", r.Header.Get("X-ChatbotGate-User"))
 		w.Header().Set("X-Echo-Provider", r.Header.Get("X-Auth-Provider"))
 		w.WriteHeader(http.StatusOK)
 	}))
@@ -122,7 +122,7 @@ func TestHandler_ProxyRequest(t *testing.T) {
 
 	// Verify headers were forwarded
 	if got := rec.Header().Get("X-Echo-User"); got != "user@example.com" {
-		t.Errorf("Backend received X-Forwarded-User = %s, want user@example.com", got)
+		t.Errorf("Backend received X-ChatbotGate-User = %s, want user@example.com", got)
 	}
 
 	if got := rec.Header().Get("X-Echo-Provider"); got != "google" {

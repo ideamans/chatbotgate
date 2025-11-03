@@ -95,9 +95,9 @@ func (f *Forwarder) AddToQueryString(targetURL string, userInfo *UserInfo) (stri
 	return u.String(), nil
 }
 
-// AddToHeaders adds user info to HTTP headers as X-Forwarded-*
+// AddToHeaders adds user info to HTTP headers as X-ChatbotGate-*
 // If encryption is enabled, values are encrypted
-// Individual headers: X-Forwarded-User (username), X-Forwarded-Email
+// Individual headers: X-ChatbotGate-User (username), X-ChatbotGate-Email
 func (f *Forwarder) AddToHeaders(headers http.Header, userInfo *UserInfo) http.Header {
 	if !f.config.Header.Enabled {
 		return headers
@@ -109,7 +109,7 @@ func (f *Forwarder) AddToHeaders(headers http.Header, userInfo *UserInfo) http.H
 		result[key] = values
 	}
 
-	// Add individual X-Forwarded-* headers
+	// Add individual X-ChatbotGate-* headers
 	for _, field := range f.config.Fields {
 		var value string
 		var headerName string
@@ -118,12 +118,12 @@ func (f *Forwarder) AddToHeaders(headers http.Header, userInfo *UserInfo) http.H
 		case "username":
 			if userInfo.Username != "" {
 				value = userInfo.Username
-				headerName = "X-Forwarded-User"
+				headerName = "X-ChatbotGate-User"
 			}
 		case "email":
 			if userInfo.Email != "" {
 				value = userInfo.Email
-				headerName = "X-Forwarded-Email"
+				headerName = "X-ChatbotGate-Email"
 			}
 		}
 

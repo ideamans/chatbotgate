@@ -80,8 +80,8 @@ func setupTestServer(t *testing.T) (*Server, *session.MemoryStore, func()) {
 	// Create a test backend server
 	backend := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Echo back the authentication headers
-		w.Header().Set("X-Test-User", r.Header.Get("X-Forwarded-User"))
-		w.Header().Set("X-Test-Email", r.Header.Get("X-Forwarded-Email"))
+		w.Header().Set("X-Test-User", r.Header.Get("X-ChatbotGate-User"))
+		w.Header().Set("X-Test-Email", r.Header.Get("X-ChatbotGate-Email"))
 		w.Header().Set("X-Test-Provider", r.Header.Get("X-Auth-Provider"))
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("backend response"))
@@ -271,7 +271,7 @@ func TestServer_AuthMiddleware_ValidSession(t *testing.T) {
 	sess := &session.Session{
 		ID:            "valid-session",
 		Email:         "user@example.com",
-		Name:          "user@example.com", // Set name for X-Forwarded-User header
+		Name:          "user@example.com", // Set name for X-ChatbotGate-User header
 		Provider:      "google",
 		CreatedAt:     time.Now(),
 		ExpiresAt:     time.Now().Add(1 * time.Hour),
@@ -295,11 +295,11 @@ func TestServer_AuthMiddleware_ValidSession(t *testing.T) {
 	// Verify that authentication headers were passed to the backend
 	// The backend echoes them back as X-Test-* headers
 	if rec.Header().Get("X-Test-User") != "user@example.com" {
-		t.Errorf("X-Forwarded-User not passed to backend, got X-Test-User = %s", rec.Header().Get("X-Test-User"))
+		t.Errorf("X-ChatbotGate-User not passed to backend, got X-Test-User = %s", rec.Header().Get("X-Test-User"))
 	}
 
 	if rec.Header().Get("X-Test-Email") != "user@example.com" {
-		t.Errorf("X-Forwarded-Email not passed to backend, got X-Test-Email = %s", rec.Header().Get("X-Test-Email"))
+		t.Errorf("X-ChatbotGate-Email not passed to backend, got X-Test-Email = %s", rec.Header().Get("X-Test-Email"))
 	}
 
 	if rec.Header().Get("X-Test-Provider") != "google" {
@@ -665,7 +665,7 @@ func TestServer_Authorization_NoWhitelist_SessionWithoutEmail(t *testing.T) {
 func TestServer_Authorization_WithWhitelist_AuthorizedEmail(t *testing.T) {
 	// Create a test backend server
 	backend := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("X-Test-Email", r.Header.Get("X-Forwarded-Email"))
+		w.Header().Set("X-Test-Email", r.Header.Get("X-ChatbotGate-Email"))
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("backend response"))
 	}))

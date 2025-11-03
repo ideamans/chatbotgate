@@ -179,7 +179,7 @@ func (m *Middleware) addAuthHeaders(r *http.Request, sess *session.Session) {
 			Email:    sess.Email,
 		}
 
-		// Add headers using forwarder (handles X-Forwarded-User, X-Forwarded-Email)
+		// Add headers using forwarder (handles X-ChatbotGate-User, X-ChatbotGate-Email)
 		// Can be plain text or encrypted depending on configuration
 		r.Header = m.forwarder.AddToHeaders(r.Header, userInfo)
 	}

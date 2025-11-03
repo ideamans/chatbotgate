@@ -189,10 +189,10 @@ func TestForwarder_AddToHeaders_Disabled(t *testing.T) {
 	if result.Get("Existing-Header") != "value" {
 		t.Error("Existing header was modified")
 	}
-	if result.Get("X-Forwarded-User") != "" {
+	if result.Get("X-ChatbotGate-User") != "" {
 		t.Error("User header should not be added when disabled")
 	}
-	if result.Get("X-Forwarded-Email") != "" {
+	if result.Get("X-ChatbotGate-Email") != "" {
 		t.Error("Email header should not be added when disabled")
 	}
 }
@@ -209,11 +209,11 @@ func TestForwarder_AddToHeaders_PlainText(t *testing.T) {
 	headers := make(http.Header)
 	result := forwarder.AddToHeaders(headers, userInfo)
 
-	if result.Get("X-Forwarded-User") != "john" {
-		t.Errorf("X-Forwarded-User header = %v, want %v", result.Get("X-Forwarded-User"), "john")
+	if result.Get("X-ChatbotGate-User") != "john" {
+		t.Errorf("X-ChatbotGate-User header = %v, want %v", result.Get("X-ChatbotGate-User"), "john")
 	}
-	if result.Get("X-Forwarded-Email") != "john@example.com" {
-		t.Errorf("X-Forwarded-Email header = %v, want %v", result.Get("X-Forwarded-Email"), "john@example.com")
+	if result.Get("X-ChatbotGate-Email") != "john@example.com" {
+		t.Errorf("X-ChatbotGate-Email header = %v, want %v", result.Get("X-ChatbotGate-Email"), "john@example.com")
 	}
 }
 
@@ -231,20 +231,20 @@ func TestForwarder_AddToHeaders_Encrypted(t *testing.T) {
 	result := forwarder.AddToHeaders(headers, userInfo)
 
 	// Check that individual encrypted headers exist
-	encryptedUser := result.Get("X-Forwarded-User")
+	encryptedUser := result.Get("X-ChatbotGate-User")
 	if encryptedUser == "" {
-		t.Error("X-Forwarded-User header not found")
+		t.Error("X-ChatbotGate-User header not found")
 	}
 
-	encryptedEmail := result.Get("X-Forwarded-Email")
+	encryptedEmail := result.Get("X-ChatbotGate-Email")
 	if encryptedEmail == "" {
-		t.Error("X-Forwarded-Email header not found")
+		t.Error("X-ChatbotGate-Email header not found")
 	}
 
 	// Verify we can decrypt individual values
 	decryptedUser, err := forwarder.encryptor.Decrypt(encryptedUser)
 	if err != nil {
-		t.Fatalf("Failed to decrypt X-Forwarded-User header: %v", err)
+		t.Fatalf("Failed to decrypt X-ChatbotGate-User header: %v", err)
 	}
 	if decryptedUser != "john" {
 		t.Errorf("decrypted username = %v, want %v", decryptedUser, "john")
@@ -252,7 +252,7 @@ func TestForwarder_AddToHeaders_Encrypted(t *testing.T) {
 
 	decryptedEmail, err := forwarder.encryptor.Decrypt(encryptedEmail)
 	if err != nil {
-		t.Fatalf("Failed to decrypt X-Forwarded-Email header: %v", err)
+		t.Fatalf("Failed to decrypt X-ChatbotGate-Email header: %v", err)
 	}
 	if decryptedEmail != "john@example.com" {
 		t.Errorf("decrypted email = %v, want %v", decryptedEmail, "john@example.com")
@@ -294,8 +294,8 @@ func TestForwarder_AddToHeaders_SelectedFields(t *testing.T) {
 			headers := make(http.Header)
 			result := forwarder.AddToHeaders(headers, tt.userInfo)
 
-			hasUsername := result.Get("X-Forwarded-User") != ""
-			hasEmail := result.Get("X-Forwarded-Email") != ""
+			hasUsername := result.Get("X-ChatbotGate-User") != ""
+			hasEmail := result.Get("X-ChatbotGate-Email") != ""
 
 			if hasUsername != tt.wantUsername {
 				t.Errorf("username presence = %v, want %v", hasUsername, tt.wantUsername)

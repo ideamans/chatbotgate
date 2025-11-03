@@ -43,8 +43,8 @@ type TestUserData struct {
 }
 
 type TestRawHeaders struct {
-	ForwardedUser  string `json:"X-Forwarded-User,omitempty"`
-	ForwardedEmail string `json:"X-Forwarded-Email,omitempty"`
+	ForwardedUser  string `json:"X-ChatbotGate-User,omitempty"`
+	ForwardedEmail string `json:"X-ChatbotGate-Email,omitempty"`
 }
 
 func TestForwarding_E2E(t *testing.T) {
@@ -203,10 +203,10 @@ func TestForwarding_E2E(t *testing.T) {
 
 		// Verify raw encrypted headers exist
 		if userInfo.RawHeaders.ForwardedUser == "" {
-			t.Error("Expected encrypted X-Forwarded-User header, got empty")
+			t.Error("Expected encrypted X-ChatbotGate-User header, got empty")
 		}
 		if userInfo.RawHeaders.ForwardedEmail == "" {
-			t.Error("Expected encrypted X-Forwarded-Email header, got empty")
+			t.Error("Expected encrypted X-ChatbotGate-Email header, got empty")
 		}
 
 		t.Logf("OAuth2 login correctly forwards both username (%s) and email (%s)", testUsername, testEmail)
@@ -359,10 +359,10 @@ func TestForwarding_E2E(t *testing.T) {
 			t.Errorf("Header email = %v, want %v", userInfo.Header.Email, testEmail)
 		}
 
-		// Verify raw headers - X-Forwarded-User should be empty or contain encrypted empty value
-		// X-Forwarded-Email should be present
+		// Verify raw headers - X-ChatbotGate-User should be empty or contain encrypted empty value
+		// X-ChatbotGate-Email should be present
 		if userInfo.RawHeaders.ForwardedEmail == "" {
-			t.Error("Expected encrypted X-Forwarded-Email header, got empty")
+			t.Error("Expected encrypted X-ChatbotGate-Email header, got empty")
 		}
 
 		t.Logf("Email login correctly has empty username, only email: %s", testEmail)
