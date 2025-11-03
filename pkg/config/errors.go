@@ -20,4 +20,16 @@ var (
 
 	// ErrConfigFileNotFound is returned when config file is not found
 	ErrConfigFileNotFound = errors.New("configuration file not found")
+
+	// ErrEncryptionKeyRequired is returned when encryption is enabled but key is not provided
+	ErrEncryptionKeyRequired = errors.New("encryption key is required when encryption is enabled")
+
+	// ErrEncryptionKeyTooShort is returned when encryption key is too short
+	ErrEncryptionKeyTooShort = errors.New("encryption key must be at least 32 characters")
+
+	// ErrForwardingFieldsRequired is returned when forwarding is enabled but no fields are specified
+	ErrForwardingFieldsRequired = errors.New("at least one field must be specified when forwarding is enabled")
+
+	// ErrInvalidForwardingField is returned when an invalid field is specified
+	ErrInvalidForwardingField = errors.New("invalid forwarding field (allowed: username, email)")
 )

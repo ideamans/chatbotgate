@@ -7,6 +7,7 @@ import (
 	"github.com/ideamans/chatbotgate/pkg/auth/oauth2"
 	"github.com/ideamans/chatbotgate/pkg/authz"
 	"github.com/ideamans/chatbotgate/pkg/config"
+	"github.com/ideamans/chatbotgate/pkg/forwarding"
 	"github.com/ideamans/chatbotgate/pkg/i18n"
 	"github.com/ideamans/chatbotgate/pkg/logging"
 	"github.com/ideamans/chatbotgate/pkg/session"
@@ -20,6 +21,7 @@ type Middleware struct {
 	oauthManager  *oauth2.Manager
 	emailHandler  *email.Handler
 	authzChecker  authz.Checker
+	forwarder     *forwarding.Forwarder
 	translator    *i18n.Translator
 	logger        logging.Logger
 	next          http.Handler // The next handler to call after auth succeeds
@@ -32,6 +34,7 @@ func New(
 	oauthManager *oauth2.Manager,
 	emailHandler *email.Handler,
 	authzChecker authz.Checker,
+	forwarder *forwarding.Forwarder,
 	translator *i18n.Translator,
 	logger logging.Logger,
 ) *Middleware {
@@ -41,6 +44,7 @@ func New(
 		oauthManager: oauthManager,
 		emailHandler: emailHandler,
 		authzChecker: authzChecker,
+		forwarder:    forwarder,
 		translator:   translator,
 		logger:       logger,
 	}
@@ -125,7 +129,7 @@ func (m *Middleware) requireAuth(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Session is valid, add auth headers and call next handler
-	addAuthHeaders(r, sess.Email, sess.Name, sess.Provider)
+	m.addAuthHeaders(r, sess)
 
 	if m.next != nil {
 		m.next.ServeHTTP(w, r)
@@ -163,14 +167,22 @@ func (m *Middleware) redirectToLogin(w http.ResponseWriter, r *http.Request) {
 }
 
 // addAuthHeaders adds authentication headers to the request
-func addAuthHeaders(r *http.Request, email, name, provider string) {
-	r.Header.Set("X-Forwarded-User", email)
-	r.Header.Set("X-Forwarded-Email", email)
-	if name != "" {
-		r.Header.Set("X-Forwarded-Name", name)
-	}
-	r.Header.Set("X-Auth-Provider", provider)
+func (m *Middleware) addAuthHeaders(r *http.Request, sess *session.Session) {
+	// Add authentication status headers
 	r.Header.Set("X-Authenticated", "true")
+	r.Header.Set("X-Auth-Provider", sess.Provider)
+
+	// Add forwarding headers (X-Forwarded-*) only if configured
+	if m.forwarder != nil {
+		userInfo := &forwarding.UserInfo{
+			Username: sess.Name, // For email auth, this will be empty
+			Email:    sess.Email,
+		}
+
+		// Add headers using forwarder (handles X-Forwarded-User, X-Forwarded-Email)
+		// Can be plain text or encrypted depending on configuration
+		r.Header = m.forwarder.AddToHeaders(r.Header, userInfo)
+	}
 }
 
 // matchPath checks if the request path matches the auth endpoint

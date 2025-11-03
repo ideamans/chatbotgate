@@ -122,6 +122,7 @@ func TestMiddleware_RequiresEmail(t *testing.T) {
 				oauthManager,
 				nil, // email handler
 				authzChecker,
+				nil, // forwarder
 				translator,
 				logger,
 			)
@@ -167,6 +168,7 @@ func TestMiddleware_Authorization_NoWhitelist(t *testing.T) {
 		oauthManager,
 		nil,
 		authzChecker,
+		nil, // forwarder
 		translator,
 		logger,
 	)
@@ -265,6 +267,7 @@ func TestMiddleware_Authorization_WithWhitelist(t *testing.T) {
 		oauthManager,
 		nil,
 		authzChecker,
+		nil, // forwarder
 		translator,
 		logger,
 	)

@@ -12,6 +12,7 @@ import (
 	"github.com/ideamans/chatbotgate/pkg/auth/oauth2"
 	"github.com/ideamans/chatbotgate/pkg/authz"
 	"github.com/ideamans/chatbotgate/pkg/config"
+	"github.com/ideamans/chatbotgate/pkg/forwarding"
 	"github.com/ideamans/chatbotgate/pkg/i18n"
 	"github.com/ideamans/chatbotgate/pkg/kvs"
 	"github.com/ideamans/chatbotgate/pkg/logging"
@@ -105,6 +106,16 @@ func setupTestServer(t *testing.T) (*Server, *session.MemoryStore, func()) {
 			CookieHTTPOnly: true,
 			CookieSameSite: "lax",
 		},
+		Forwarding: config.ForwardingConfig{
+			Fields: []string{"username", "email"},
+			Header: config.ForwardingHeaderConfig{
+				Enabled: true,
+				Encrypt: false, // Plain text for tests
+			},
+			QueryString: config.ForwardingMethodConfig{
+				Enabled: false, // Not needed for these tests
+			},
+		},
 	}
 
 	sessionStore := session.NewMemoryStore(1 * time.Minute)
@@ -125,7 +136,13 @@ func setupTestServer(t *testing.T) (*Server, *session.MemoryStore, func()) {
 
 	logger := logging.NewSimpleLogger("test", logging.LevelInfo, false)
 
-	server := New(cfg, "localhost", 4180, sessionStore, oauthManager, nil, authzChecker, proxyHandler, logger)
+	// Create forwarder for the tests
+	var forwarder *forwarding.Forwarder
+	if cfg.Forwarding.Header.Enabled || cfg.Forwarding.QueryString.Enabled {
+		forwarder = forwarding.NewForwarder(&cfg.Forwarding)
+	}
+
+	server := New(cfg, "localhost", 4180, sessionStore, oauthManager, nil, authzChecker, proxyHandler, forwarder, logger)
 
 	cleanup := func() {
 		backend.Close()
@@ -254,6 +271,7 @@ func TestServer_AuthMiddleware_ValidSession(t *testing.T) {
 	sess := &session.Session{
 		ID:            "valid-session",
 		Email:         "user@example.com",
+		Name:          "user@example.com", // Set name for X-Forwarded-User header
 		Provider:      "google",
 		CreatedAt:     time.Now(),
 		ExpiresAt:     time.Now().Add(1 * time.Hour),
@@ -594,7 +612,7 @@ func setupTestServerWithEmail(t *testing.T) (*Server, *session.MemoryStore) {
 
 	logger := logging.NewSimpleLogger("test", logging.LevelInfo, false)
 
-	server := New(cfg, "localhost", 4180, sessionStore, oauthManager, emailHandler, authzChecker, proxyHandler, logger)
+	server := New(cfg, "localhost", 4180, sessionStore, oauthManager, emailHandler, authzChecker, proxyHandler, nil, logger)
 
 	return server, sessionStore
 }
@@ -675,6 +693,16 @@ func TestServer_Authorization_WithWhitelist_AuthorizedEmail(t *testing.T) {
 		Authorization: config.AuthorizationConfig{
 			Allowed: []string{"authorized@example.com"}, // Whitelist configured
 		},
+		Forwarding: config.ForwardingConfig{
+			Fields: []string{"username", "email"},
+			Header: config.ForwardingHeaderConfig{
+				Enabled: true,
+				Encrypt: false, // Plain text for tests
+			},
+			QueryString: config.ForwardingMethodConfig{
+				Enabled: false,
+			},
+		},
 	}
 
 	sessionStore := session.NewMemoryStore(1 * time.Minute)
@@ -690,7 +718,13 @@ func TestServer_Authorization_WithWhitelist_AuthorizedEmail(t *testing.T) {
 
 	logger := logging.NewSimpleLogger("test", logging.LevelInfo, false)
 
-	server := New(cfg, "localhost", 4180, sessionStore, oauthManager, nil, authzChecker, proxyHandler, logger)
+	// Create forwarder for the tests
+	var forwarder *forwarding.Forwarder
+	if cfg.Forwarding.Header.Enabled || cfg.Forwarding.QueryString.Enabled {
+		forwarder = forwarding.NewForwarder(&cfg.Forwarding)
+	}
+
+	server := New(cfg, "localhost", 4180, sessionStore, oauthManager, nil, authzChecker, proxyHandler, forwarder, logger)
 
 	// Create a session with authorized email
 	sessionID := "test-session-authorized"

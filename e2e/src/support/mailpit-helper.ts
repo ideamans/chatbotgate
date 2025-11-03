@@ -49,18 +49,38 @@ export async function getMessages(mailpitUrl?: string): Promise<MailpitMessage[]
 
 /**
  * Get message detail by ID
+ * Includes retry logic to handle race conditions where message appears in list but details aren't ready yet
  */
 export async function getMessage(id: string, mailpitUrl?: string): Promise<MailpitMessageDetail> {
   const baseUrl = mailpitUrl ?? process.env.MAILPIT_URL ?? DEFAULT_MAILPIT_URL;
-  const response = await fetch(`${baseUrl}/api/v1/message/${id}`);
-  if (!response.ok) {
+  const maxRetries = 5;
+  const retryDelayMs = 200;
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    const response = await fetch(`${baseUrl}/api/v1/message/${id}`);
+
+    if (response.ok) {
+      return (await response.json()) as MailpitMessageDetail;
+    }
+
+    // If 404 and not the last attempt, retry after a delay
+    if (response.status === 404 && attempt < maxRetries) {
+      console.log(`Message ${id} not found (attempt ${attempt}/${maxRetries}), retrying in ${retryDelayMs}ms...`);
+      await delay(retryDelayMs);
+      continue;
+    }
+
+    // For other errors or last attempt, throw
     throw new Error(`Failed to get message ${id}: ${response.status} ${response.statusText}`);
   }
-  return (await response.json()) as MailpitMessageDetail;
+
+  // This should never be reached, but TypeScript needs it
+  throw new Error(`Failed to get message ${id} after ${maxRetries} attempts`);
 }
 
 /**
  * Wait for a message to a specific email address
+ * Returns the most recent message to handle parallel test execution
  */
 export async function waitForMessage(
   toEmail: string,
@@ -74,11 +94,16 @@ export async function waitForMessage(
 
   while (Date.now() < deadline) {
     const messages = await getMessages(mailpitUrl);
-    // Find the latest message to the target email
-    const found = messages.find((msg) => msg.To.some((to) => to.Address === toEmail));
-    if (found) {
-      return found;
+
+    // Filter messages to the target email address
+    const matchingMessages = messages.filter((msg) => msg.To.some((to) => to.Address === toEmail));
+
+    if (matchingMessages.length > 0) {
+      // Sort by Created date descending to get the latest message
+      matchingMessages.sort((a, b) => new Date(b.Created).getTime() - new Date(a.Created).getTime());
+      return matchingMessages[0];
     }
+
     await delay(pollIntervalMs);
   }
 

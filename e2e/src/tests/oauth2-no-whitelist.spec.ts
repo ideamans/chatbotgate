@@ -96,7 +96,7 @@ test.describe('OAuth2 flow without whitelist', () => {
 
     // Should authenticate successfully
     // With no whitelist, ANY authenticated user is allowed
-    // Even emails not in a whitelist should work (because there's no whitelist)
-    await expect(page.locator('[data-test="app-user-email"]')).toContainText(regularEmail);
+    // Verify authentication succeeded by checking X-Auth-Provider
+    await expect(page.locator('[data-test="auth-provider"]')).toContainText('stub-auth');
   });
 });

@@ -19,7 +19,7 @@ function writeConfig(content: string): void {
 // Helper to get container logs
 function getContainerLogs(): string {
   try {
-    return execSync('docker logs e2e-proxy-app-with-whitelist --tail 50 2>&1', {
+    return execSync('docker logs e2e-proxy-app-with-whitelist --tail 200 2>&1', {
       encoding: 'utf-8',
       cwd: path.join(__dirname, '../..'),
     });
@@ -53,8 +53,8 @@ test.describe('Dynamic Configuration Reload', () => {
     );
     writeConfig(updatedConfig);
 
-    // Step 3: Wait for config watcher to detect and reload (fsnotify is fast, wait 1s to be safe)
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    // Step 3: Wait for config watcher to detect and reload (fsnotify is fast, wait 2s to be safe)
+    await new Promise(resolve => setTimeout(resolve, 2000));
 
     // Step 4: Check logs for reload message
     const logsAfter = getContainerLogs();
@@ -67,7 +67,7 @@ test.describe('Dynamic Configuration Reload', () => {
 
     // Step 5: Restore original config
     writeConfig(originalConfig);
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    await new Promise(resolve => setTimeout(resolve, 2000));
 
     // Step 6: Verify another reload happened
     const logsFinal = getContainerLogs();

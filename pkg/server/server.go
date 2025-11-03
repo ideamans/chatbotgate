@@ -10,6 +10,7 @@ import (
 	"github.com/ideamans/chatbotgate/pkg/auth/oauth2"
 	"github.com/ideamans/chatbotgate/pkg/authz"
 	"github.com/ideamans/chatbotgate/pkg/config"
+	"github.com/ideamans/chatbotgate/pkg/forwarding"
 	"github.com/ideamans/chatbotgate/pkg/i18n"
 	"github.com/ideamans/chatbotgate/pkg/logging"
 	"github.com/ideamans/chatbotgate/pkg/middleware"
@@ -40,6 +41,7 @@ func New(
 	emailHandler *email.Handler,
 	authzChecker authz.Checker,
 	proxyHandler *proxy.Handler,
+	forwarder *forwarding.Forwarder,
 	logger logging.Logger,
 ) *Server {
 	translator := i18n.NewTranslator()
@@ -51,6 +53,7 @@ func New(
 		oauthManager,
 		emailHandler,
 		authzChecker,
+		forwarder,
 		translator,
 		logger.WithModule("middleware"),
 	)

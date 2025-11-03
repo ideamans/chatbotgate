@@ -10,6 +10,7 @@ import (
 	"github.com/ideamans/chatbotgate/pkg/auth/oauth2"
 	"github.com/ideamans/chatbotgate/pkg/authz"
 	"github.com/ideamans/chatbotgate/pkg/config"
+	"github.com/ideamans/chatbotgate/pkg/forwarding"
 	"github.com/ideamans/chatbotgate/pkg/i18n"
 	"github.com/ideamans/chatbotgate/pkg/kvs"
 	"github.com/ideamans/chatbotgate/pkg/logging"
@@ -168,17 +169,12 @@ func (m *MiddlewareManager) createMiddleware(cfg *config.Config) (*middleware.Mi
 
 		var provider oauth2.Provider
 
-		// Calculate redirect URL
-		var redirectURL string
-		if cfg.Server.CallbackURL != "" {
-			redirectURL = cfg.Server.CallbackURL
-		} else {
-			redirectPath := joinURLPath(authPrefix, "oauth2/callback")
-			redirectURL = fmt.Sprintf("http://%s:%d%s", m.host, m.port, redirectPath)
-			if m.host == "0.0.0.0" {
-				redirectURL = fmt.Sprintf("http://localhost:%d%s", m.port, redirectPath)
-			}
+		// Get callback URL (auto-generated from base_url and auth_path_prefix)
+		host := m.host
+		if host == "0.0.0.0" {
+			host = "localhost"
 		}
+		redirectURL := cfg.Server.GetCallbackURL(host, m.port)
 
 		// Determine provider type
 		providerType := providerCfg.Type
@@ -268,6 +264,16 @@ func (m *MiddlewareManager) createMiddleware(cfg *config.Config) (*middleware.Mi
 		m.logger.Debug("Email authentication handler initialized", "sender", cfg.EmailAuth.SenderType)
 	}
 
+	// Create forwarder if any forwarding is enabled
+	var forwarder *forwarding.Forwarder
+	if cfg.Forwarding.QueryString.Enabled || cfg.Forwarding.Header.Enabled {
+		forwarder = forwarding.NewForwarder(&cfg.Forwarding)
+		m.logger.Debug("User info forwarder initialized",
+			"querystring_enabled", cfg.Forwarding.QueryString.Enabled,
+			"header_enabled", cfg.Forwarding.Header.Enabled,
+			"fields", len(cfg.Forwarding.Fields))
+	}
+
 	// Create middleware
 	mw := middleware.New(
 		cfg,
@@ -275,6 +281,7 @@ func (m *MiddlewareManager) createMiddleware(cfg *config.Config) (*middleware.Mi
 		oauthManager,
 		emailHandler,
 		authzChecker,
+		forwarder,
 		translator,
 		m.logger.WithModule("middleware"),
 	)
