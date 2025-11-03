@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/ideamans/chatbotgate/pkg/config"
+	"github.com/ideamans/chatbotgate/pkg/factory"
 	"github.com/ideamans/chatbotgate/pkg/forwarding"
 	"github.com/ideamans/chatbotgate/pkg/kvs"
 	"github.com/ideamans/chatbotgate/pkg/logging"
@@ -89,24 +90,6 @@ func TestForwarding_E2E(t *testing.T) {
 	}
 	defer sessionKVS.Close()
 
-	// Create token KVS
-	tokenCfg := cfg.KVS.Default
-	tokenCfg.Namespace = cfg.KVS.Namespaces.Token
-	tokenKVS, err := kvs.New(tokenCfg)
-	if err != nil {
-		t.Fatalf("Failed to create token KVS: %v", err)
-	}
-	defer tokenKVS.Close()
-
-	// Create rate limit KVS
-	rateLimitCfg := cfg.KVS.Default
-	rateLimitCfg.Namespace = cfg.KVS.Namespaces.RateLimit
-	rateLimitKVS, err := kvs.New(rateLimitCfg)
-	if err != nil {
-		t.Fatalf("Failed to create rate limit KVS: %v", err)
-	}
-	defer rateLimitKVS.Close()
-
 	// Create session store
 	sessionStore := session.NewKVSStore(sessionKVS)
 
@@ -116,15 +99,15 @@ func TestForwarding_E2E(t *testing.T) {
 		t.Fatalf("Failed to create proxy handler: %v", err)
 	}
 
+	// Create factory
+	mwFactory := factory.NewDefaultFactory("localhost", chatbotgatePort, logger)
+
 	// Create middleware manager
 	mgr, err := manager.New(manager.ManagerConfig{
 		Config:       cfg,
-		Host:         "localhost",
-		Port:         chatbotgatePort,
+		Factory:      mwFactory,
 		SessionStore: sessionStore,
 		ProxyHandler: proxyHandler,
-		TokenKVS:     tokenKVS,
-		RateLimitKVS: rateLimitKVS,
 		Logger:       logger,
 	})
 	if err != nil {
@@ -411,24 +394,6 @@ func TestCustomFieldsForwarding_E2E_Encrypted(t *testing.T) {
 	}
 	defer sessionKVS.Close()
 
-	// Create token KVS
-	tokenCfg := cfg.KVS.Default
-	tokenCfg.Namespace = cfg.KVS.Namespaces.Token
-	tokenKVS, err := kvs.New(tokenCfg)
-	if err != nil {
-		t.Fatalf("Failed to create token KVS: %v", err)
-	}
-	defer tokenKVS.Close()
-
-	// Create rate limit KVS
-	rateLimitCfg := cfg.KVS.Default
-	rateLimitCfg.Namespace = cfg.KVS.Namespaces.RateLimit
-	rateLimitKVS, err := kvs.New(rateLimitCfg)
-	if err != nil {
-		t.Fatalf("Failed to create rate limit KVS: %v", err)
-	}
-	defer rateLimitKVS.Close()
-
 	// Create session store
 	sessionStore := session.NewKVSStore(sessionKVS)
 
@@ -438,15 +403,15 @@ func TestCustomFieldsForwarding_E2E_Encrypted(t *testing.T) {
 		t.Fatalf("Failed to create proxy handler: %v", err)
 	}
 
+	// Create factory
+	mwFactory := factory.NewDefaultFactory("localhost", chatbotgatePort, logger)
+
 	// Create middleware manager
 	mgr, err := manager.New(manager.ManagerConfig{
 		Config:       cfg,
-		Host:         "localhost",
-		Port:         chatbotgatePort,
+		Factory:      mwFactory,
 		SessionStore: sessionStore,
 		ProxyHandler: proxyHandler,
-		TokenKVS:     tokenKVS,
-		RateLimitKVS: rateLimitKVS,
 		Logger:       logger,
 	})
 	if err != nil {

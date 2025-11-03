@@ -17,7 +17,7 @@ import (
 // ConfigWatcher watches configuration changes and triggers middleware reloads.
 type ConfigWatcher struct {
 	loader       config.Loader
-	manager      *manager.MiddlewareManager
+	manager      *manager.SingleDomainManager // Concrete type
 	configPath   string
 	lastHash     string
 	logger       logging.Logger
@@ -27,8 +27,8 @@ type ConfigWatcher struct {
 // WatcherConfig contains the configuration for creating a ConfigWatcher
 type WatcherConfig struct {
 	Loader       config.Loader
-	Manager      *manager.MiddlewareManager
-	ConfigPath   string // Path to the configuration file to watch
+	Manager      *manager.SingleDomainManager // Concrete type
+	ConfigPath   string                       // Path to the configuration file to watch
 	Logger       logging.Logger
 	ReloadNotify chan struct{} // Optional: notified after each reload attempt
 }
@@ -54,8 +54,11 @@ func New(cfg WatcherConfig) (*ConfigWatcher, error) {
 		return nil, fmt.Errorf("failed to get absolute path: %w", err)
 	}
 
-	// Calculate initial hash
-	currentConfig := cfg.Manager.GetConfig()
+	// Calculate initial hash from current config file
+	currentConfig, err := cfg.Loader.Load()
+	if err != nil {
+		return nil, fmt.Errorf("failed to load current config: %w", err)
+	}
 	hash, err := calculateConfigHash(currentConfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed to calculate initial config hash: %w", err)

@@ -10,11 +10,9 @@ import (
 	"time"
 
 	"github.com/ideamans/chatbotgate/pkg/config"
-	"github.com/ideamans/chatbotgate/pkg/kvs"
+	"github.com/ideamans/chatbotgate/pkg/factory"
 	"github.com/ideamans/chatbotgate/pkg/logging"
 	"github.com/ideamans/chatbotgate/pkg/manager"
-	"github.com/ideamans/chatbotgate/pkg/proxy"
-	"github.com/ideamans/chatbotgate/pkg/session"
 	"github.com/ideamans/chatbotgate/pkg/watcher"
 	"github.com/spf13/cobra"
 )
@@ -53,128 +51,35 @@ func runServe(cmd *cobra.Command, args []string) error {
 
 	logger.Info("Starting chatbotgate", "version", version, "service", cfg.Service.Name)
 
-	// Initialize KVS stores with namespace isolation
-	// Set default namespace names
-	cfg.KVS.Namespaces.SetDefaults()
-	logger.Debug("Namespace configuration",
-		"session", cfg.KVS.Namespaces.Session,
-		"token", cfg.KVS.Namespaces.Token,
-		"ratelimit", cfg.KVS.Namespaces.RateLimit)
+	// Create factory for all components
+	mwFactory := factory.NewDefaultFactory(host, port, logger)
 
-	// Default KVS type fallback
-	if cfg.KVS.Default.Type == "" {
-		cfg.KVS.Default.Type = "memory"
+	// Create KVS stores
+	sessionKVS, tokenKVS, rateLimitKVS, err := mwFactory.CreateKVSStores(cfg)
+	if err != nil {
+		logger.Error("Startup failed: could not create KVS stores", "error", err)
+		logger.Fatal("Server initialization failed")
 	}
+	defer sessionKVS.Close()
+	defer tokenKVS.Close()
+	defer rateLimitKVS.Close()
 
-	// Track KVS stores that need to be closed
-	var kvsToClose []kvs.Store
-	defer func() {
-		for _, store := range kvsToClose {
-			store.Close()
-		}
-	}()
+	// Create session store
+	sessionStore := mwFactory.CreateSessionStore(sessionKVS)
 
-	// Initialize session KVS (override or default with namespace)
-	var sessionKVS kvs.Store
-	if cfg.KVS.Session != nil {
-		// Dedicated session KVS specified
-		sessionKVS, err = kvs.New(*cfg.KVS.Session)
-		if err != nil {
-			logger.Error("Startup failed: could not create session KVS", "error", err)
-			logger.Fatal("Server initialization failed")
-		}
-		logger.Debug("Session KVS initialized (dedicated)", "type", cfg.KVS.Session.Type, "namespace", cfg.KVS.Session.Namespace)
-	} else {
-		// Use default KVS config with session namespace
-		sessionCfg := cfg.KVS.Default
-		sessionCfg.Namespace = cfg.KVS.Namespaces.Session
-		sessionKVS, err = kvs.New(sessionCfg)
-		if err != nil {
-			logger.Error("Startup failed: could not create session KVS", "error", err)
-			logger.Fatal("Server initialization failed")
-		}
-		logger.Debug("Session KVS initialized (default)", "type", sessionCfg.Type, "namespace", sessionCfg.Namespace)
-	}
-	kvsToClose = append(kvsToClose, sessionKVS)
-
-	// Initialize token KVS (override or default with namespace)
-	var tokenKVS kvs.Store
-	if cfg.KVS.Token != nil {
-		// Dedicated token KVS specified
-		tokenKVS, err = kvs.New(*cfg.KVS.Token)
-		if err != nil {
-			logger.Error("Startup failed: could not create token KVS", "error", err)
-			logger.Fatal("Server initialization failed")
-		}
-		logger.Debug("Token KVS initialized (dedicated)", "type", cfg.KVS.Token.Type, "namespace", cfg.KVS.Token.Namespace)
-	} else {
-		// Use default KVS config with token namespace
-		tokenCfg := cfg.KVS.Default
-		tokenCfg.Namespace = cfg.KVS.Namespaces.Token
-		tokenKVS, err = kvs.New(tokenCfg)
-		if err != nil {
-			logger.Error("Startup failed: could not create token KVS", "error", err)
-			logger.Fatal("Server initialization failed")
-		}
-		logger.Debug("Token KVS initialized (default)", "type", tokenCfg.Type, "namespace", tokenCfg.Namespace)
-	}
-	kvsToClose = append(kvsToClose, tokenKVS)
-
-	// Initialize rate limit KVS (override or default with namespace)
-	var rateLimitKVS kvs.Store
-	if cfg.KVS.RateLimit != nil {
-		// Dedicated rate limit KVS specified
-		rateLimitKVS, err = kvs.New(*cfg.KVS.RateLimit)
-		if err != nil {
-			logger.Error("Startup failed: could not create rate limit KVS", "error", err)
-			logger.Fatal("Server initialization failed")
-		}
-		logger.Debug("Rate limit KVS initialized (dedicated)", "type", cfg.KVS.RateLimit.Type, "namespace", cfg.KVS.RateLimit.Namespace)
-	} else {
-		// Use default KVS config with ratelimit namespace
-		rateLimitCfg := cfg.KVS.Default
-		rateLimitCfg.Namespace = cfg.KVS.Namespaces.RateLimit
-		rateLimitKVS, err = kvs.New(rateLimitCfg)
-		if err != nil {
-			logger.Error("Startup failed: could not create rate limit KVS", "error", err)
-			logger.Fatal("Server initialization failed")
-		}
-		logger.Debug("Rate limit KVS initialized (default)", "type", rateLimitCfg.Type, "namespace", rateLimitCfg.Namespace)
-	}
-	kvsToClose = append(kvsToClose, rateLimitKVS)
-
-	// Create session store using KVS
-	sessionStore := session.NewKVSStore(sessionKVS)
-
-	// Create proxy handler if upstream is configured
-	var proxyHandler *proxy.Handler
-	if len(cfg.Proxy.Hosts) > 0 {
-		proxyHandler, err = proxy.NewHandlerWithHosts(cfg.Proxy.Upstream, cfg.Proxy.Hosts)
-		if err != nil {
-			logger.Error("Startup failed: could not create proxy handler", "error", err)
-			logger.Fatal("Server initialization failed")
-		}
-		logger.Debug("Proxy handler initialized with host routing",
-			"default_upstream", cfg.Proxy.Upstream,
-			"hosts", len(cfg.Proxy.Hosts))
-	} else {
-		proxyHandler, err = proxy.NewHandler(cfg.Proxy.Upstream)
-		if err != nil {
-			logger.Error("Startup failed: could not create proxy handler", "error", err)
-			logger.Fatal("Server initialization failed")
-		}
-		logger.Debug("Proxy handler initialized", "upstream", cfg.Proxy.Upstream)
+	// Create proxy handler
+	proxyHandler, err := mwFactory.CreateProxyHandler(cfg)
+	if err != nil {
+		logger.Error("Startup failed: could not create proxy handler", "error", err)
+		logger.Fatal("Server initialization failed")
 	}
 
 	// Create middleware manager
 	middlewareManager, err := manager.New(manager.ManagerConfig{
 		Config:       cfg,
-		Host:         host,
-		Port:         port,
+		Factory:      mwFactory,
 		SessionStore: sessionStore,
 		ProxyHandler: proxyHandler,
-		TokenKVS:     tokenKVS,
-		RateLimitKVS: rateLimitKVS,
 		Logger:       logger,
 	})
 	if err != nil {
