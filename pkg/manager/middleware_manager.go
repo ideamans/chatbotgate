@@ -6,35 +6,27 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/ideamans/chatbotgate/pkg/auth/email"
-	"github.com/ideamans/chatbotgate/pkg/auth/oauth2"
-	"github.com/ideamans/chatbotgate/pkg/authz"
 	"github.com/ideamans/chatbotgate/pkg/config"
-	"github.com/ideamans/chatbotgate/pkg/forwarding"
-	"github.com/ideamans/chatbotgate/pkg/i18n"
-	"github.com/ideamans/chatbotgate/pkg/kvs"
+	"github.com/ideamans/chatbotgate/pkg/factory"
 	"github.com/ideamans/chatbotgate/pkg/logging"
 	"github.com/ideamans/chatbotgate/pkg/middleware"
 	"github.com/ideamans/chatbotgate/pkg/proxy"
 	"github.com/ideamans/chatbotgate/pkg/session"
 )
 
-// MiddlewareManager manages middleware instances and supports dynamic reloading.
+// SingleDomainManager manages a single middleware instance with dynamic reloading support.
 // It holds the current middleware instance and can atomically swap it with a new one
-// when the configuration changes.
-type MiddlewareManager struct {
+// when the configuration changes. This is the basic manager for single-domain setups.
+type SingleDomainManager struct {
 	// Current middleware instance (atomic)
 	current atomic.Value // *middleware.Middleware
+
+	// Factory for creating middleware instances
+	factory factory.Factory
 
 	// Shared resources that are NOT reloaded
 	sessionStore session.Store
 	proxyHandler *proxy.Handler
-	tokenKVS     kvs.Store
-	rateLimitKVS kvs.Store
-
-	// Server configuration (host/port)
-	host string
-	port int
 
 	// Current configuration
 	config *config.Config
@@ -46,17 +38,14 @@ type MiddlewareManager struct {
 // ManagerConfig contains the configuration for creating a MiddlewareManager
 type ManagerConfig struct {
 	Config       *config.Config
-	Host         string
-	Port         int
+	Factory      factory.Factory  // Factory for creating middleware (optional - will use default if nil)
 	SessionStore session.Store
 	ProxyHandler *proxy.Handler
-	TokenKVS     kvs.Store
-	RateLimitKVS kvs.Store
 	Logger       logging.Logger
 }
 
-// New creates a new MiddlewareManager with the given configuration.
-func New(cfg ManagerConfig) (*MiddlewareManager, error) {
+// New creates a new SingleDomainManager with the given configuration.
+func New(cfg ManagerConfig) (*SingleDomainManager, error) {
 	if cfg.Config == nil {
 		return nil, fmt.Errorf("config is required")
 	}
@@ -78,19 +67,28 @@ func New(cfg ManagerConfig) (*MiddlewareManager, error) {
 		return nil, errs
 	}
 
-	manager := &MiddlewareManager{
+	// Use provided factory or create default factory
+	// Note: We can't create DefaultFactory here without host/port
+	// So factory must be provided by caller
+	if cfg.Factory == nil {
+		return nil, fmt.Errorf("factory is required")
+	}
+
+	manager := &SingleDomainManager{
+		factory:      cfg.Factory,
 		sessionStore: cfg.SessionStore,
 		proxyHandler: cfg.ProxyHandler,
-		tokenKVS:     cfg.TokenKVS,
-		rateLimitKVS: cfg.RateLimitKVS,
-		host:         cfg.Host,
-		port:         cfg.Port,
 		config:       cfg.Config,
 		logger:       logger,
 	}
 
-	// Create initial middleware instance
-	mw, err := manager.createMiddleware(cfg.Config)
+	// Create initial middleware instance using factory
+	mw, err := cfg.Factory.CreateMiddleware(
+		cfg.Config,
+		cfg.SessionStore,
+		cfg.ProxyHandler,
+		logger,
+	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create initial middleware: %w", err)
 	}
@@ -102,7 +100,7 @@ func New(cfg ManagerConfig) (*MiddlewareManager, error) {
 }
 
 // ServeHTTP implements http.Handler by delegating to the current middleware instance.
-func (m *MiddlewareManager) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (m *SingleDomainManager) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	mw := m.current.Load().(*middleware.Middleware)
 	mw.ServeHTTP(w, r)
 }
@@ -110,7 +108,8 @@ func (m *MiddlewareManager) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // Reload reloads the middleware with a new configuration.
 // It creates a new middleware instance and atomically swaps it with the current one.
 // If the new configuration is invalid or middleware creation fails, the old instance is kept.
-func (m *MiddlewareManager) Reload(newConfig *config.Config) error {
+// This is a convenience method - not part of any interface.
+func (m *SingleDomainManager) Reload(newConfig *config.Config) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -126,8 +125,13 @@ func (m *MiddlewareManager) Reload(newConfig *config.Config) error {
 		return errs
 	}
 
-	// Create new middleware instance
-	newMw, err := m.createMiddleware(newConfig)
+	// Create new middleware instance using factory
+	newMw, err := m.factory.CreateMiddleware(
+		newConfig,
+		m.sessionStore,
+		m.proxyHandler,
+		m.logger,
+	)
 	if err != nil {
 		m.logger.Debug("Middleware creation failed", "error", err)
 		m.logger.Error("Configuration reload failed: could not create new middleware")
@@ -140,210 +144,4 @@ func (m *MiddlewareManager) Reload(newConfig *config.Config) error {
 
 	m.logger.Info("Configuration reloaded successfully")
 	return nil
-}
-
-// GetConfig returns the current configuration (thread-safe copy).
-func (m *MiddlewareManager) GetConfig() *config.Config {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-
-	// Return a copy to prevent external modifications
-	cfg := *m.config
-	return &cfg
-}
-
-// createMiddleware creates a new middleware instance with the given configuration.
-// This is the central place where all middleware dependencies are initialized.
-func (m *MiddlewareManager) createMiddleware(cfg *config.Config) (*middleware.Middleware, error) {
-	translator := i18n.NewTranslator()
-
-	// Create OAuth2 manager
-	oauthManager := oauth2.NewManager()
-	authPrefix := cfg.Server.GetAuthPathPrefix()
-
-	// Setup OAuth2 providers
-	for _, providerCfg := range cfg.OAuth2.Providers {
-		if !providerCfg.Enabled {
-			continue
-		}
-
-		var provider oauth2.Provider
-
-		// Get callback URL (auto-generated from base_url and auth_path_prefix)
-		host := m.host
-		if host == "0.0.0.0" {
-			host = "localhost"
-		}
-		redirectURL := cfg.Server.GetCallbackURL(host, m.port)
-
-		// Determine provider type
-		providerType := providerCfg.Type
-		if providerType == "" {
-			providerType = providerCfg.Name
-		}
-
-		switch providerType {
-		case "google":
-			provider = oauth2.NewGoogleProvider(
-				providerCfg.ClientID,
-				providerCfg.ClientSecret,
-				redirectURL,
-			)
-		case "github":
-			provider = oauth2.NewGitHubProvider(
-				providerCfg.ClientID,
-				providerCfg.ClientSecret,
-				redirectURL,
-			)
-		case "microsoft":
-			provider = oauth2.NewMicrosoftProvider(
-				providerCfg.ClientID,
-				providerCfg.ClientSecret,
-				redirectURL,
-			)
-		case "custom":
-			if providerCfg.AuthURL == "" || providerCfg.TokenURL == "" || providerCfg.UserInfoURL == "" {
-				m.logger.Warn("Skipping custom OAuth2 provider: missing required URLs", "provider", providerCfg.Name)
-				continue
-			}
-			provider = oauth2.NewCustomProvider(
-				providerCfg.Name,
-				providerCfg.ClientID,
-				providerCfg.ClientSecret,
-				redirectURL,
-				providerCfg.AuthURL,
-				providerCfg.TokenURL,
-				providerCfg.UserInfoURL,
-				providerCfg.Scopes,
-				providerCfg.InsecureSkipVerify,
-			)
-		default:
-			m.logger.Warn("Skipping OAuth2 provider: unknown provider type", "provider", providerCfg.Name, "type", providerType)
-			continue
-		}
-
-		oauthManager.AddProvider(provider)
-		m.logger.Debug("OAuth2 provider registered", "provider", providerCfg.Name, "type", providerType)
-	}
-
-	// Create authorization checker
-	authzChecker := authz.NewEmailChecker(cfg.Authorization)
-	if len(cfg.Authorization.Allowed) > 0 {
-		m.logger.Debug("Authorization checker initialized", "allowed_entries", len(cfg.Authorization.Allowed))
-	} else {
-		m.logger.Debug("Authorization checker initialized with no restrictions")
-	}
-
-	// Create email authentication handler if enabled
-	var emailHandler *email.Handler
-	if cfg.EmailAuth.Enabled {
-		var emailBaseURL string
-		if cfg.Server.BaseURL != "" {
-			emailBaseURL = cfg.Server.BaseURL
-		} else {
-			emailBaseURL = fmt.Sprintf("http://%s:%d", m.host, m.port)
-			if m.host == "0.0.0.0" {
-				emailBaseURL = fmt.Sprintf("http://localhost:%d", m.port)
-			}
-		}
-
-		var err error
-		emailHandler, err = email.NewHandler(
-			cfg.EmailAuth,
-			cfg.Service,
-			emailBaseURL,
-			authPrefix,
-			authzChecker,
-			translator,
-			cfg.Session.CookieSecret,
-			m.tokenKVS,
-			m.rateLimitKVS,
-		)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create email handler: %w", err)
-		}
-		m.logger.Debug("Email authentication handler initialized", "sender", cfg.EmailAuth.SenderType)
-	}
-
-	// Create forwarder if any forwarding is enabled
-	var forwarder *forwarding.Forwarder
-	if cfg.Forwarding.QueryString.Enabled || cfg.Forwarding.Header.Enabled {
-		forwarder = forwarding.NewForwarder(&cfg.Forwarding, cfg.OAuth2.Providers)
-		m.logger.Debug("User info forwarder initialized",
-			"querystring_enabled", cfg.Forwarding.QueryString.Enabled,
-			"header_enabled", cfg.Forwarding.Header.Enabled,
-			"fields", len(cfg.Forwarding.Fields))
-	}
-
-	// Create middleware
-	mw := middleware.New(
-		cfg,
-		m.sessionStore,
-		oauthManager,
-		emailHandler,
-		authzChecker,
-		forwarder,
-		translator,
-		m.logger.WithModule("middleware"),
-	)
-
-	// Wrap with proxy handler if available
-	if m.proxyHandler != nil {
-		mw = mw.Wrap(m.proxyHandler).(*middleware.Middleware)
-	}
-
-	return mw, nil
-}
-
-// normalizeAuthPrefix normalizes the authentication path prefix
-func normalizeAuthPrefix(prefix string) string {
-	if prefix == "" {
-		prefix = "/_auth"
-	}
-	if prefix[0] != '/' {
-		prefix = "/" + prefix
-	}
-	if len(prefix) > 1 {
-		prefix = trimRight(prefix, "/")
-		if prefix == "" {
-			prefix = "/"
-		}
-	}
-	return prefix
-}
-
-// trimRight removes trailing occurrences of a character from a string
-func trimRight(s, cutset string) string {
-	for len(s) > 0 && contains(cutset, s[len(s)-1]) {
-		s = s[:len(s)-1]
-	}
-	return s
-}
-
-// contains checks if a string contains a byte
-func contains(s string, b byte) bool {
-	for i := 0; i < len(s); i++ {
-		if s[i] == b {
-			return true
-		}
-	}
-	return false
-}
-
-// joinURLPath joins URL path segments
-func joinURLPath(prefix, suffix string) string {
-	normalized := normalizeAuthPrefix(prefix)
-	suffix = trimLeft(suffix, "/")
-	if normalized == "/" {
-		return "/" + suffix
-	}
-	return normalized + "/" + suffix
-}
-
-// trimLeft removes leading occurrences of a character from a string
-func trimLeft(s, cutset string) string {
-	for len(s) > 0 && contains(cutset, s[0]) {
-		s = s[1:]
-	}
-	return s
 }

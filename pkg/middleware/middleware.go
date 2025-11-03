@@ -22,8 +22,8 @@ type Middleware struct {
 	oauthManager       *oauth2.Manager
 	emailHandler       *email.Handler
 	authzChecker       authz.Checker
-	forwarder          *forwarding.Forwarder
-	passthroughMatcher *passthrough.Matcher
+	forwarder          forwarding.Forwarder  // Interface type
+	passthroughMatcher passthrough.Matcher   // Interface type
 	translator         *i18n.Translator
 	logger             logging.Logger
 	next               http.Handler // The next handler to call after auth succeeds
@@ -36,7 +36,7 @@ func New(
 	oauthManager *oauth2.Manager,
 	emailHandler *email.Handler,
 	authzChecker authz.Checker,
-	forwarder *forwarding.Forwarder,
+	forwarder forwarding.Forwarder, // Interface type
 	translator *i18n.Translator,
 	logger logging.Logger,
 ) *Middleware {

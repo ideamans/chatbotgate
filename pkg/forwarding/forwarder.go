@@ -21,16 +21,27 @@ type UserInfo struct {
 	Provider string                 // OAuth2 provider name (for provider-specific forwarding)
 }
 
-// Forwarder handles user information forwarding
-type Forwarder struct {
+// Forwarder is the interface for forwarding user information
+type Forwarder interface {
+	// AddToHeaders adds user info to HTTP headers
+	// Returns a new http.Header with user information added
+	AddToHeaders(headers http.Header, userInfo *UserInfo) http.Header
+
+	// AddToQueryString adds user info to a URL's query string
+	// Returns the modified URL with user information in query parameters
+	AddToQueryString(targetURL string, userInfo *UserInfo) (string, error)
+}
+
+// DefaultForwarder is the default implementation of Forwarder
+type DefaultForwarder struct {
 	config            *config.ForwardingConfig
 	providerConfigs   map[string]*config.OAuth2Provider // Provider-specific forwarding configurations
 	encryptor         *Encryptor
 }
 
-// NewForwarder creates a new Forwarder
-func NewForwarder(cfg *config.ForwardingConfig, providers []config.OAuth2Provider) *Forwarder {
-	f := &Forwarder{
+// NewForwarder creates a new DefaultForwarder
+func NewForwarder(cfg *config.ForwardingConfig, providers []config.OAuth2Provider) *DefaultForwarder {
+	f := &DefaultForwarder{
 		config:          cfg,
 		providerConfigs: make(map[string]*config.OAuth2Provider),
 	}
@@ -52,7 +63,7 @@ func NewForwarder(cfg *config.ForwardingConfig, providers []config.OAuth2Provide
 // Parameters are added as chatbotgate.user, chatbotgate.email, etc.
 // If encryption is enabled, the values are encrypted
 // Merges with existing query parameters
-func (f *Forwarder) AddToQueryString(targetURL string, userInfo *UserInfo) (string, error) {
+func (f *DefaultForwarder) AddToQueryString(targetURL string, userInfo *UserInfo) (string, error) {
 	if !f.config.QueryString.Enabled {
 		return targetURL, nil
 	}
@@ -135,7 +146,7 @@ func (f *Forwarder) AddToQueryString(targetURL string, userInfo *UserInfo) (stri
 // AddToHeaders adds user info to HTTP headers as X-ChatbotGate-*
 // If encryption is enabled, values are encrypted
 // Individual headers: X-ChatbotGate-User (username), X-ChatbotGate-Email
-func (f *Forwarder) AddToHeaders(headers http.Header, userInfo *UserInfo) http.Header {
+func (f *DefaultForwarder) AddToHeaders(headers http.Header, userInfo *UserInfo) http.Header {
 	if !f.config.Header.Enabled {
 		return headers
 	}

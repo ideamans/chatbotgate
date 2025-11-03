@@ -8,21 +8,33 @@ import (
 	"github.com/ideamans/chatbotgate/pkg/config"
 )
 
-// Matcher checks if a path should bypass authentication
-type Matcher struct {
+// Matcher is the interface for checking if a path should bypass authentication
+type Matcher interface {
+	// Match checks if the given path matches any passthrough pattern
+	Match(requestPath string) bool
+
+	// HasErrors returns true if there were any compilation errors
+	HasErrors() bool
+
+	// Errors returns all compilation errors
+	Errors() []error
+}
+
+// PatternMatcher is the default implementation of Matcher
+type PatternMatcher struct {
 	prefixes       []string
 	regexPatterns  []*regexp.Regexp
 	globPatterns   []string
 	compileErrors  []error
 }
 
-// NewMatcher creates a new passthrough matcher from configuration
-func NewMatcher(cfg *config.PassthroughConfig) *Matcher {
+// NewMatcher creates a new PatternMatcher from configuration
+func NewMatcher(cfg *config.PassthroughConfig) *PatternMatcher {
 	if cfg == nil {
-		return &Matcher{}
+		return &PatternMatcher{}
 	}
 
-	m := &Matcher{
+	m := &PatternMatcher{
 		prefixes:     cfg.Prefix,
 		globPatterns: cfg.Minimatch,
 	}
@@ -41,7 +53,7 @@ func NewMatcher(cfg *config.PassthroughConfig) *Matcher {
 }
 
 // Match checks if the given path matches any passthrough pattern
-func (m *Matcher) Match(requestPath string) bool {
+func (m *PatternMatcher) Match(requestPath string) bool {
 	if m == nil {
 		return false
 	}
@@ -71,12 +83,12 @@ func (m *Matcher) Match(requestPath string) bool {
 }
 
 // HasErrors returns true if there were any compilation errors
-func (m *Matcher) HasErrors() bool {
+func (m *PatternMatcher) HasErrors() bool {
 	return len(m.compileErrors) > 0
 }
 
 // Errors returns all compilation errors
-func (m *Matcher) Errors() []error {
+func (m *PatternMatcher) Errors() []error {
 	return m.compileErrors
 }
 

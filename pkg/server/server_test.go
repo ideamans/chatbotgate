@@ -137,7 +137,7 @@ func setupTestServer(t *testing.T) (*Server, *session.MemoryStore, func()) {
 	logger := logging.NewSimpleLogger("test", logging.LevelInfo, false)
 
 	// Create forwarder for the tests
-	var forwarder *forwarding.Forwarder
+	var forwarder forwarding.Forwarder
 	if cfg.Forwarding.Header.Enabled || cfg.Forwarding.QueryString.Enabled {
 		forwarder = forwarding.NewForwarder(&cfg.Forwarding, cfg.OAuth2.Providers)
 	}
@@ -719,7 +719,7 @@ func TestServer_Authorization_WithWhitelist_AuthorizedEmail(t *testing.T) {
 	logger := logging.NewSimpleLogger("test", logging.LevelInfo, false)
 
 	// Create forwarder for the tests
-	var forwarder *forwarding.Forwarder
+	var forwarder forwarding.Forwarder
 	if cfg.Forwarding.Header.Enabled || cfg.Forwarding.QueryString.Enabled {
 		forwarder = forwarding.NewForwarder(&cfg.Forwarding, cfg.OAuth2.Providers)
 	}

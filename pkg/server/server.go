@@ -41,7 +41,7 @@ func New(
 	emailHandler *email.Handler,
 	authzChecker authz.Checker,
 	proxyHandler *proxy.Handler,
-	forwarder *forwarding.Forwarder,
+	forwarder forwarding.Forwarder,
 	logger logging.Logger,
 ) *Server {
 	translator := i18n.NewTranslator()
