@@ -19,6 +19,7 @@ type Config struct {
 	Logging       LoggingConfig       `yaml:"logging" json:"logging"`
 	KVS           KVSConfig           `yaml:"kvs" json:"kvs"`         // KVS storage configuration
 	Forwarding    ForwardingConfig    `yaml:"forwarding" json:"forwarding"` // User info forwarding configuration
+	Passthrough   PassthroughConfig   `yaml:"passthrough" json:"passthrough"` // Passthrough (no auth) configuration
 }
 
 // ServiceConfig contains service-level settings
@@ -331,4 +332,12 @@ func (e EncryptionConfig) GetAlgorithm() string {
 		return "aes-256-gcm"
 	}
 	return e.Algorithm
+}
+
+// PassthroughConfig contains passthrough (no authentication) settings
+// Paths matching any of these patterns will skip authentication
+type PassthroughConfig struct {
+	Prefix    []string `yaml:"prefix" json:"prefix"`       // Exact prefix matches (e.g., "/embed.js", "/public/")
+	Regex     []string `yaml:"regex" json:"regex"`         // Regular expression patterns (e.g., "^/api/public/.*$")
+	Minimatch []string `yaml:"minimatch" json:"minimatch"` // Minimatch/glob patterns (e.g., "/**/*.js", "/static/**")
 }

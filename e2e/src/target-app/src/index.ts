@@ -98,7 +98,45 @@ app.get('/health', (_req, res) => {
   res.status(200).send('OK');
 });
 
-// Catch-all route to handle all paths (except /health)
+// Passthrough test endpoints - these should be accessible without authentication
+app.get('/embed.js', (_req, res) => {
+  res.setHeader('Content-Type', 'application/javascript');
+  res.status(200).send("// Embed widget script\nconsole.log('ChatbotGate embed widget loaded');");
+});
+
+app.get('/public/data.json', (_req, res) => {
+  res.json({
+    message: 'public data',
+    status: 'ok',
+  });
+});
+
+app.get('/static/image.png', (_req, res) => {
+  // Return a 1x1 transparent PNG
+  const png = Buffer.from([
+    0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A,
+    0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44, 0x52,
+    0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
+    0x08, 0x06, 0x00, 0x00, 0x00, 0x1F, 0x15, 0xC4,
+    0x89, 0x00, 0x00, 0x00, 0x0A, 0x49, 0x44, 0x41,
+    0x54, 0x78, 0x9C, 0x63, 0x00, 0x01, 0x00, 0x00,
+    0x05, 0x00, 0x01, 0x0D, 0x0A, 0x2D, 0xB4, 0x00,
+    0x00, 0x00, 0x00, 0x49, 0x45, 0x4E, 0x44, 0xAE,
+    0x42, 0x60, 0x82,
+  ]);
+  res.setHeader('Content-Type', 'image/png');
+  res.status(200).send(png);
+});
+
+app.get('/api/public/info', (_req, res) => {
+  res.json({
+    api: 'public',
+    version: '1.0',
+    authenticated: false,
+  });
+});
+
+// Catch-all route to handle all paths (except /health and passthrough endpoints)
 app.get('*', (req, res) => {
   const isAuthenticated = req.header('x-authenticated') === 'true';
   const authProvider = req.header('x-auth-provider') ?? 'unknown';

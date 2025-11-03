@@ -238,3 +238,30 @@ forwarding:
     # key: "CHANGE-THIS-TO-A-RANDOM-KEY-AT-LEAST-32-CHARACTERS"
     # Algorithm (default: "aes-256-gcm")
     # algorithm: "aes-256-gcm"
+
+# Passthrough configuration
+# Paths matching these patterns will bypass authentication
+# Useful for public assets, API endpoints, or embedding widgets
+passthrough:
+  # Exact prefix matches
+  # Any path starting with these prefixes will skip authentication
+  prefix:
+    # - "/embed.js"
+    # - "/public/"
+    # - "/static/"
+
+  # Regular expression patterns
+  # Paths matching these regex patterns will skip authentication
+  regex:
+    # - "^/api/public/.*$"
+    # - "\.js$"
+    # - "^/v\\d+/.*$"
+
+  # Minimatch/glob patterns
+  # Supports *, **, ?, and brace expansion
+  # ** matches across path separators, * matches within a segment
+  minimatch:
+    # - "/**/*.js"       # All .js files at any depth
+    # - "/**/*.css"      # All .css files at any depth
+    # - "/static/**"     # Everything under /static/
+    # - "/api/**/public" # /api/public, /api/v1/public, etc.

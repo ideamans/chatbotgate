@@ -64,6 +64,31 @@ services:
       timeout: 3s
       retries: 10
 
+  proxy-app-with-passthrough:
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+    container_name: e2e-proxy-app-with-passthrough
+    command: ["serve", "--config", "/config/proxy.e2e.with-passthrough.yaml", "--host", "0.0.0.0", "--port", "4180"]
+    ports:
+      - "4183:4180"  # Map external 4183 to internal 4180
+    depends_on:
+      - target-app
+      - stub-auth
+      - mailpit
+    volumes:
+      - ../config/proxy.e2e.with-passthrough.yaml:/config/proxy.e2e.with-passthrough.yaml:ro
+      - otp-files:/otp
+    environment:
+      - LANGUAGE=en
+    networks:
+      - e2e-net
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:4180/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
   target-app:
     build:
       context: ..
