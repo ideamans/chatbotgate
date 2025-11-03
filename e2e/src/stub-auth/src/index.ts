@@ -435,22 +435,41 @@ app.get(
       return res.status(401).json({ error: 'invalid_token' });
     }
 
+    // Base response
+    const response: any = {
+      sub: sessionToken.userEmail,
+      name: sessionToken.userName,
+    };
+
     // Special case: noemail@example.com user doesn't provide email
     // This simulates OAuth2 providers that don't provide email address
-    if (sessionToken.userEmail === NO_EMAIL_USER_EMAIL) {
-      res.json({
-        sub: sessionToken.userEmail,
-        name: sessionToken.userName,
-        // No email field - simulating provider that doesn't provide email
-      });
-    } else {
-      res.json({
-        sub: sessionToken.userEmail,
-        email: sessionToken.userEmail,
-        email_verified: true,
-        name: sessionToken.userName,
-      });
+    if (sessionToken.userEmail !== NO_EMAIL_USER_EMAIL) {
+      response.email = sessionToken.userEmail;
+      response.email_verified = true;
     }
+
+    // Add additional fields based on scopes
+    const scopes = sessionToken.scope?.split(' ') || [];
+
+    // If 'analytics' scope is requested, add custom analytics field
+    if (scopes.includes('analytics')) {
+      response.secrets = {
+        access_token: 'secret-analytics-token-' + nanoid(16),
+        refresh_token: 'secret-refresh-token-' + nanoid(16),
+      };
+      response.analytics = {
+        user_id: 'analytics-user-' + sessionToken.userEmail.split('@')[0],
+        tier: 'premium',
+      };
+    }
+
+    // If 'profile' scope is requested, add additional profile fields
+    if (scopes.includes('profile')) {
+      response.locale = 'ja-JP';
+      response.timezone = 'Asia/Tokyo';
+    }
+
+    res.json(response);
   })
 );
 

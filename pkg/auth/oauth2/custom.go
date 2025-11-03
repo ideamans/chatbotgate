@@ -27,19 +27,21 @@ func NewCustomProvider(
 	authURL string,
 	tokenURL string,
 	userInfoURL string,
+	scopes []string,
 	insecureSkipVerify bool,
 ) *CustomProvider {
+	// Use provided scopes or default to openid, email, profile
+	if len(scopes) == 0 {
+		scopes = []string{"openid", "email", "profile"}
+	}
+
 	return &CustomProvider{
 		name: name,
 		config: &oauth2.Config{
 			ClientID:     clientID,
 			ClientSecret: clientSecret,
 			RedirectURL:  redirectURL,
-			Scopes: []string{
-				"openid",
-				"email",
-				"profile",
-			},
+			Scopes:       scopes,
 			Endpoint: oauth2.Endpoint{
 				AuthURL:  authURL,
 				TokenURL: tokenURL,
@@ -84,36 +86,45 @@ func (p *CustomProvider) GetUserInfo(ctx context.Context, token *oauth2.Token) (
 		return nil, fmt.Errorf("failed to get user info: status %d", resp.StatusCode)
 	}
 
-	var apiUserInfo struct {
-		Email         string `json:"email"`
-		VerifiedEmail bool   `json:"email_verified"`
-		Name          string `json:"name"`
-		PreferredName string `json:"preferred_username"`
-		GivenName     string `json:"given_name"`
-		FamilyName    string `json:"family_name"`
-	}
-
-	if err := json.NewDecoder(resp.Body).Decode(&apiUserInfo); err != nil {
+	// Decode the full response into a map to preserve all fields
+	var fullResponse map[string]interface{}
+	if err := json.NewDecoder(resp.Body).Decode(&fullResponse); err != nil {
 		return nil, fmt.Errorf("failed to decode user info: %w", err)
 	}
 
-	// Try to get name from various fields
-	name := apiUserInfo.Name
-	if name == "" {
-		name = apiUserInfo.PreferredName
+	// Extract standard fields
+	email := ""
+	if emailVal, ok := fullResponse["email"].(string); ok {
+		email = emailVal
 	}
-	if name == "" && apiUserInfo.GivenName != "" {
-		name = apiUserInfo.GivenName
-		if apiUserInfo.FamilyName != "" {
-			name += " " + apiUserInfo.FamilyName
+
+	// Try to get name from various fields
+	name := ""
+	if nameVal, ok := fullResponse["name"].(string); ok {
+		name = nameVal
+	}
+	if name == "" {
+		if preferredName, ok := fullResponse["preferred_username"].(string); ok {
+			name = preferredName
+		}
+	}
+	if name == "" {
+		givenName, hasGiven := fullResponse["given_name"].(string)
+		familyName, hasFamily := fullResponse["family_name"].(string)
+		if hasGiven {
+			name = givenName
+			if hasFamily {
+				name += " " + familyName
+			}
 		}
 	}
 
 	// Email is optional - some providers don't provide it
 	// Authorization layer will check if email is required based on whitelist configuration
 	return &UserInfo{
-		Email: apiUserInfo.Email, // May be empty
+		Email: email, // May be empty
 		Name:  name,
+		Extra: fullResponse, // Store complete response for custom forwarding
 	}, nil
 }
 

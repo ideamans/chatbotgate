@@ -19,6 +19,7 @@ func TestNewCustomProvider(t *testing.T) {
 		"https://auth.example.com/oauth/authorize",
 		"https://auth.example.com/oauth/token",
 		"https://auth.example.com/oauth/userinfo",
+		nil, // Use default scopes
 		false,
 	)
 
@@ -135,6 +136,7 @@ func TestCustomProvider_GetUserEmail(t *testing.T) {
 				"https://auth.example.com/oauth/authorize",
 				"https://auth.example.com/oauth/token",
 				server.URL+"/userinfo",
+				nil, // Use default scopes
 				false,
 			)
 
@@ -187,6 +189,7 @@ func TestCustomProvider_GetUserEmail_InsecureSkipVerify(t *testing.T) {
 		"http://auth.example.com/oauth/authorize",
 		"http://auth.example.com/oauth/token",
 		server.URL+"/userinfo",
+		nil,  // Use default scopes
 		true, // insecureSkipVerify enabled
 	)
 
