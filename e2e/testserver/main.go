@@ -45,6 +45,12 @@ func main() {
 	http.HandleFunc("/", handleRoot)
 	http.HandleFunc("/health", handleHealth)
 
+	// Passthrough test endpoints
+	http.HandleFunc("/embed.js", handleEmbedJS)
+	http.HandleFunc("/public/data.json", handlePublicData)
+	http.HandleFunc("/static/image.png", handleStaticImage)
+	http.HandleFunc("/api/public/info", handlePublicAPI)
+
 	addr := fmt.Sprintf(":%d", *port)
 	log.Printf("Test backend server starting on %s", addr)
 	log.Printf("Encryption key: %s", encryptionKey)
@@ -151,4 +157,50 @@ func decryptField(encrypted string) string {
 		return ""
 	}
 	return decrypted
+}
+
+// Passthrough test handlers
+// These handlers should be accessible without authentication when passthrough is configured
+
+func handleEmbedJS(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/javascript")
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("// Embed widget script\nconsole.log('ChatbotGate embed widget loaded');"))
+}
+
+func handlePublicData(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{
+		"message": "public data",
+		"status":  "ok",
+	})
+}
+
+func handleStaticImage(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "image/png")
+	w.WriteHeader(http.StatusOK)
+	// Return a 1x1 transparent PNG
+	png := []byte{
+		0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A,
+		0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44, 0x52,
+		0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
+		0x08, 0x06, 0x00, 0x00, 0x00, 0x1F, 0x15, 0xC4,
+		0x89, 0x00, 0x00, 0x00, 0x0A, 0x49, 0x44, 0x41,
+		0x54, 0x78, 0x9C, 0x63, 0x00, 0x01, 0x00, 0x00,
+		0x05, 0x00, 0x01, 0x0D, 0x0A, 0x2D, 0xB4, 0x00,
+		0x00, 0x00, 0x00, 0x49, 0x45, 0x4E, 0x44, 0xAE,
+		0x42, 0x60, 0x82,
+	}
+	w.Write(png)
+}
+
+func handlePublicAPI(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"api":     "public",
+		"version": "1.0",
+		"authenticated": false,
+	})
 }

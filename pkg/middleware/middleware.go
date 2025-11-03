@@ -10,21 +10,23 @@ import (
 	"github.com/ideamans/chatbotgate/pkg/forwarding"
 	"github.com/ideamans/chatbotgate/pkg/i18n"
 	"github.com/ideamans/chatbotgate/pkg/logging"
+	"github.com/ideamans/chatbotgate/pkg/passthrough"
 	"github.com/ideamans/chatbotgate/pkg/session"
 )
 
 // Middleware is the core authentication middleware
 // It implements http.Handler and can wrap any http.Handler
 type Middleware struct {
-	config        *config.Config
-	sessionStore  session.Store
-	oauthManager  *oauth2.Manager
-	emailHandler  *email.Handler
-	authzChecker  authz.Checker
-	forwarder     *forwarding.Forwarder
-	translator    *i18n.Translator
-	logger        logging.Logger
-	next          http.Handler // The next handler to call after auth succeeds
+	config             *config.Config
+	sessionStore       session.Store
+	oauthManager       *oauth2.Manager
+	emailHandler       *email.Handler
+	authzChecker       authz.Checker
+	forwarder          *forwarding.Forwarder
+	passthroughMatcher *passthrough.Matcher
+	translator         *i18n.Translator
+	logger             logging.Logger
+	next               http.Handler // The next handler to call after auth succeeds
 }
 
 // New creates a new authentication middleware
@@ -38,15 +40,22 @@ func New(
 	translator *i18n.Translator,
 	logger logging.Logger,
 ) *Middleware {
+	// Create passthrough matcher from config
+	passthroughMatcher := passthrough.NewMatcher(&cfg.Passthrough)
+	if passthroughMatcher.HasErrors() {
+		logger.Warn("Passthrough configuration has errors", "errors", passthroughMatcher.Errors())
+	}
+
 	return &Middleware{
-		config:       cfg,
-		sessionStore: sessionStore,
-		oauthManager: oauthManager,
-		emailHandler: emailHandler,
-		authzChecker: authzChecker,
-		forwarder:    forwarder,
-		translator:   translator,
-		logger:       logger,
+		config:             cfg,
+		sessionStore:       sessionStore,
+		oauthManager:       oauthManager,
+		emailHandler:       emailHandler,
+		authzChecker:       authzChecker,
+		forwarder:          forwarder,
+		passthroughMatcher: passthroughMatcher,
+		translator:         translator,
+		logger:             logger,
 	}
 }
 
@@ -99,6 +108,19 @@ func (m *Middleware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	case r.URL.Path == "/ready":
 		m.handleReady(w, r)
+		return
+	}
+
+	// Check passthrough patterns - skip authentication if matched
+	if m.passthroughMatcher != nil && m.passthroughMatcher.Match(r.URL.Path) {
+		m.logger.Debug("Passthrough matched, skipping authentication", "path", r.URL.Path)
+		// Skip authentication and call next handler directly
+		if m.next != nil {
+			m.next.ServeHTTP(w, r)
+		} else {
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte("Passthrough"))
+		}
 		return
 	}
 
