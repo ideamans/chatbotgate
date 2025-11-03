@@ -11,7 +11,7 @@ import (
 )
 
 func TestNewGitHubProvider(t *testing.T) {
-	provider := NewGitHubProvider("test-client-id", "test-client-secret", "http://localhost/callback")
+	provider := NewGitHubProvider("test-client-id", "test-client-secret", "http://localhost/callback", nil, false)
 
 	if provider == nil {
 		t.Fatal("NewGitHubProvider() returned nil")
@@ -148,7 +148,7 @@ func TestGitHubProvider_GetUserEmail(t *testing.T) {
 			}))
 			defer server.Close()
 
-			provider := NewGitHubProvider("test-client-id", "test-client-secret", "http://localhost/callback")
+			provider := NewGitHubProvider("test-client-id", "test-client-secret", "http://localhost/callback", nil, false)
 
 			// Create test token
 			token := &oauth2lib.Token{

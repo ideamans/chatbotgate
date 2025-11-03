@@ -119,7 +119,8 @@ type OAuth2Provider struct {
 	InsecureSkipVerify bool   `yaml:"insecure_skip_verify" json:"insecure_skip_verify"` // Allow HTTP for testing (default: false)
 
 	// OAuth2 scopes to request
-	Scopes []string `yaml:"scopes" json:"scopes"` // OAuth2 scopes to request (e.g., ["openid", "email", "profile", "analytics"])
+	Scopes      []string `yaml:"scopes" json:"scopes"`             // OAuth2 scopes to request (e.g., ["openid", "email", "profile", "analytics"])
+	ResetScopes bool     `yaml:"reset_scopes" json:"reset_scopes"` // If true, replaces default scopes; if false, adds to default scopes (default: false)
 
 	// Custom forwarding configuration for this provider
 	// Allows forwarding additional user data obtained from OAuth2 to upstream

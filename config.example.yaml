@@ -64,6 +64,14 @@ oauth2:
       enabled: true
       # Optional: Custom icon URL (if not set, uses default Google icon)
       # icon_url: "https://example.com/custom-google-icon.svg"
+      # Optional: Custom scopes (default: userinfo.email, userinfo.profile)
+      # By default (reset_scopes: false), these scopes are ADDED to the default scopes
+      # scopes:
+      #   - "https://www.googleapis.com/auth/analytics.readonly"
+      # Optional: Reset scopes (default: false)
+      # If true, replaces default scopes with the specified scopes
+      # If false (default), adds specified scopes to default scopes
+      # reset_scopes: false
 
     # GitHub OAuth2
     - name: "github"
@@ -73,6 +81,12 @@ oauth2:
       enabled: false
       # Optional: Custom icon URL (if not set, uses default GitHub icon)
       # icon_url: "https://example.com/custom-github-icon.svg"
+      # Optional: Custom scopes (default: user:email, read:user)
+      # By default (reset_scopes: false), these scopes are ADDED to the default scopes
+      # scopes:
+      #   - "repo"
+      # Optional: Reset scopes (default: false)
+      # reset_scopes: false
 
     # Microsoft OAuth2 (Azure AD)
     - name: "microsoft"
@@ -82,6 +96,12 @@ oauth2:
       enabled: false
       # Optional: Custom icon URL (if not set, uses default Microsoft icon)
       # icon_url: "https://example.com/custom-microsoft-icon.svg"
+      # Optional: Custom scopes (default: openid, profile, email, User.Read)
+      # By default (reset_scopes: false), these scopes are ADDED to the default scopes
+      # scopes:
+      #   - "Calendars.Read"
+      # Optional: Reset scopes (default: false)
+      # reset_scopes: false
 
     # Custom OIDC Provider Example
     # - name: "custom-oidc"

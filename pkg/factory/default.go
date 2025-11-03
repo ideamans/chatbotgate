@@ -127,18 +127,24 @@ func (f *DefaultFactory) CreateOAuth2Manager(cfg *config.Config, host string, po
 				providerCfg.ClientID,
 				providerCfg.ClientSecret,
 				redirectURL,
+				providerCfg.Scopes,
+				providerCfg.ResetScopes,
 			)
 		case "github":
 			provider = oauth2.NewGitHubProvider(
 				providerCfg.ClientID,
 				providerCfg.ClientSecret,
 				redirectURL,
+				providerCfg.Scopes,
+				providerCfg.ResetScopes,
 			)
 		case "microsoft":
 			provider = oauth2.NewMicrosoftProvider(
 				providerCfg.ClientID,
 				providerCfg.ClientSecret,
 				redirectURL,
+				providerCfg.Scopes,
+				providerCfg.ResetScopes,
 			)
 		case "custom":
 			if providerCfg.AuthURL == "" || providerCfg.TokenURL == "" || providerCfg.UserInfoURL == "" {

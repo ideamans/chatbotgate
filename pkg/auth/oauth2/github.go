@@ -15,17 +15,34 @@ type GitHubProvider struct {
 }
 
 // NewGitHubProvider creates a new GitHub OAuth2 provider
-func NewGitHubProvider(clientID, clientSecret, redirectURL string) *GitHubProvider {
+func NewGitHubProvider(clientID, clientSecret, redirectURL string, scopes []string, resetScopes bool) *GitHubProvider {
+	// Default scopes
+	defaultScopes := []string{
+		"user:email",
+		"read:user", // For accessing user profile (name)
+	}
+
+	// Determine final scopes based on resetScopes flag
+	var finalScopes []string
+	if resetScopes {
+		// Replace default scopes with provided scopes
+		if len(scopes) == 0 {
+			finalScopes = defaultScopes // Fallback to default if no scopes provided
+		} else {
+			finalScopes = scopes
+		}
+	} else {
+		// Add provided scopes to default scopes
+		finalScopes = append(defaultScopes, scopes...)
+	}
+
 	return &GitHubProvider{
 		config: &oauth2.Config{
 			ClientID:     clientID,
 			ClientSecret: clientSecret,
 			RedirectURL:  redirectURL,
-			Scopes: []string{
-				"user:email",
-				"read:user", // For accessing user profile (name)
-			},
-			Endpoint: github.Endpoint,
+			Scopes:       finalScopes,
+			Endpoint:     github.Endpoint,
 		},
 	}
 }
