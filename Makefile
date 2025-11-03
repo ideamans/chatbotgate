@@ -29,4 +29,4 @@ clean: ## Clean build artifacts
 	rm -rf web/node_modules/
 
 run: build ## Build and run the server
-	./bin/chatbotgate
+	./bin/chatbotgate -c config.example.yaml

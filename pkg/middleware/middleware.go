@@ -88,6 +88,12 @@ func (m *Middleware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case matchPath(r.URL.Path, prefix, "/assets/icons/"):
 		m.handleIcon(w, r)
 		return
+	case matchPath(r.URL.Path, prefix, "/404"):
+		m.handle404(w, r)
+		return
+	case matchPath(r.URL.Path, prefix, "/500"):
+		m.handle500(w, r, nil)
+		return
 	case r.URL.Path == "/health":
 		m.handleHealth(w, r)
 		return
