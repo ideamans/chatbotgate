@@ -24,7 +24,6 @@ oauth2:
       display_name: "Stub Auth"
       client_id: "stub-client-id"
       client_secret: "stub-client-secret"
-      enabled: true
       auth_url: "http://localhost:3001/oauth/authorize"
       token_url: "http://stub-auth:3001/oauth/token"
       userinfo_url: "http://stub-auth:3001/oauth/userinfo"

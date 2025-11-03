@@ -15,17 +15,34 @@ type GoogleProvider struct {
 }
 
 // NewGoogleProvider creates a new Google OAuth2 provider
-func NewGoogleProvider(clientID, clientSecret, redirectURL string) *GoogleProvider {
+func NewGoogleProvider(clientID, clientSecret, redirectURL string, scopes []string, resetScopes bool) *GoogleProvider {
+	// Default scopes
+	defaultScopes := []string{
+		"https://www.googleapis.com/auth/userinfo.email",
+		"https://www.googleapis.com/auth/userinfo.profile",
+	}
+
+	// Determine final scopes based on resetScopes flag
+	var finalScopes []string
+	if resetScopes {
+		// Replace default scopes with provided scopes
+		if len(scopes) == 0 {
+			finalScopes = defaultScopes // Fallback to default if no scopes provided
+		} else {
+			finalScopes = scopes
+		}
+	} else {
+		// Add provided scopes to default scopes
+		finalScopes = append(defaultScopes, scopes...)
+	}
+
 	return &GoogleProvider{
 		config: &oauth2.Config{
 			ClientID:     clientID,
 			ClientSecret: clientSecret,
 			RedirectURL:  redirectURL,
-			Scopes: []string{
-				"https://www.googleapis.com/auth/userinfo.email",
-				"https://www.googleapis.com/auth/userinfo.profile",
-			},
-			Endpoint: google.Endpoint,
+			Scopes:       finalScopes,
+			Endpoint:     google.Endpoint,
 		},
 	}
 }

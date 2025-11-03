@@ -108,7 +108,7 @@ type OAuth2Provider struct {
 	DisplayName  string `yaml:"display_name" json:"display_name"`
 	ClientID     string `yaml:"client_id" json:"client_id"`
 	ClientSecret string `yaml:"client_secret" json:"client_secret"`
-	Enabled      bool   `yaml:"enabled" json:"enabled"`
+	Disabled     bool   `yaml:"disabled" json:"disabled"` // If true, provider is hidden from login page
 	IconURL      string `yaml:"icon_url" json:"icon_url"` // Optional custom icon URL (if not set, uses default icon based on provider type)
 
 	// Custom provider settings (only used when Type is "custom")
@@ -119,7 +119,8 @@ type OAuth2Provider struct {
 	InsecureSkipVerify bool   `yaml:"insecure_skip_verify" json:"insecure_skip_verify"` // Allow HTTP for testing (default: false)
 
 	// OAuth2 scopes to request
-	Scopes []string `yaml:"scopes" json:"scopes"` // OAuth2 scopes to request (e.g., ["openid", "email", "profile", "analytics"])
+	Scopes      []string `yaml:"scopes" json:"scopes"`             // OAuth2 scopes to request (e.g., ["openid", "email", "profile", "analytics"])
+	ResetScopes bool     `yaml:"reset_scopes" json:"reset_scopes"` // If true, replaces default scopes; if false, adds to default scopes (default: false)
 
 	// Custom forwarding configuration for this provider
 	// Allows forwarding additional user data obtained from OAuth2 to upstream
@@ -240,15 +241,15 @@ func (c *Config) Validate() error {
 		return ErrCookieSecretTooShort
 	}
 
-	// Check at least one OAuth2 provider is enabled
-	hasEnabledProvider := false
+	// Check at least one OAuth2 provider is available (not disabled)
+	hasAvailableProvider := false
 	for _, p := range c.OAuth2.Providers {
-		if p.Enabled {
-			hasEnabledProvider = true
+		if !p.Disabled {
+			hasAvailableProvider = true
 			break
 		}
 	}
-	if !hasEnabledProvider {
+	if !hasAvailableProvider {
 		return ErrNoEnabledProviders
 	}
 

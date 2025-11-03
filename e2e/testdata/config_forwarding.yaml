@@ -27,7 +27,6 @@ oauth2:
       display_name: "Test Provider"
       client_id: "test-client-id"
       client_secret: "test-client-secret"
-      enabled: true
       auth_url: "http://localhost:9999/oauth/authorize"
       token_url: "http://localhost:9999/oauth/token"
       userinfo_url: "http://localhost:9999/oauth/userinfo"

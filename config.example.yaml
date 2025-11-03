@@ -61,27 +61,48 @@ oauth2:
       display_name: "Google"
       client_id: "YOUR-GOOGLE-CLIENT-ID"
       client_secret: "YOUR-GOOGLE-CLIENT-SECRET"
-      enabled: true
+      # Optional: Set disabled: true to hide from login page (default: false)
+      # disabled: false
       # Optional: Custom icon URL (if not set, uses default Google icon)
       # icon_url: "https://example.com/custom-google-icon.svg"
+      # Optional: Custom scopes (default: userinfo.email, userinfo.profile)
+      # By default (reset_scopes: false), these scopes are ADDED to the default scopes
+      # scopes:
+      #   - "https://www.googleapis.com/auth/analytics.readonly"
+      # Optional: Reset scopes (default: false)
+      # If true, replaces default scopes with the specified scopes
+      # If false (default), adds specified scopes to default scopes
+      # reset_scopes: false
 
     # GitHub OAuth2
     - name: "github"
       display_name: "GitHub"
       client_id: "YOUR-GITHUB-CLIENT-ID"
       client_secret: "YOUR-GITHUB-CLIENT-SECRET"
-      enabled: false
+      disabled: true  # Set to false to enable
       # Optional: Custom icon URL (if not set, uses default GitHub icon)
       # icon_url: "https://example.com/custom-github-icon.svg"
+      # Optional: Custom scopes (default: user:email, read:user)
+      # By default (reset_scopes: false), these scopes are ADDED to the default scopes
+      # scopes:
+      #   - "repo"
+      # Optional: Reset scopes (default: false)
+      # reset_scopes: false
 
     # Microsoft OAuth2 (Azure AD)
     - name: "microsoft"
       display_name: "Microsoft"
       client_id: "YOUR-MICROSOFT-CLIENT-ID"
       client_secret: "YOUR-MICROSOFT-CLIENT-SECRET"
-      enabled: false
+      disabled: true  # Set to false to enable
       # Optional: Custom icon URL (if not set, uses default Microsoft icon)
       # icon_url: "https://example.com/custom-microsoft-icon.svg"
+      # Optional: Custom scopes (default: openid, profile, email, User.Read)
+      # By default (reset_scopes: false), these scopes are ADDED to the default scopes
+      # scopes:
+      #   - "Calendars.Read"
+      # Optional: Reset scopes (default: false)
+      # reset_scopes: false
 
     # Custom OIDC Provider Example
     # - name: "custom-oidc"
@@ -89,7 +110,7 @@ oauth2:
     #   display_name: "My OIDC Provider"
     #   client_id: "YOUR-CLIENT-ID"
     #   client_secret: "YOUR-CLIENT-SECRET"
-    #   enabled: false
+    #   disabled: true  # Set to false to enable
     #   # Custom icon URL is especially useful for custom OIDC providers
     #   icon_url: "https://your-provider.com/logo.svg"
     #   auth_url: "https://your-provider.com/oauth/authorize"

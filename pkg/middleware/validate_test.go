@@ -31,7 +31,6 @@ func validConfig() *config.Config {
 					Type:         "google",
 					ClientID:     "test-client-id",
 					ClientSecret: "test-client-secret",
-					Enabled:      true,
 				},
 			},
 		},
@@ -239,9 +238,9 @@ func TestValidateConfig_OAuth2Validation(t *testing.T) {
 		expectedError string
 	}{
 		{
-			name: "No enabled providers",
+			name: "No available providers (all disabled)",
 			modifyConfig: func(cfg *config.Config) {
-				cfg.OAuth2.Providers[0].Enabled = false
+				cfg.OAuth2.Providers[0].Disabled = true
 			},
 			expectedField: "oauth2.providers / email_auth.enabled",
 			expectedError: "at least one authentication method must be enabled",
@@ -306,7 +305,6 @@ func TestValidateConfig_CustomOAuth2Provider(t *testing.T) {
 			Type:         "custom",
 			ClientID:     "test-client-id",
 			ClientSecret: "test-client-secret",
-			Enabled:      true,
 			// Missing required custom provider URLs
 		},
 	}
@@ -346,7 +344,7 @@ func TestValidateConfig_EmailAuthValidation(t *testing.T) {
 		{
 			name: "Email auth enabled without sender type",
 			modifyConfig: func(cfg *config.Config) {
-				cfg.OAuth2.Providers[0].Enabled = false
+				cfg.OAuth2.Providers[0].Disabled = true
 				cfg.EmailAuth.Enabled = true
 				cfg.EmailAuth.SenderType = ""
 			},

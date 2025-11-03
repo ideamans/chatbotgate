@@ -65,7 +65,6 @@ func CreateTestConfigWithOAuth2() *config.Config {
 			DisplayName:  "Google",
 			ClientID:     "test-client-id",
 			ClientSecret: "test-client-secret",
-			Enabled:      true,
 		},
 	}
 	return cfg

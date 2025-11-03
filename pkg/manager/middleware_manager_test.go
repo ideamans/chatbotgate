@@ -48,7 +48,6 @@ func createTestConfig(serviceName string, allowedEmails []string) *config.Config
 					DisplayName:  "Test Provider",
 					ClientID:     "test-client-id",
 					ClientSecret: "test-client-secret",
-					Enabled:      true,
 				},
 			},
 		},
