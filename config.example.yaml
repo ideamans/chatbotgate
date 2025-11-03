@@ -205,3 +205,36 @@ kvs:
   #   type: "leveldb"
   #   leveldb:
   #     path: "/var/lib/chatbotgate/ratelimit"
+
+# User information forwarding configuration
+# Forward authenticated user information to upstream applications
+forwarding:
+  # Fields to forward (username, email)
+  # These are the user attributes that will be forwarded to the upstream
+  fields:
+    - "username"
+    - "email"
+
+  # QueryString forwarding (only on login redirect)
+  # When enabled, user info is appended to the redirect URL after successful login
+  # Example: https://app.example.com/?username=john&email=john@example.com
+  querystring:
+    enabled: false
+    encrypt: false  # Set to true to encrypt the query parameters
+
+  # Header forwarding (on all requests to upstream)
+  # When enabled, user info is added as HTTP headers on every proxied request
+  # Example headers: X-Chatbotgate-Username: john, X-Chatbotgate-Email: john@example.com
+  header:
+    enabled: false
+    encrypt: false  # Set to true to encrypt the header values
+    # Header prefix (default: "X-Chatbotgate-")
+    # prefix: "X-Chatbotgate-"
+
+  # Encryption settings (required if querystring.encrypt or header.encrypt is true)
+  encryption:
+    # Encryption key (must be at least 32 characters)
+    # Generate a random key: openssl rand -base64 32
+    # key: "CHANGE-THIS-TO-A-RANDOM-KEY-AT-LEAST-32-CHARACTERS"
+    # Algorithm (default: "aes-256-gcm")
+    # algorithm: "aes-256-gcm"

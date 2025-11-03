@@ -121,7 +121,7 @@ test.describe('Whitelist Authorization - OAuth2', () => {
 
 test.describe('Whitelist Authorization - Email Authentication', () => {
   test.beforeEach(async ({ page }) => {
-    await clearAllMessages();
+    // Note: Not clearing Mailpit messages to avoid conflicts with parallel tests
     await routeStubAuthRequests(page);
   });
 

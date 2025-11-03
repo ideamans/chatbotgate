@@ -145,8 +145,9 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 // AddAuthHeaders adds authentication headers to the request
+// Deprecated: Use the Forwarder from pkg/forwarding for more flexible header management
 func AddAuthHeaders(r *http.Request, email, provider string) {
-	r.Header.Set("X-Forwarded-User", email)
-	r.Header.Set("X-Forwarded-Email", email)
+	r.Header.Set("X-ChatbotGate-User", email)
+	r.Header.Set("X-ChatbotGate-Email", email)
 	r.Header.Set("X-Auth-Provider", provider)
 }

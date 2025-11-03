@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/ideamans/chatbotgate/pkg/kvs"
@@ -16,7 +17,8 @@ type Config struct {
 	EmailAuth     EmailAuthConfig     `yaml:"email_auth" json:"email_auth"`
 	Authorization AuthorizationConfig `yaml:"authorization" json:"authorization"`
 	Logging       LoggingConfig       `yaml:"logging" json:"logging"`
-	KVS           KVSConfig           `yaml:"kvs" json:"kvs"` // KVS storage configuration
+	KVS           KVSConfig           `yaml:"kvs" json:"kvs"`         // KVS storage configuration
+	Forwarding    ForwardingConfig    `yaml:"forwarding" json:"forwarding"` // User info forwarding configuration
 }
 
 // ServiceConfig contains service-level settings
@@ -31,8 +33,7 @@ type ServiceConfig struct {
 // ServerConfig contains authentication server settings
 type ServerConfig struct {
 	AuthPathPrefix string `yaml:"auth_path_prefix" json:"auth_path_prefix"` // Path prefix for authentication endpoints (default: "/_auth")
-	CallbackURL    string `yaml:"callback_url" json:"callback_url"`         // Optional: Override OAuth2 callback URL (useful when behind reverse proxy or different external port)
-	BaseURL        string `yaml:"base_url" json:"base_url"`                 // Optional: Override base URL for email links and redirects (e.g., "http://localhost:4181")
+	BaseURL        string `yaml:"base_url" json:"base_url"`                 // Optional: Base URL for email links and OAuth2 callback (e.g., "https://example.com:8443" or "http://localhost:4181")
 }
 
 // GetAuthPathPrefix returns the authentication path prefix
@@ -42,6 +43,25 @@ func (s ServerConfig) GetAuthPathPrefix() string {
 		return "/_auth"
 	}
 	return s.AuthPathPrefix
+}
+
+// GetCallbackURL returns the OAuth2 callback URL
+// Automatically generated from BaseURL and AuthPathPrefix
+// Format: {base_url}{auth_path_prefix}/oauth2/callback
+// If BaseURL is not set, defaults to http://host:port
+func (s ServerConfig) GetCallbackURL(host string, port int) string {
+	baseURL := s.BaseURL
+	if baseURL == "" {
+		// Auto-generate from host and port (defaults to HTTP)
+		// For HTTPS, set base_url explicitly (e.g., "https://example.com:8443")
+		baseURL = fmt.Sprintf("http://%s:%d", host, port)
+		if host == "0.0.0.0" {
+			baseURL = fmt.Sprintf("http://localhost:%d", port)
+		}
+	}
+
+	prefix := s.GetAuthPathPrefix()
+	return baseURL + prefix + "/oauth2/callback"
 }
 
 // ProxyConfig contains proxy settings
@@ -224,5 +244,91 @@ func (c *Config) Validate() error {
 		return ErrNoEnabledProviders
 	}
 
+	// Validate forwarding configuration
+	if err := c.validateForwarding(); err != nil {
+		return err
+	}
+
 	return nil
+}
+
+// validateForwarding validates the forwarding configuration
+func (c *Config) validateForwarding() error {
+	fwd := &c.Forwarding
+
+	// Check if any forwarding method is enabled
+	isForwardingEnabled := fwd.QueryString.Enabled || fwd.Header.Enabled
+	if !isForwardingEnabled {
+		return nil // No forwarding enabled, no validation needed
+	}
+
+	// Check that fields are specified when forwarding is enabled
+	if len(fwd.Fields) == 0 {
+		return ErrForwardingFieldsRequired
+	}
+
+	// Validate field names
+	validFields := map[string]bool{"username": true, "email": true}
+	for _, field := range fwd.Fields {
+		if !validFields[field] {
+			return ErrInvalidForwardingField
+		}
+	}
+
+	// Check encryption requirements
+	needsEncryption := fwd.QueryString.Encrypt || fwd.Header.Encrypt
+
+	if needsEncryption {
+		if fwd.Encryption.Key == "" {
+			return ErrEncryptionKeyRequired
+		}
+		if len(fwd.Encryption.Key) < 32 {
+			return ErrEncryptionKeyTooShort
+		}
+	}
+
+	return nil
+}
+
+// ForwardingConfig contains user info forwarding settings
+type ForwardingConfig struct {
+	Fields      []string               `yaml:"fields" json:"fields"`           // Fields to forward (e.g., username, email)
+	QueryString ForwardingMethodConfig `yaml:"querystring" json:"querystring"` // QueryString forwarding (only on login redirect)
+	Header      ForwardingHeaderConfig `yaml:"header" json:"header"`           // Header forwarding (on all requests)
+	Encryption  EncryptionConfig       `yaml:"encryption" json:"encryption"`   // Encryption settings
+}
+
+// ForwardingMethodConfig contains settings for a forwarding method (querystring)
+type ForwardingMethodConfig struct {
+	Enabled bool `yaml:"enabled" json:"enabled"` // Enable forwarding
+	Encrypt bool `yaml:"encrypt" json:"encrypt"` // Encrypt the data
+}
+
+// ForwardingHeaderConfig contains settings for header forwarding
+type ForwardingHeaderConfig struct {
+	Enabled bool   `yaml:"enabled" json:"enabled"` // Enable forwarding
+	Encrypt bool   `yaml:"encrypt" json:"encrypt"` // Encrypt the data
+	Prefix  string `yaml:"prefix" json:"prefix"`   // Header prefix (default: "X-Chatbotgate-")
+}
+
+// GetPrefix returns the header prefix with default value
+func (h ForwardingHeaderConfig) GetPrefix() string {
+	if h.Prefix == "" {
+		return "X-Chatbotgate-"
+	}
+	return h.Prefix
+}
+
+// EncryptionConfig contains encryption settings
+type EncryptionConfig struct {
+	Key       string `yaml:"key" json:"key"`               // Encryption key (required if encrypt is enabled)
+	Algorithm string `yaml:"algorithm" json:"algorithm"` // Encryption algorithm (default: "aes-256-gcm")
+}
+
+// GetAlgorithm returns the encryption algorithm with default value
+func (e EncryptionConfig) GetAlgorithm() string {
+	if e.Algorithm == "" {
+		return "aes-256-gcm"
+	}
+	return e.Algorithm
 }

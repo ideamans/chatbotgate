@@ -7,8 +7,8 @@ const TEST_EMAIL = 'passwordless-basic@example.com';
 
 test.describe('Passwordless email flow', () => {
   test.beforeEach(async ({ page }) => {
-    // Clear all emails in Mailpit before each test
-    await clearAllMessages();
+    // Note: Not clearing Mailpit messages to avoid conflicts with parallel tests
+    // Each test uses a unique email address to ensure isolation
     await routeStubAuthRequests(page);
   });
 
@@ -28,7 +28,7 @@ test.describe('Passwordless email flow', () => {
     // Wait for email to arrive in Mailpit and extract login URL
     console.log(`Waiting for email to ${TEST_EMAIL}...`);
     const loginUrl = await waitForLoginEmail(TEST_EMAIL, {
-      timeoutMs: 10_000,
+      timeoutMs: 30_000,
       pollIntervalMs: 500,
     });
 

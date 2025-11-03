@@ -9,6 +9,7 @@ import (
 
 	"github.com/ideamans/chatbotgate/pkg/assets"
 	"github.com/ideamans/chatbotgate/pkg/auth/oauth2"
+	"github.com/ideamans/chatbotgate/pkg/forwarding"
 	"github.com/ideamans/chatbotgate/pkg/i18n"
 	"github.com/ideamans/chatbotgate/pkg/session"
 )
@@ -417,8 +418,19 @@ func (m *Middleware) handleOAuth2Start(w http.ResponseWriter, r *http.Request) {
 	// Store state in session (simplified for now - in production, use a dedicated state store)
 	// For now, we'll pass it directly and verify in callback
 
-	// Get auth URL
-	authURL, err := m.oauthManager.GetAuthURL(providerName, state)
+	// Determine the base URL for OAuth2 callback
+	// Priority: 1. config.base_url, 2. request Host header
+	var authURL, redirectURL string
+	if m.config.Server.BaseURL != "" {
+		// Use configured base URL
+		authURL, redirectURL, err = m.oauthManager.GetAuthURLWithRedirect(providerName, state, m.config.Server.BaseURL, prefix)
+		m.logger.Debug("Generated OAuth2 auth URL", "provider", providerName, "base_url", m.config.Server.BaseURL, "redirect_url", redirectURL)
+	} else {
+		// Use request host (dynamic)
+		requestHost := r.Host
+		authURL, redirectURL, err = m.oauthManager.GetAuthURLWithRedirect(providerName, state, requestHost, prefix)
+		m.logger.Debug("Generated OAuth2 auth URL", "provider", providerName, "request_host", requestHost, "redirect_url", redirectURL)
+	}
 	if err != nil {
 		m.logger.Error("Failed to get auth URL", "provider", providerName, "error", err)
 		http.Error(w, "Invalid provider", http.StatusBadRequest)
@@ -440,6 +452,17 @@ func (m *Middleware) handleOAuth2Start(w http.ResponseWriter, r *http.Request) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     "oauth_provider",
 		Value:    providerName,
+		Path:     "/",
+		MaxAge:   600,
+		HttpOnly: true,
+		Secure:   m.config.Session.CookieSecure,
+		SameSite: http.SameSiteLaxMode,
+	})
+
+	// Store redirect URL in cookie for token exchange
+	http.SetCookie(w, &http.Cookie{
+		Name:     "oauth_redirect_url",
+		Value:    redirectURL,
 		Path:     "/",
 		MaxAge:   600,
 		HttpOnly: true,
@@ -469,6 +492,14 @@ func (m *Middleware) handleOAuth2Callback(w http.ResponseWriter, r *http.Request
 		return
 	}
 
+	// Get redirect URL from cookie
+	redirectURLCookie, err := r.Cookie("oauth_redirect_url")
+	if err != nil {
+		m.logger.Error("Redirect URL cookie not found")
+		http.Error(w, "Invalid redirect URL", http.StatusBadRequest)
+		return
+	}
+
 	// Verify state
 	state := r.URL.Query().Get("state")
 	if state != stateCookie.Value {
@@ -487,11 +518,12 @@ func (m *Middleware) handleOAuth2Callback(w http.ResponseWriter, r *http.Request
 	}
 
 	providerName := providerCookie.Value
+	oauthRedirectURL := redirectURLCookie.Value
 
-	// Exchange code for token
-	token, err := m.oauthManager.Exchange(r.Context(), providerName, code)
+	// Exchange code for token using the same redirect URL
+	token, err := m.oauthManager.ExchangeWithRedirect(r.Context(), providerName, code, oauthRedirectURL)
 	if err != nil {
-		m.logger.Error("Failed to exchange code", "error", err)
+		m.logger.Error("Failed to exchange code", "error", err, "redirect_url", oauthRedirectURL)
 		http.Error(w, "Failed to authenticate", http.StatusInternalServerError)
 		return
 	}
@@ -595,12 +627,34 @@ func (m *Middleware) handleOAuth2Callback(w http.ResponseWriter, r *http.Request
 		Path:   "/",
 		MaxAge: -1,
 	})
+	http.SetCookie(w, &http.Cookie{
+		Name:   "oauth_redirect_url",
+		Value:  "",
+		Path:   "/",
+		MaxAge: -1,
+	})
 
 	// Log success after all session/cookie operations succeed
 	m.logger.Info("OAuth2 authentication successful", "email", email, "name", name, "provider", providerName)
 
+	// Get redirect URL
+	redirectURL := m.getRedirectURL(w, r)
+
+	// Add user info to query string if forwarding is enabled
+	if m.forwarder != nil {
+		userInfo := &forwarding.UserInfo{
+			Username: name,
+			Email:    email,
+		}
+		if modifiedURL, err := m.forwarder.AddToQueryString(redirectURL, userInfo); err == nil {
+			redirectURL = modifiedURL
+		} else {
+			m.logger.Warn("Failed to add user info to redirect URL", "error", err)
+		}
+	}
+
 	// Redirect to original URL or home
-	http.Redirect(w, r, m.getRedirectURL(w, r), http.StatusFound)
+	http.Redirect(w, r, redirectURL, http.StatusFound)
 }
 
 // generateSessionID generates a random session ID
@@ -793,8 +847,24 @@ func (m *Middleware) handleEmailVerify(w http.ResponseWriter, r *http.Request) {
 
 	m.logger.Info("Email authentication successful", "email", email)
 
+	// Get redirect URL
+	redirectURL := m.getRedirectURL(w, r)
+
+	// Add user info to query string if forwarding is enabled
+	if m.forwarder != nil {
+		userInfo := &forwarding.UserInfo{
+			Username: "", // Email auth has no username (name)
+			Email:    email,
+		}
+		if modifiedURL, err := m.forwarder.AddToQueryString(redirectURL, userInfo); err == nil {
+			redirectURL = modifiedURL
+		} else {
+			m.logger.Warn("Failed to add user info to redirect URL", "error", err)
+		}
+	}
+
 	// Redirect to original URL or home
-	http.Redirect(w, r, m.getRedirectURL(w, r), http.StatusFound)
+	http.Redirect(w, r, redirectURL, http.StatusFound)
 }
 
 // handleForbidden displays the access denied page

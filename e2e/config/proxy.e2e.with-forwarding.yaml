@@ -1,16 +1,16 @@
 service:
-  name: "chatbotgate e2e (with whitelist)"
-  description: "E2E verification environment with whitelist"
+  name: "chatbotgate e2e with forwarding"
+  description: "E2E verification environment with user info forwarding"
 
 server:
   auth_path_prefix: "/_auth"
-  base_url: "http://localhost:4181"  # External base URL for email links and OAuth2 callback
+  base_url: "http://localhost:4182"  # External base URL for email links and OAuth2 callback
 
 proxy:
   upstream: "http://target-app:3000/"
 
 session:
-  cookie_name: "mop-e2e-wl"  # Different cookie name to avoid conflicts
+  cookie_name: "mop-e2e"
   cookie_secret: "0123456789abcdef0123456789abcdef"
   cookie_expire: "24h"
   cookie_secure: false
@@ -41,18 +41,14 @@ email_auth:
     username: ""
     password: ""
     from: "noreply@example.com"
-    from_name: "chatbotgate E2E (WL)"
+    from_name: "chatbotgate E2E"
     insecure_skip_verify: true
   token:
     expire: "3m"
-  # otp_output_file: "/otp/passwordless-otp-wl.jsonl"  # Commented out to use Mailpit instead
 
-# Whitelist configured - only specific emails and domains are allowed
-# Entries starting with @ are domains, others are email addresses
+# No authorization whitelist configured - all authenticated users are allowed
 authorization:
-  allowed:
-    - "allowed@example.com"
-    - "@allowed.example.com"
+  allowed: []
 
 logging:
   level: "debug"
@@ -78,16 +74,17 @@ forwarding:
     - "username"
     - "email"
 
-  # QueryString forwarding (disabled for basic tests)
+  # QueryString forwarding (encrypted)
   querystring:
-    enabled: false
+    enabled: true
+    encrypt: true
 
-  # Header forwarding (plain text for testing)
+  # Header forwarding (encrypted)
   header:
     enabled: true
-    encrypt: false
+    encrypt: true
 
-  # Encryption settings (for when encrypt: true)
+  # Encryption settings
   encryption:
     # E2E test encryption key (32+ characters)
     key: "e2e-test-encryption-key-32-chars-long-1234567890"

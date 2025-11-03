@@ -4,6 +4,7 @@ service:
 
 server:
   auth_path_prefix: "/_auth"
+  base_url: "http://localhost:4180"
 
 proxy:
   upstream: "http://target-app:3000/"
@@ -66,3 +67,25 @@ kvs:
     session: "session"
     token: "token"
     ratelimit: "ratelimit"
+
+# User information forwarding configuration
+forwarding:
+  # Forward both username and email
+  fields:
+    - "username"
+    - "email"
+
+  # QueryString forwarding (disabled for basic tests)
+  querystring:
+    enabled: false
+
+  # Header forwarding (plain text for testing)
+  header:
+    enabled: true
+    encrypt: false
+
+  # Encryption settings (for when encrypt: true)
+  encryption:
+    # E2E test encryption key (32+ characters)
+    key: "e2e-test-encryption-key-32-chars-long-1234567890"
+    algorithm: "aes-256-gcm"

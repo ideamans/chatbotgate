@@ -4,8 +4,8 @@ import { routeStubAuthRequests } from '../support/stub-auth-route';
 
 test.describe('Passwordless email flow (Mailpit)', () => {
   test.beforeEach(async ({ page }) => {
-    // Clear all emails in Mailpit before each test
-    await clearAllMessages();
+    // Note: Not clearing Mailpit messages to avoid conflicts with parallel tests
+    // Each test uses a unique email address to ensure isolation
     await routeStubAuthRequests(page);
   });
 
