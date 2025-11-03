@@ -273,6 +273,14 @@
 @layer components;
 
 @layer utilities {
+  .collapse {
+    visibility: collapse;
+  }
+
+  .visible {
+    visibility: visible;
+  }
+
   .container {
     width: 100%;
   }
@@ -531,9 +539,33 @@ body {
   max-width: 28rem;
 }
 
+.auth-credit {
+  text-align: center;
+  width: 100%;
+  color: var(--color-text-secondary);
+  margin-top: var(--spacing-md);
+  justify-content: center;
+  align-items: center;
+  gap: var(--spacing-xs);
+  cursor: pointer;
+  font-size: .875rem;
+  text-decoration: none;
+  transition: opacity .2s;
+  display: flex;
+}
+
+.auth-credit:hover {
+  opacity: .7;
+}
+
+.auth-credit img {
+  width: auto;
+  height: 1.25rem;
+}
+
 .auth-title {
   text-align: center;
-  margin-bottom: var(--spacing-xs);
+  margin-bottom: var(--spacing-md);
   color: var(--color-text-primary);
   font-size: 1.875rem;
   font-weight: 700;
@@ -548,7 +580,7 @@ body {
 
 .auth-subtitle {
   text-align: center;
-  margin-bottom: var(--spacing-sm);
+  margin-bottom: var(--spacing-md);
   color: var(--color-text-primary);
   font-size: 1.25rem;
   font-weight: 600;
@@ -655,6 +687,76 @@ body {
 
 .theme-toggle:hover {
   background-color: var(--color-bg-muted);
+}
+
+.accordion {
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--spacing-md);
+  overflow: hidden;
+}
+
+.accordion-header {
+  padding: var(--spacing-md);
+  background-color: var(--color-bg-elevated);
+  cursor: pointer;
+  -webkit-user-select: none;
+  user-select: none;
+  justify-content: space-between;
+  align-items: center;
+  transition: background-color .15s;
+  display: flex;
+}
+
+.accordion-header:hover {
+  background-color: var(--color-bg-muted);
+}
+
+.accordion-header-title {
+  color: var(--color-text-secondary);
+  font-size: .875rem;
+  font-weight: 500;
+}
+
+.accordion-header-icon {
+  width: 1rem;
+  height: 1rem;
+  color: var(--color-text-muted);
+  justify-content: center;
+  align-items: center;
+  transition: transform .2s;
+  display: flex;
+}
+
+.accordion-header-icon:before {
+  content: "▼";
+  font-size: .75rem;
+}
+
+.accordion.open .accordion-header-icon {
+  transform: rotate(180deg);
+}
+
+.accordion-content {
+  max-height: 0;
+  transition: max-height .3s;
+  overflow: hidden;
+}
+
+.accordion.open .accordion-content {
+  max-height: 500px;
+  overflow-y: auto;
+}
+
+.accordion-body {
+  padding: var(--spacing-md);
+  background-color: var(--color-bg-base);
+  font-size: .75rem;
+  font-family: var(--font-mono, monospace);
+  color: var(--color-text-secondary);
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: 1.5;
 }
 
 @property --tw-border-style {

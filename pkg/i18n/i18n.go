@@ -198,6 +198,15 @@ var defaultTranslations = Translations{
 		"error.internal":               "Internal Server Error",
 		"error.invalid_request":        "Invalid Request",
 		"error.invalid_email":          "Email is required",
+		"error.notfound.title":         "404 - Not Found",
+		"error.notfound.heading":       "Not Found",
+		"error.notfound.message":       "The page you are looking for could not be found.",
+		"error.notfound.home":          "Go to Home",
+		"error.server.title":           "500 - Internal Server Error",
+		"error.server.heading":         "Internal Server Error",
+		"error.server.message":         "An unexpected error occurred. Please try again later.",
+		"error.server.home":            "Go to Home",
+		"error.details.title":          "Error Details",
 
 		// Theme and Language
 		"ui.theme":         "Theme",
@@ -267,6 +276,15 @@ var defaultTranslations = Translations{
 		"error.internal":               "内部サーバーエラー",
 		"error.invalid_request":        "不正なリクエスト",
 		"error.invalid_email":          "メールアドレスが必要です",
+		"error.notfound.title":         "404 - Not Found",
+		"error.notfound.heading":       "Not Found",
+		"error.notfound.message":       "お探しのページは見つかりませんでした。",
+		"error.notfound.home":          "ホームに戻る",
+		"error.server.title":           "500 - Internal Server Error",
+		"error.server.heading":         "Internal Server Error",
+		"error.server.message":         "予期しないエラーが発生しました。しばらくしてから再度お試しください。",
+		"error.server.home":            "ホームに戻る",
+		"error.details.title":          "エラーの詳細",
 
 		// Theme and Language
 		"ui.theme":         "テーマ",

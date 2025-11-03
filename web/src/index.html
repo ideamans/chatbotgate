@@ -127,6 +127,7 @@
         <li><a href="#cards">Cards</a></li>
         <li><a href="#alerts">Alerts</a></li>
         <li><a href="#pages">Pages</a></li>
+        <li><a href="#accordion">Accordion</a></li>
       </ul>
     </div>
   </nav>
@@ -505,7 +506,8 @@
       <h3>Login Page</h3>
       <div class="component-demo">
         <div class="auth-container" style="min-height: auto;">
-          <div class="card auth-card">
+          <div style="width: 100%; max-width: 28rem;">
+            <div class="card auth-card">
             <h1 class="auth-title">Welcome Back</h1>
             <p class="auth-description">Sign in to your account to continue</p>
 
@@ -586,6 +588,11 @@
               });
             })();
             </script>
+            </div>
+            <a href="#" class="auth-credit">
+              <img src="../icons/chatbotgate.svg" alt="ChatbotGate Logo">
+              Protected by ChatbotGate
+            </a>
           </div>
         </div>
       </div>
@@ -593,14 +600,20 @@
       <h3>Email Sent Page</h3>
       <div class="component-demo">
         <div class="auth-container" style="min-height: auto;">
-          <div class="card auth-card">
-            <h1 class="auth-title">Multi OAuth2 Proxy</h1>
-            <h2 class="auth-subtitle">Check Your Email</h2>
-            <div class="alert alert-success" style="text-align: left; margin-bottom: var(--spacing-md);">
-              If your email address is authorized, you will receive a login link shortly. Please check your inbox and click the link to log in.
+          <div style="width: 100%; max-width: 28rem;">
+            <div class="card auth-card">
+              <h1 class="auth-title">Multi OAuth2 Proxy</h1>
+              <h2 class="auth-subtitle">Check Your Email</h2>
+              <div class="alert alert-success" style="text-align: left; margin-bottom: var(--spacing-md);">
+                If your email address is authorized, you will receive a login link shortly. Please check your inbox and click the link to log in.
+              </div>
+              <a href="#" class="btn btn-ghost" style="width: 100%; margin-top: var(--spacing-md);">
+                Back to login
+              </a>
             </div>
-            <a href="#" class="btn btn-ghost" style="width: 100%; margin-top: var(--spacing-md);">
-              Back to login
+            <a href="#" class="auth-credit">
+              <img src="../icons/chatbotgate.svg" alt="ChatbotGate Logo">
+              Protected by ChatbotGate
             </a>
           </div>
         </div>
@@ -609,14 +622,20 @@
       <h3>Email Verification Error Page</h3>
       <div class="component-demo">
         <div class="auth-container" style="min-height: auto;">
-          <div class="card auth-card">
-            <h1 class="auth-title">Multi OAuth2 Proxy</h1>
-            <h2 class="auth-subtitle">Invalid or Expired Token</h2>
-            <div class="alert alert-error" style="text-align: left; margin-bottom: var(--spacing-md);">
-              <strong>Error:</strong> The login link is invalid or has already been used. This link cannot be used to authenticate.
+          <div style="width: 100%; max-width: 28rem;">
+            <div class="card auth-card">
+              <h1 class="auth-title">Multi OAuth2 Proxy</h1>
+              <h2 class="auth-subtitle">Invalid or Expired Token</h2>
+              <div class="alert alert-error" style="text-align: left; margin-bottom: var(--spacing-md);">
+                <strong>Error:</strong> The login link is invalid or has already been used. This link cannot be used to authenticate.
+              </div>
+              <a href="#" class="btn btn-primary" style="width: 100%; margin-top: var(--spacing-md);">
+                Request a new login link
+              </a>
             </div>
-            <a href="#" class="btn btn-primary" style="width: 100%; margin-top: var(--spacing-md);">
-              Request a new login link
+            <a href="#" class="auth-credit">
+              <img src="../icons/chatbotgate.svg" alt="ChatbotGate Logo">
+              Protected by ChatbotGate
             </a>
           </div>
         </div>
@@ -625,14 +644,20 @@
       <h3>Logout Page</h3>
       <div class="component-demo">
         <div class="auth-container" style="min-height: auto;">
-          <div class="card auth-card">
-            <h1 class="auth-title">Multi OAuth2 Proxy</h1>
-            <h2 class="auth-subtitle">Logged Out</h2>
-            <div class="alert alert-success" style="text-align: left; margin-bottom: var(--spacing-md);">
-              Your session has been terminated securely.
+          <div style="width: 100%; max-width: 28rem;">
+            <div class="card auth-card">
+              <h1 class="auth-title">Multi OAuth2 Proxy</h1>
+              <h2 class="auth-subtitle">Logged Out</h2>
+              <div class="alert alert-success" style="text-align: left; margin-bottom: var(--spacing-md);">
+                Your session has been terminated securely.
+              </div>
+              <a href="#" class="btn btn-primary" style="width: 100%; margin-top: var(--spacing-md);">
+                Login again
+              </a>
             </div>
-            <a href="#" class="btn btn-primary" style="width: 100%; margin-top: var(--spacing-md);">
-              Login again
+            <a href="#" class="auth-credit">
+              <img src="../icons/chatbotgate.svg" alt="ChatbotGate Logo">
+              Protected by ChatbotGate
             </a>
           </div>
         </div>
@@ -641,20 +666,179 @@
       <h3>Access Denied Page (Unauthorized Email)</h3>
       <div class="component-demo">
         <div class="auth-container" style="min-height: auto;">
-          <div class="card auth-card">
-            <h1 class="auth-title">Access Denied</h1>
-            <p class="auth-description" style="margin-bottom: var(--spacing-md);">
-              This service is only available to pre-authorized email addresses.
-            </p>
-            <div class="alert alert-error" style="text-align: left;">
-              <strong>Access Denied:</strong> Your email address is not authorized to use this service. Please contact the administrator.
+          <div style="width: 100%; max-width: 28rem;">
+            <div class="card auth-card">
+              <h1 class="auth-title">Access Denied</h1>
+              <p class="auth-description" style="margin-bottom: var(--spacing-md);">
+                This service is only available to pre-authorized email addresses.
+              </p>
+              <div class="alert alert-error" style="text-align: left;">
+                <strong>Access Denied:</strong> Your email address is not authorized to use this service. Please contact the administrator.
+              </div>
+              <a href="#" class="btn btn-ghost" style="width: 100%; margin-top: var(--spacing-md);">
+                Back to login
+              </a>
             </div>
-            <a href="#" class="btn btn-ghost" style="width: 100%; margin-top: var(--spacing-md);">
-              Back to login
+            <a href="#" class="auth-credit">
+              <img src="../icons/chatbotgate.svg" alt="ChatbotGate Logo">
+              Protected by ChatbotGate
             </a>
           </div>
         </div>
       </div>
+
+      <h3>404 - Not Found Page</h3>
+      <div class="component-demo">
+        <div class="auth-container" style="min-height: auto;">
+          <div style="width: 100%; max-width: 28rem;">
+            <div class="card auth-card">
+              <h1 class="auth-title">ChatbotGate</h1>
+              <h2 class="auth-subtitle">Not Found</h2>
+              <div class="alert alert-error" style="text-align: left; margin-bottom: var(--spacing-md);">
+                The page you are looking for could not be found.
+              </div>
+              <a href="#" class="btn btn-primary" style="width: 100%; margin-top: var(--spacing-md);">
+                Go to Home
+              </a>
+            </div>
+            <a href="#" class="auth-credit">
+              <img src="../icons/chatbotgate.svg" alt="ChatbotGate Logo">
+              Protected by ChatbotGate
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <h3>500 - Internal Server Error Page (with Accordion)</h3>
+      <p style="color: var(--color-text-secondary); margin-bottom: var(--spacing-md);">
+        The 500 error page includes an accordion component to show error details like stack traces.
+        Click the "Error Details" header to toggle the accordion.
+      </p>
+      <div class="component-demo">
+        <div class="auth-container" style="min-height: auto;">
+          <div style="width: 100%; max-width: 28rem;">
+            <div class="card auth-card">
+              <h1 class="auth-title">ChatbotGate</h1>
+              <h2 class="auth-subtitle">Internal Server Error</h2>
+
+              <div class="alert alert-error" style="text-align: left; margin-bottom: var(--spacing-md);">
+                An unexpected error occurred. Please try again later.
+              </div>
+
+              <!-- Accordion for error details -->
+              <div class="accordion" id="demo-accordion">
+                <div class="accordion-header" onclick="document.getElementById('demo-accordion').classList.toggle('open')">
+                  <span class="accordion-header-title">Error Details</span>
+                  <span class="accordion-header-icon"></span>
+                </div>
+                <div class="accordion-content">
+                  <div class="accordion-body">Error: failed to connect to database
+  at Database.connect (/app/database.go:123)
+  at Server.initialize (/app/server.go:45)
+  at main (/app/main.go:12)
+
+Connection details:
+  Host: localhost:5432
+  Database: chatbotgate
+  User: app_user
+
+Timestamp: 2025-11-03T14:00:00.000Z
+Request ID: req_abc123xyz456</div>
+                </div>
+              </div>
+
+              <a href="#" class="btn btn-ghost" style="width: 100%; margin-top: var(--spacing-md);">
+                Go to Home
+              </a>
+            </div>
+            <a href="#" class="auth-credit">
+              <img src="../icons/chatbotgate.svg" alt="ChatbotGate Logo">
+              Protected by ChatbotGate
+            </a>
+          </div>
+        </div>
+      </div>
+      <div class="code-block">&lt;!-- 500 Error Page with Accordion --&gt;
+&lt;div class="alert alert-error"&gt;...&lt;/div&gt;
+
+&lt;div class="accordion"&gt;
+  &lt;div class="accordion-header" onclick="this.parentElement.classList.toggle('open')"&gt;
+    &lt;span class="accordion-header-title"&gt;エラーの詳細&lt;/span&gt;
+    &lt;span class="accordion-header-icon"&gt;&lt;/span&gt;
+  &lt;/div&gt;
+  &lt;div class="accordion-content"&gt;
+    &lt;div class="accordion-body"&gt;Stack trace here...&lt;/div&gt;
+  &lt;/div&gt;
+&lt;/div&gt;</div>
+    </section>
+
+    <!-- Accordion Section -->
+    <section id="accordion" class="catalog-section">
+      <h2>Accordion</h2>
+      <p style="color: var(--color-text-secondary); margin-bottom: var(--spacing-md);">
+        The accordion component is useful for hiding additional information that can be expanded on demand.
+        Perfect for error details, stack traces, or debug information on error pages.
+      </p>
+
+      <h3>Accordion (Closed)</h3>
+      <div class="component-demo">
+        <div class="accordion" id="demo-accordion-1">
+          <div class="accordion-header" onclick="document.getElementById('demo-accordion-1').classList.toggle('open')">
+            <span class="accordion-header-title">Click to expand</span>
+            <span class="accordion-header-icon"></span>
+          </div>
+          <div class="accordion-content">
+            <div class="accordion-body">This is the accordion content. It can contain any text, including code blocks, stack traces, or debug information.</div>
+          </div>
+        </div>
+      </div>
+
+      <h3>Accordion (Open)</h3>
+      <div class="component-demo">
+        <div class="accordion open" id="demo-accordion-2">
+          <div class="accordion-header" onclick="document.getElementById('demo-accordion-2').classList.toggle('open')">
+            <span class="accordion-header-title">Click to collapse</span>
+            <span class="accordion-header-icon"></span>
+          </div>
+          <div class="accordion-content">
+            <div class="accordion-body">This accordion is initially open. The content is visible by default and can be collapsed by clicking the header.</div>
+          </div>
+        </div>
+      </div>
+
+      <h3>Accordion with Stack Trace</h3>
+      <div class="component-demo">
+        <div class="accordion" id="demo-accordion-3">
+          <div class="accordion-header" onclick="document.getElementById('demo-accordion-3').classList.toggle('open')">
+            <span class="accordion-header-title">Error Details</span>
+            <span class="accordion-header-icon"></span>
+          </div>
+          <div class="accordion-content">
+            <div class="accordion-body">Error: failed to connect to database
+  at Database.connect (/app/database.go:123)
+  at Server.initialize (/app/server.go:45)
+  at main (/app/main.go:12)
+
+Connection details:
+  Host: localhost:5432
+  Database: chatbotgate
+  User: app_user
+
+Timestamp: 2025-11-03T14:00:00.000Z
+Request ID: req_abc123xyz456</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="code-block">&lt;div class="accordion"&gt;
+  &lt;div class="accordion-header" onclick="this.parentElement.classList.toggle('open')"&gt;
+    &lt;span class="accordion-header-title"&gt;Click to expand&lt;/span&gt;
+    &lt;span class="accordion-header-icon"&gt;&lt;/span&gt;
+  &lt;/div&gt;
+  &lt;div class="accordion-content"&gt;
+    &lt;div class="accordion-body"&gt;Content here...&lt;/div&gt;
+  &lt;/div&gt;
+&lt;/div&gt;</div>
     </section>
   </div>
 

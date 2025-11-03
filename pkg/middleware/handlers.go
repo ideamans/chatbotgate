@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"fmt"
+	"html"
 	"net/http"
 	"time"
 
@@ -163,9 +164,10 @@ func (m *Middleware) handleLogin(w http.ResponseWriter, r *http.Request) {
 </div>
 
 <div class="auth-container">
-	<div class="card auth-card">
-		` + m.buildAuthHeader(m.config.Server.GetAuthPathPrefix()) + `
-		<p class="auth-description">` + m.config.Service.Description + `</p>`
+	<div style="width: 100%; max-width: 28rem;">
+		<div class="card auth-card">
+			` + m.buildAuthHeader(m.config.Server.GetAuthPathPrefix()) + `
+			<p class="auth-description">` + m.config.Service.Description + `</p>`
 
 	prefix := m.config.Server.GetAuthPathPrefix()
 	providers := m.oauthManager.GetProviders()
@@ -274,7 +276,15 @@ func (m *Middleware) handleLogin(w http.ResponseWriter, r *http.Request) {
 		</script>`
 	}
 
+	prefix = normalizeAuthPrefix(m.config.Server.GetAuthPathPrefix())
+	iconPath := joinAuthPath(prefix, "/assets/icons/chatbotgate.svg")
+
 	html += `
+		</div>
+		<a href="https://github.com/ideamans/chatbotgate" class="auth-credit">
+			<img src="` + iconPath + `" alt="ChatbotGate Logo">
+			Protected by ChatbotGate
+		</a>
 	</div>
 </div>
 <script>
@@ -375,6 +385,8 @@ func (m *Middleware) handleLogout(w http.ResponseWriter, r *http.Request) {
 		themeClass = "light"
 	}
 
+	iconPath := joinAuthPath(prefix, "/assets/icons/chatbotgate.svg")
+
 	html := `<!DOCTYPE html>
 <html lang="` + string(lang) + `" class="` + themeClass + `">
 <head>
@@ -385,11 +397,17 @@ func (m *Middleware) handleLogout(w http.ResponseWriter, r *http.Request) {
 </head>
 <body>
 <div class="auth-container">
-	<div class="card auth-card">
-		` + m.buildAuthHeader(prefix) + `
-		` + m.buildAuthSubtitle(t("logout.heading")) + `
-		<div class="alert alert-success" style="text-align: left; margin-bottom: var(--spacing-md);">` + t("logout.message") + `</div>
-		<a href="` + loginPath + `" class="btn btn-primary" style="width: 100%; margin-top: var(--spacing-md);">` + t("logout.login") + `</a>
+	<div style="width: 100%; max-width: 28rem;">
+		<div class="card auth-card">
+			` + m.buildAuthHeader(prefix) + `
+			` + m.buildAuthSubtitle(t("logout.heading")) + `
+			<div class="alert alert-success" style="text-align: left; margin-bottom: var(--spacing-md);">` + t("logout.message") + `</div>
+			<a href="` + loginPath + `" class="btn btn-primary" style="width: 100%; margin-top: var(--spacing-md);">` + t("logout.login") + `</a>
+		</div>
+		<a href="https://github.com/ideamans/chatbotgate" class="auth-credit">
+			<img src="` + iconPath + `" alt="ChatbotGate Logo">
+			Protected by ChatbotGate
+		</a>
 	</div>
 </div>
 </body>
@@ -712,6 +730,8 @@ func (m *Middleware) handleEmailSend(w http.ResponseWriter, r *http.Request) {
 		themeClass = "light"
 	}
 
+	iconPath := joinAuthPath(prefix, "/assets/icons/chatbotgate.svg")
+
 	html := `<!DOCTYPE html>
 <html lang="` + string(lang) + `" class="` + themeClass + `">
 <head>
@@ -722,11 +742,17 @@ func (m *Middleware) handleEmailSend(w http.ResponseWriter, r *http.Request) {
 </head>
 <body>
 <div class="auth-container">
-	<div class="card auth-card">
-		` + m.buildAuthHeader(prefix) + `
-		` + m.buildAuthSubtitle(t("email.sent.heading")) + `
-		<div class="alert alert-success" style="text-align: left; margin-bottom: var(--spacing-md);">` + t("email.sent.message") + ` ` + t("email.sent.detail") + `</div>
-		<a href="` + loginPath + `" class="btn btn-ghost" style="width: 100%; margin-top: var(--spacing-md);">` + t("email.sent.back") + `</a>
+	<div style="width: 100%; max-width: 28rem;">
+		<div class="card auth-card">
+			` + m.buildAuthHeader(prefix) + `
+			` + m.buildAuthSubtitle(t("email.sent.heading")) + `
+			<div class="alert alert-success" style="text-align: left; margin-bottom: var(--spacing-md);">` + t("email.sent.message") + ` ` + t("email.sent.detail") + `</div>
+			<a href="` + loginPath + `" class="btn btn-ghost" style="width: 100%; margin-top: var(--spacing-md);">` + t("email.sent.back") + `</a>
+		</div>
+		<a href="https://github.com/ideamans/chatbotgate" class="auth-credit">
+			<img src="` + iconPath + `" alt="ChatbotGate Logo">
+			Protected by ChatbotGate
+		</a>
 	</div>
 </div>
 </body>
@@ -767,6 +793,8 @@ func (m *Middleware) handleEmailVerify(w http.ResponseWriter, r *http.Request) {
 			themeClass = "light"
 		}
 
+		iconPath := joinAuthPath(prefix, "/assets/icons/chatbotgate.svg")
+
 		html := `<!DOCTYPE html>
 <html lang="` + string(lang) + `" class="` + themeClass + `">
 <head>
@@ -777,11 +805,17 @@ func (m *Middleware) handleEmailVerify(w http.ResponseWriter, r *http.Request) {
 </head>
 <body>
 <div class="auth-container">
-	<div class="card auth-card">
-		` + m.buildAuthHeader(prefix) + `
-		` + m.buildAuthSubtitle(t("email.invalid.heading")) + `
-		<div class="alert alert-error" style="text-align: left; margin-bottom: var(--spacing-md);"><strong>Error:</strong> ` + t("email.invalid.message") + ` This link cannot be used to authenticate.</div>
-		<a href="` + loginPath + `" class="btn btn-primary" style="width: 100%; margin-top: var(--spacing-md);">` + t("email.invalid.retry") + `</a>
+	<div style="width: 100%; max-width: 28rem;">
+		<div class="card auth-card">
+			` + m.buildAuthHeader(prefix) + `
+			` + m.buildAuthSubtitle(t("email.invalid.heading")) + `
+			<div class="alert alert-error" style="text-align: left; margin-bottom: var(--spacing-md);"><strong>Error:</strong> ` + t("email.invalid.message") + ` This link cannot be used to authenticate.</div>
+			<a href="` + loginPath + `" class="btn btn-primary" style="width: 100%; margin-top: var(--spacing-md);">` + t("email.invalid.retry") + `</a>
+		</div>
+		<a href="https://github.com/ideamans/chatbotgate" class="auth-credit">
+			<img src="` + iconPath + `" alt="ChatbotGate Logo">
+			Protected by ChatbotGate
+		</a>
 	</div>
 </div>
 </body>
@@ -885,6 +919,8 @@ func (m *Middleware) handleForbidden(w http.ResponseWriter, r *http.Request) {
 	}
 	// ThemeAuto: no class, let CSS media query handle it
 
+	iconPath := joinAuthPath(prefix, "/assets/icons/chatbotgate.svg")
+
 	html := `<!DOCTYPE html>
 <html lang="` + string(lang) + `" class="` + themeClass + `">
 <head>
@@ -895,11 +931,17 @@ func (m *Middleware) handleForbidden(w http.ResponseWriter, r *http.Request) {
 </head>
 <body>
 <div class="auth-container">
-  <div class="card auth-card">
-    ` + m.buildAuthHeader(prefix) + `
-    ` + m.buildAuthSubtitle(t("error.forbidden.heading")) + `
-    <div class="alert alert-error" style="text-align: left; margin-bottom: var(--spacing-md);">` + t("error.forbidden.message") + `</div>
-    <a href="` + loginPath + `" class="btn btn-ghost" style="width: 100%; margin-top: var(--spacing-md);">` + t("login.back") + `</a>
+  <div style="width: 100%; max-width: 28rem;">
+    <div class="card auth-card">
+      ` + m.buildAuthHeader(prefix) + `
+      ` + m.buildAuthSubtitle(t("error.forbidden.heading")) + `
+      <div class="alert alert-error" style="text-align: left; margin-bottom: var(--spacing-md);">` + t("error.forbidden.message") + `</div>
+      <a href="` + loginPath + `" class="btn btn-ghost" style="width: 100%; margin-top: var(--spacing-md);">` + t("login.back") + `</a>
+    </div>
+    <a href="https://github.com/ideamans/chatbotgate" class="auth-credit">
+      <img src="` + iconPath + `" alt="ChatbotGate Logo">
+      Protected by ChatbotGate
+    </a>
   </div>
 </div>
 </body>
@@ -927,6 +969,8 @@ func (m *Middleware) handleEmailFetchError(w http.ResponseWriter, r *http.Reques
 		themeClass = "light"
 	}
 
+	iconPath := joinAuthPath(prefix, "/assets/icons/chatbotgate.svg")
+
 	html := `<!DOCTYPE html>
 <html lang="` + string(lang) + `" class="` + themeClass + `">
 <head>
@@ -937,11 +981,17 @@ func (m *Middleware) handleEmailFetchError(w http.ResponseWriter, r *http.Reques
 </head>
 <body>
 <div class="auth-container">
-  <div class="card auth-card">
-    ` + m.buildAuthHeader(prefix) + `
-    ` + m.buildAuthSubtitle(t("error.email_required.heading")) + `
-    <div class="alert alert-error" style="text-align: left; margin-bottom: var(--spacing-md);">` + t("error.email_required.message") + `</div>
-    <a href="` + loginPath + `" class="btn btn-ghost" style="width: 100%; margin-top: var(--spacing-md);">` + t("login.back") + `</a>
+  <div style="width: 100%; max-width: 28rem;">
+    <div class="card auth-card">
+      ` + m.buildAuthHeader(prefix) + `
+      ` + m.buildAuthSubtitle(t("error.email_required.heading")) + `
+      <div class="alert alert-error" style="text-align: left; margin-bottom: var(--spacing-md);">` + t("error.email_required.message") + `</div>
+      <a href="` + loginPath + `" class="btn btn-ghost" style="width: 100%; margin-top: var(--spacing-md);">` + t("login.back") + `</a>
+    </div>
+    <a href="https://github.com/ideamans/chatbotgate" class="auth-credit">
+      <img src="` + iconPath + `" alt="ChatbotGate Logo">
+      Protected by ChatbotGate
+    </a>
   </div>
 </div>
 </body>
@@ -949,5 +999,117 @@ func (m *Middleware) handleEmailFetchError(w http.ResponseWriter, r *http.Reques
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(http.StatusBadRequest)
+	w.Write([]byte(html))
+}
+
+// handle404 displays the 404 Not Found page
+func (m *Middleware) handle404(w http.ResponseWriter, r *http.Request) {
+	lang := i18n.DetectLanguage(r)
+	theme := i18n.DetectTheme(r)
+	t := func(key string) string { return m.translator.T(lang, key) }
+
+	prefix := normalizeAuthPrefix(m.config.Server.GetAuthPathPrefix())
+	cssPath := joinAuthPath(prefix, "/assets/styles.css")
+	iconPath := joinAuthPath(prefix, "/assets/icons/chatbotgate.svg")
+
+	themeClass := ""
+	if theme == i18n.ThemeDark {
+		themeClass = "dark"
+	} else if theme == i18n.ThemeLight {
+		themeClass = "light"
+	}
+
+	html := `<!DOCTYPE html>
+<html lang="` + string(lang) + `" class="` + themeClass + `">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>` + t("error.notfound.title") + ` - ` + m.config.Service.Name + `</title>
+<link rel="stylesheet" href="` + cssPath + `">
+</head>
+<body>
+<div class="auth-container">
+  <div style="width: 100%; max-width: 28rem;">
+    <div class="card auth-card">
+      ` + m.buildAuthHeader(prefix) + `
+      ` + m.buildAuthSubtitle(t("error.notfound.heading")) + `
+      <div class="alert alert-error" style="text-align: left; margin-bottom: var(--spacing-md);">` + t("error.notfound.message") + `</div>
+      <a href="/" class="btn btn-primary" style="width: 100%; margin-top: var(--spacing-md);">` + t("error.notfound.home") + `</a>
+    </div>
+    <a href="https://github.com/ideamans/chatbotgate" class="auth-credit">
+      <img src="` + iconPath + `" alt="ChatbotGate Logo">
+      Protected by ChatbotGate
+    </a>
+  </div>
+</div>
+</body>
+</html>`
+
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.WriteHeader(http.StatusNotFound)
+	w.Write([]byte(html))
+}
+
+// handle500 displays the 500 Internal Server Error page with optional error details
+func (m *Middleware) handle500(w http.ResponseWriter, r *http.Request, err error) {
+	lang := i18n.DetectLanguage(r)
+	theme := i18n.DetectTheme(r)
+	t := func(key string) string { return m.translator.T(lang, key) }
+
+	prefix := normalizeAuthPrefix(m.config.Server.GetAuthPathPrefix())
+	cssPath := joinAuthPath(prefix, "/assets/styles.css")
+	iconPath := joinAuthPath(prefix, "/assets/icons/chatbotgate.svg")
+
+	themeClass := ""
+	if theme == i18n.ThemeDark {
+		themeClass = "dark"
+	} else if theme == i18n.ThemeLight {
+		themeClass = "light"
+	}
+
+	// Build error details accordion if error is provided
+	errorDetailsHTML := ""
+	if err != nil {
+		errorDetailsHTML = `
+    <div class="accordion" id="error-accordion">
+      <div class="accordion-header" onclick="document.getElementById('error-accordion').classList.toggle('open')">
+        <span class="accordion-header-title">` + t("error.details.title") + `</span>
+        <span class="accordion-header-icon"></span>
+      </div>
+      <div class="accordion-content">
+        <div class="accordion-body">` + html.EscapeString(fmt.Sprintf("%+v", err)) + `</div>
+      </div>
+    </div>`
+	}
+
+	html := `<!DOCTYPE html>
+<html lang="` + string(lang) + `" class="` + themeClass + `">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>` + t("error.server.title") + ` - ` + m.config.Service.Name + `</title>
+<link rel="stylesheet" href="` + cssPath + `">
+</head>
+<body>
+<div class="auth-container">
+  <div style="width: 100%; max-width: 28rem;">
+    <div class="card auth-card">
+      ` + m.buildAuthHeader(prefix) + `
+      ` + m.buildAuthSubtitle(t("error.server.heading")) + `
+      <div class="alert alert-error" style="text-align: left; margin-bottom: var(--spacing-md);">` + t("error.server.message") + `</div>
+      ` + errorDetailsHTML + `
+      <a href="/" class="btn btn-ghost" style="width: 100%; margin-top: var(--spacing-md);">` + t("error.server.home") + `</a>
+    </div>
+    <a href="https://github.com/ideamans/chatbotgate" class="auth-credit">
+      <img src="` + iconPath + `" alt="ChatbotGate Logo">
+      Protected by ChatbotGate
+    </a>
+  </div>
+</div>
+</body>
+</html>`
+
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.WriteHeader(http.StatusInternalServerError)
 	w.Write([]byte(html))
 }

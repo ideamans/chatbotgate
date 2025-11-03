@@ -6,7 +6,7 @@ export default defineConfig({
   root: 'src',
   publicDir: '../public',
   build: {
-    outDir: '../../pkg/server/static',
+    outDir: '../../pkg/assets/static',
     emptyOutDir: false, // Don't delete existing files (like embedded Go files)
     assetsDir: 'assets',
     rollupOptions: {
