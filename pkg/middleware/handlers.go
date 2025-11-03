@@ -608,6 +608,7 @@ func (m *Middleware) handleOAuth2Callback(w http.ResponseWriter, r *http.Request
 		Email:         email,
 		Name:          name,
 		Provider:      providerName,
+		Extra:         userInfo.Extra, // Store additional user data for custom forwarding
 		CreatedAt:     time.Now(),
 		ExpiresAt:     time.Now().Add(duration),
 		Authenticated: true,

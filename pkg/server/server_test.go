@@ -139,7 +139,7 @@ func setupTestServer(t *testing.T) (*Server, *session.MemoryStore, func()) {
 	// Create forwarder for the tests
 	var forwarder *forwarding.Forwarder
 	if cfg.Forwarding.Header.Enabled || cfg.Forwarding.QueryString.Enabled {
-		forwarder = forwarding.NewForwarder(&cfg.Forwarding)
+		forwarder = forwarding.NewForwarder(&cfg.Forwarding, cfg.OAuth2.Providers)
 	}
 
 	server := New(cfg, "localhost", 4180, sessionStore, oauthManager, nil, authzChecker, proxyHandler, forwarder, logger)
@@ -721,7 +721,7 @@ func TestServer_Authorization_WithWhitelist_AuthorizedEmail(t *testing.T) {
 	// Create forwarder for the tests
 	var forwarder *forwarding.Forwarder
 	if cfg.Forwarding.Header.Enabled || cfg.Forwarding.QueryString.Enabled {
-		forwarder = forwarding.NewForwarder(&cfg.Forwarding)
+		forwarder = forwarding.NewForwarder(&cfg.Forwarding, cfg.OAuth2.Providers)
 	}
 
 	server := New(cfg, "localhost", 4180, sessionStore, oauthManager, nil, authzChecker, proxyHandler, forwarder, logger)

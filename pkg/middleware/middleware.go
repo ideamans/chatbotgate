@@ -205,9 +205,11 @@ func (m *Middleware) addAuthHeaders(r *http.Request, sess *session.Session) {
 		userInfo := &forwarding.UserInfo{
 			Username: sess.Name, // For email auth, this will be empty
 			Email:    sess.Email,
+			Extra:    sess.Extra,    // Additional OAuth2 data for custom forwarding
+			Provider: sess.Provider, // Provider name for provider-specific forwarding
 		}
 
-		// Add headers using forwarder (handles X-ChatbotGate-User, X-ChatbotGate-Email)
+		// Add headers using forwarder (handles X-ChatbotGate-User, X-ChatbotGate-Email, and custom fields)
 		// Can be plain text or encrypted depending on configuration
 		r.Header = m.forwarder.AddToHeaders(r.Header, userInfo)
 	}

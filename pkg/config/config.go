@@ -117,6 +117,13 @@ type OAuth2Provider struct {
 	UserInfoURL        string `yaml:"userinfo_url" json:"userinfo_url"`          // Custom userinfo endpoint
 	JWKSURL            string `yaml:"jwks_url" json:"jwks_url"`              // Optional OIDC JWKS URL
 	InsecureSkipVerify bool   `yaml:"insecure_skip_verify" json:"insecure_skip_verify"` // Allow HTTP for testing (default: false)
+
+	// OAuth2 scopes to request
+	Scopes []string `yaml:"scopes" json:"scopes"` // OAuth2 scopes to request (e.g., ["openid", "email", "profile", "analytics"])
+
+	// Custom forwarding configuration for this provider
+	// Allows forwarding additional user data obtained from OAuth2 to upstream
+	Forwarding *ProviderForwardingConfig `yaml:"forwarding,omitempty" json:"forwarding,omitempty"`
 }
 
 // EmailAuthConfig contains email authentication settings
@@ -340,4 +347,19 @@ type PassthroughConfig struct {
 	Prefix    []string `yaml:"prefix" json:"prefix"`       // Exact prefix matches (e.g., "/embed.js", "/public/")
 	Regex     []string `yaml:"regex" json:"regex"`         // Regular expression patterns (e.g., "^/api/public/.*$")
 	Minimatch []string `yaml:"minimatch" json:"minimatch"` // Minimatch/glob patterns (e.g., "/**/*.js", "/static/**")
+}
+
+// ProviderForwardingConfig contains provider-specific forwarding settings
+// Allows forwarding custom fields from OAuth2 user data to upstream application
+type ProviderForwardingConfig struct {
+	Custom []CustomFieldForwarding `yaml:"custom" json:"custom"` // Custom field forwarding rules
+}
+
+// CustomFieldForwarding defines how to forward a custom field
+// The field is retrieved from OAuth2 user data using a dot-separated path
+// and forwarded to upstream via HTTP header and/or query string
+type CustomFieldForwarding struct {
+	Path   string `yaml:"path" json:"path"`     // Dot-separated path to the field in user data (e.g., "secrets.access_token")
+	Header string `yaml:"header,omitempty" json:"header,omitempty"` // HTTP header name (e.g., "X-Access-Token"), omit to skip header forwarding
+	Query  string `yaml:"query,omitempty" json:"query,omitempty"`  // Query parameter name (e.g., "access_token"), omit to skip query forwarding
 }

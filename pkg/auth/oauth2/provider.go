@@ -17,8 +17,9 @@ var (
 
 // UserInfo represents user information from OAuth2 provider
 type UserInfo struct {
-	Email string // User's email address
-	Name  string // User's display name (optional)
+	Email string                 // User's email address
+	Name  string                 // User's display name (optional)
+	Extra map[string]interface{} // Additional data from OAuth2 provider (for custom forwarding)
 }
 
 // Provider is an interface for OAuth2 providers

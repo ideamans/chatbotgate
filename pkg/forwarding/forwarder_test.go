@@ -15,7 +15,7 @@ func TestForwarder_AddToQueryString_Disabled(t *testing.T) {
 		QueryString: config.ForwardingMethodConfig{Enabled: false},
 	}
 
-	forwarder := NewForwarder(cfg)
+	forwarder := NewForwarder(cfg, nil)
 	userInfo := &UserInfo{Username: "john", Email: "john@example.com"}
 
 	result, err := forwarder.AddToQueryString("http://example.com/path", userInfo)
@@ -35,7 +35,7 @@ func TestForwarder_AddToQueryString_PlainText(t *testing.T) {
 		QueryString: config.ForwardingMethodConfig{Enabled: true, Encrypt: false},
 	}
 
-	forwarder := NewForwarder(cfg)
+	forwarder := NewForwarder(cfg, nil)
 	userInfo := &UserInfo{Username: "john", Email: "john@example.com"}
 
 	result, err := forwarder.AddToQueryString("http://example.com/path", userInfo)
@@ -65,7 +65,7 @@ func TestForwarder_AddToQueryString_Encrypted(t *testing.T) {
 		Encryption:  config.EncryptionConfig{Key: "this-is-a-32-character-encryption-key"},
 	}
 
-	forwarder := NewForwarder(cfg)
+	forwarder := NewForwarder(cfg, nil)
 	userInfo := &UserInfo{Username: "john", Email: "john@example.com"}
 
 	result, err := forwarder.AddToQueryString("http://example.com/path?existing=param", userInfo)
@@ -151,7 +151,7 @@ func TestForwarder_AddToQueryString_SelectedFields(t *testing.T) {
 				QueryString: config.ForwardingMethodConfig{Enabled: true, Encrypt: false},
 			}
 
-			forwarder := NewForwarder(cfg)
+			forwarder := NewForwarder(cfg, nil)
 			result, err := forwarder.AddToQueryString("http://example.com/", tt.userInfo)
 			if err != nil {
 				t.Fatalf("AddToQueryString() error = %v", err)
@@ -177,7 +177,7 @@ func TestForwarder_AddToHeaders_Disabled(t *testing.T) {
 		Header: config.ForwardingHeaderConfig{Enabled: false},
 	}
 
-	forwarder := NewForwarder(cfg)
+	forwarder := NewForwarder(cfg, nil)
 	userInfo := &UserInfo{Username: "john", Email: "john@example.com"}
 
 	headers := make(http.Header)
@@ -203,7 +203,7 @@ func TestForwarder_AddToHeaders_PlainText(t *testing.T) {
 		Header: config.ForwardingHeaderConfig{Enabled: true, Encrypt: false},
 	}
 
-	forwarder := NewForwarder(cfg)
+	forwarder := NewForwarder(cfg, nil)
 	userInfo := &UserInfo{Username: "john", Email: "john@example.com"}
 
 	headers := make(http.Header)
@@ -224,7 +224,7 @@ func TestForwarder_AddToHeaders_Encrypted(t *testing.T) {
 		Encryption: config.EncryptionConfig{Key: "this-is-a-32-character-encryption-key"},
 	}
 
-	forwarder := NewForwarder(cfg)
+	forwarder := NewForwarder(cfg, nil)
 	userInfo := &UserInfo{Username: "john", Email: "john@example.com"}
 
 	headers := make(http.Header)
@@ -290,7 +290,7 @@ func TestForwarder_AddToHeaders_SelectedFields(t *testing.T) {
 				Header: config.ForwardingHeaderConfig{Enabled: true, Encrypt: false},
 			}
 
-			forwarder := NewForwarder(cfg)
+			forwarder := NewForwarder(cfg, nil)
 			headers := make(http.Header)
 			result := forwarder.AddToHeaders(headers, tt.userInfo)
 
@@ -313,7 +313,7 @@ func TestForwarder_AddToQueryString_PreservesFragment(t *testing.T) {
 		QueryString: config.ForwardingMethodConfig{Enabled: true, Encrypt: false},
 	}
 
-	forwarder := NewForwarder(cfg)
+	forwarder := NewForwarder(cfg, nil)
 	userInfo := &UserInfo{Username: "john"}
 
 	result, err := forwarder.AddToQueryString("http://example.com/path#fragment", userInfo)
@@ -324,5 +324,193 @@ func TestForwarder_AddToQueryString_PreservesFragment(t *testing.T) {
 	// Check that fragment is preserved
 	if !strings.Contains(result, "#fragment") {
 		t.Errorf("Fragment was not preserved: %v", result)
+	}
+}
+
+func TestForwarder_CustomFields_QueryString_PlainText(t *testing.T) {
+	cfg := &config.ForwardingConfig{
+		QueryString: config.ForwardingMethodConfig{Enabled: true, Encrypt: false},
+	}
+	providers := []config.OAuth2Provider{
+		{
+			Name: "test-provider",
+			Forwarding: &config.ProviderForwardingConfig{
+				Custom: []config.CustomFieldForwarding{
+					{Path: "secrets.access_token", Query: "access_token"},
+					{Path: "analytics.user_id", Query: "user_id"},
+					{Path: "nonexistent.field", Query: "should_not_exist"},
+				},
+			},
+		},
+	}
+
+	forwarder := NewForwarder(cfg, providers)
+	userInfo := &UserInfo{
+		Provider: "test-provider",
+		Extra: map[string]interface{}{
+			"secrets": map[string]interface{}{
+				"access_token": "secret-token-123",
+			},
+			"analytics": map[string]interface{}{
+				"user_id": "user-456",
+			},
+		},
+	}
+
+	result, err := forwarder.AddToQueryString("http://example.com/path", userInfo)
+	if err != nil {
+		t.Fatalf("AddToQueryString() error = %v", err)
+	}
+
+	u, _ := url.Parse(result)
+	if u.Query().Get("access_token") != "secret-token-123" {
+		t.Errorf("access_token = %v, want %v", u.Query().Get("access_token"), "secret-token-123")
+	}
+	if u.Query().Get("user_id") != "user-456" {
+		t.Errorf("user_id = %v, want %v", u.Query().Get("user_id"), "user-456")
+	}
+	if u.Query().Get("should_not_exist") != "" {
+		t.Errorf("should_not_exist should be empty, got %v", u.Query().Get("should_not_exist"))
+	}
+}
+
+func TestForwarder_CustomFields_QueryString_Encrypted(t *testing.T) {
+	cfg := &config.ForwardingConfig{
+		QueryString: config.ForwardingMethodConfig{Enabled: true, Encrypt: true},
+		Encryption:  config.EncryptionConfig{Key: "this-is-a-32-character-encryption-key"},
+	}
+	providers := []config.OAuth2Provider{
+		{
+			Name: "test-provider",
+			Forwarding: &config.ProviderForwardingConfig{
+				Custom: []config.CustomFieldForwarding{
+					{Path: "secrets.access_token", Query: "access_token"},
+				},
+			},
+		},
+	}
+
+	forwarder := NewForwarder(cfg, providers)
+	userInfo := &UserInfo{
+		Provider: "test-provider",
+		Extra: map[string]interface{}{
+			"secrets": map[string]interface{}{
+				"access_token": "secret-token-123",
+			},
+		},
+	}
+
+	result, err := forwarder.AddToQueryString("http://example.com/path", userInfo)
+	if err != nil {
+		t.Fatalf("AddToQueryString() error = %v", err)
+	}
+
+	u, _ := url.Parse(result)
+	encryptedToken := u.Query().Get("access_token")
+	if encryptedToken == "" {
+		t.Fatal("access_token parameter not found")
+	}
+	if encryptedToken == "secret-token-123" {
+		t.Error("access_token should be encrypted, but got plain text")
+	}
+
+	// Verify decryption
+	decrypted, err := forwarder.encryptor.Decrypt(encryptedToken)
+	if err != nil {
+		t.Fatalf("Failed to decrypt access_token: %v", err)
+	}
+	if decrypted != "secret-token-123" {
+		t.Errorf("decrypted access_token = %v, want %v", decrypted, "secret-token-123")
+	}
+}
+
+func TestForwarder_CustomFields_Headers_PlainText(t *testing.T) {
+	cfg := &config.ForwardingConfig{
+		Header: config.ForwardingHeaderConfig{Enabled: true, Encrypt: false},
+	}
+	providers := []config.OAuth2Provider{
+		{
+			Name: "test-provider",
+			Forwarding: &config.ProviderForwardingConfig{
+				Custom: []config.CustomFieldForwarding{
+					{Path: "secrets.access_token", Header: "X-Access-Token"},
+					{Path: "analytics.user_id", Header: "X-Analytics-User-Id"},
+					{Path: "nonexistent.field", Header: "X-Should-Not-Exist"},
+				},
+			},
+		},
+	}
+
+	forwarder := NewForwarder(cfg, providers)
+	userInfo := &UserInfo{
+		Provider: "test-provider",
+		Extra: map[string]interface{}{
+			"secrets": map[string]interface{}{
+				"access_token": "secret-token-123",
+			},
+			"analytics": map[string]interface{}{
+				"user_id": "user-456",
+			},
+		},
+	}
+
+	headers := make(http.Header)
+	result := forwarder.AddToHeaders(headers, userInfo)
+
+	if result.Get("X-Access-Token") != "secret-token-123" {
+		t.Errorf("X-Access-Token = %v, want %v", result.Get("X-Access-Token"), "secret-token-123")
+	}
+	if result.Get("X-Analytics-User-Id") != "user-456" {
+		t.Errorf("X-Analytics-User-Id = %v, want %v", result.Get("X-Analytics-User-Id"), "user-456")
+	}
+	if result.Get("X-Should-Not-Exist") != "" {
+		t.Errorf("X-Should-Not-Exist should be empty, got %v", result.Get("X-Should-Not-Exist"))
+	}
+}
+
+func TestForwarder_CustomFields_Headers_Encrypted(t *testing.T) {
+	cfg := &config.ForwardingConfig{
+		Header:     config.ForwardingHeaderConfig{Enabled: true, Encrypt: true},
+		Encryption: config.EncryptionConfig{Key: "this-is-a-32-character-encryption-key"},
+	}
+	providers := []config.OAuth2Provider{
+		{
+			Name: "test-provider",
+			Forwarding: &config.ProviderForwardingConfig{
+				Custom: []config.CustomFieldForwarding{
+					{Path: "secrets.access_token", Header: "X-Access-Token"},
+				},
+			},
+		},
+	}
+
+	forwarder := NewForwarder(cfg, providers)
+	userInfo := &UserInfo{
+		Provider: "test-provider",
+		Extra: map[string]interface{}{
+			"secrets": map[string]interface{}{
+				"access_token": "secret-token-123",
+			},
+		},
+	}
+
+	headers := make(http.Header)
+	result := forwarder.AddToHeaders(headers, userInfo)
+
+	encryptedToken := result.Get("X-Access-Token")
+	if encryptedToken == "" {
+		t.Fatal("X-Access-Token header not found")
+	}
+	if encryptedToken == "secret-token-123" {
+		t.Error("X-Access-Token should be encrypted, but got plain text")
+	}
+
+	// Verify decryption
+	decrypted, err := forwarder.encryptor.Decrypt(encryptedToken)
+	if err != nil {
+		t.Fatalf("Failed to decrypt X-Access-Token: %v", err)
+	}
+	if decrypted != "secret-token-123" {
+		t.Errorf("decrypted X-Access-Token = %v, want %v", decrypted, "secret-token-123")
 	}
 }

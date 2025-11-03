@@ -214,6 +214,7 @@ func (m *MiddlewareManager) createMiddleware(cfg *config.Config) (*middleware.Mi
 				providerCfg.AuthURL,
 				providerCfg.TokenURL,
 				providerCfg.UserInfoURL,
+				providerCfg.Scopes,
 				providerCfg.InsecureSkipVerify,
 			)
 		default:
@@ -267,7 +268,7 @@ func (m *MiddlewareManager) createMiddleware(cfg *config.Config) (*middleware.Mi
 	// Create forwarder if any forwarding is enabled
 	var forwarder *forwarding.Forwarder
 	if cfg.Forwarding.QueryString.Enabled || cfg.Forwarding.Header.Enabled {
-		forwarder = forwarding.NewForwarder(&cfg.Forwarding)
+		forwarder = forwarding.NewForwarder(&cfg.Forwarding, cfg.OAuth2.Providers)
 		m.logger.Debug("User info forwarder initialized",
 			"querystring_enabled", cfg.Forwarding.QueryString.Enabled,
 			"header_enabled", cfg.Forwarding.Header.Enabled,

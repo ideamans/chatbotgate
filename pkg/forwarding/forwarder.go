@@ -17,18 +17,27 @@ var (
 type UserInfo struct {
 	Username string
 	Email    string
+	Extra    map[string]interface{} // Additional data from OAuth2 provider (for custom forwarding)
+	Provider string                 // OAuth2 provider name (for provider-specific forwarding)
 }
 
 // Forwarder handles user information forwarding
 type Forwarder struct {
-	config    *config.ForwardingConfig
-	encryptor *Encryptor
+	config            *config.ForwardingConfig
+	providerConfigs   map[string]*config.OAuth2Provider // Provider-specific forwarding configurations
+	encryptor         *Encryptor
 }
 
 // NewForwarder creates a new Forwarder
-func NewForwarder(cfg *config.ForwardingConfig) *Forwarder {
+func NewForwarder(cfg *config.ForwardingConfig, providers []config.OAuth2Provider) *Forwarder {
 	f := &Forwarder{
-		config: cfg,
+		config:          cfg,
+		providerConfigs: make(map[string]*config.OAuth2Provider),
+	}
+
+	// Build provider config map for quick lookup
+	for i := range providers {
+		f.providerConfigs[providers[i].Name] = &providers[i]
 	}
 
 	// Initialize encryptor if encryption is needed
@@ -90,6 +99,34 @@ func (f *Forwarder) AddToQueryString(targetURL string, userInfo *UserInfo) (stri
 		}
 	}
 
+	// Add provider-specific custom fields (if provider and Extra data are available)
+	if userInfo.Provider != "" && userInfo.Extra != nil {
+		if providerCfg, ok := f.providerConfigs[userInfo.Provider]; ok && providerCfg.Forwarding != nil {
+			for _, custom := range providerCfg.Forwarding.Custom {
+				// Skip if no query parameter specified
+				if custom.Query == "" {
+					continue
+				}
+
+				// Get value from Extra using dot-separated path
+				value := GetValueByPath(userInfo.Extra, custom.Path)
+				if value != "" {
+					if f.config.QueryString.Encrypt {
+						// Encrypt the value
+						encrypted, err := f.encryptor.Encrypt(value)
+						if err != nil {
+							return "", err
+						}
+						q.Set(custom.Query, encrypted)
+					} else {
+						// Plain text
+						q.Set(custom.Query, value)
+					}
+				}
+			}
+		}
+	}
+
 	// Update URL with merged query parameters
 	u.RawQuery = q.Encode()
 	return u.String(), nil
@@ -139,6 +176,35 @@ func (f *Forwarder) AddToHeaders(headers http.Header, userInfo *UserInfo) http.H
 			} else {
 				// Plain text
 				result.Set(headerName, value)
+			}
+		}
+	}
+
+	// Add provider-specific custom fields (if provider and Extra data are available)
+	if userInfo.Provider != "" && userInfo.Extra != nil {
+		if providerCfg, ok := f.providerConfigs[userInfo.Provider]; ok && providerCfg.Forwarding != nil {
+			for _, custom := range providerCfg.Forwarding.Custom {
+				// Skip if no header specified
+				if custom.Header == "" {
+					continue
+				}
+
+				// Get value from Extra using dot-separated path
+				value := GetValueByPath(userInfo.Extra, custom.Path)
+				if value != "" {
+					if f.config.Header.Encrypt {
+						// Encrypt the value
+						encrypted, err := f.encryptor.Encrypt(value)
+						if err != nil {
+							// Log error but don't fail the request
+							continue
+						}
+						result.Set(custom.Header, encrypted)
+					} else {
+						// Plain text
+						result.Set(custom.Header, value)
+					}
+				}
 			}
 		}
 	}
