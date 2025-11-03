@@ -53,14 +53,14 @@ func runTestConfig(cmd *cobra.Command, args []string) error {
 	fmt.Printf("  Service Name: %s\n", cfg.Service.Name)
 	fmt.Printf("  Upstream: %s\n", cfg.Proxy.Upstream)
 
-	// Count enabled OAuth2 providers
-	enabledProviders := 0
+	// Count available OAuth2 providers (not disabled)
+	availableProviders := 0
 	for _, p := range cfg.OAuth2.Providers {
-		if p.Enabled {
-			enabledProviders++
+		if !p.Disabled {
+			availableProviders++
 		}
 	}
-	fmt.Printf("  OAuth2 Providers: %d enabled\n", enabledProviders)
+	fmt.Printf("  OAuth2 Providers: %d available\n", availableProviders)
 
 	if cfg.EmailAuth.Enabled {
 		fmt.Printf("  Email Auth: enabled (%s)\n", cfg.EmailAuth.SenderType)

@@ -129,12 +129,12 @@ func ValidateConfig(cfg *config.Config) ValidationErrors {
 		}
 	}
 
-	// Validate OAuth2 - at least one provider must be enabled
-	hasEnabledOAuth2Provider := false
+	// Validate OAuth2 - at least one provider must be available (not disabled)
+	hasAvailableOAuth2Provider := false
 	for i, provider := range cfg.OAuth2.Providers {
-		if provider.Enabled {
-			hasEnabledOAuth2Provider = true
-			// Validate enabled provider configuration
+		if !provider.Disabled {
+			hasAvailableOAuth2Provider = true
+			// Validate available provider configuration
 			if provider.Name == "" {
 				errs = append(errs, ValidationError{
 					Field:   fmt.Sprintf("oauth2.providers[%d].name", i),
@@ -185,8 +185,8 @@ func ValidateConfig(cfg *config.Config) ValidationErrors {
 	// Validate Email Authentication
 	hasEnabledEmailAuth := cfg.EmailAuth.Enabled
 
-	// At least one authentication method must be enabled
-	if !hasEnabledOAuth2Provider && !hasEnabledEmailAuth {
+	// At least one authentication method must be available
+	if !hasAvailableOAuth2Provider && !hasEnabledEmailAuth {
 		errs = append(errs, ValidationError{
 			Field:   "oauth2.providers / email_auth.enabled",
 			Message: "at least one authentication method must be enabled (OAuth2 provider or email authentication)",

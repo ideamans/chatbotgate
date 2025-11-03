@@ -102,7 +102,7 @@ func (f *DefaultFactory) CreateOAuth2Manager(cfg *config.Config, host string, po
 
 	// Setup OAuth2 providers
 	for _, providerCfg := range cfg.OAuth2.Providers {
-		if !providerCfg.Enabled {
+		if providerCfg.Disabled {
 			continue
 		}
 

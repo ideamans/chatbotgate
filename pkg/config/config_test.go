@@ -34,7 +34,6 @@ func TestConfig_Validate(t *testing.T) {
 							DisplayName:  "Google",
 							ClientID:     "test-client-id",
 							ClientSecret: "test-client-secret",
-							Enabled:      true,
 						},
 					},
 				},
@@ -56,7 +55,7 @@ func TestConfig_Validate(t *testing.T) {
 				},
 				OAuth2: OAuth2Config{
 					Providers: []OAuth2Provider{
-						{Enabled: true},
+						{},
 					},
 				},
 			},
@@ -77,7 +76,7 @@ func TestConfig_Validate(t *testing.T) {
 				},
 				OAuth2: OAuth2Config{
 					Providers: []OAuth2Provider{
-						{Enabled: true},
+						{},
 					},
 				},
 			},
@@ -98,14 +97,14 @@ func TestConfig_Validate(t *testing.T) {
 				},
 				OAuth2: OAuth2Config{
 					Providers: []OAuth2Provider{
-						{Enabled: true},
+						{},
 					},
 				},
 			},
 			wantErr: ErrCookieSecretTooShort,
 		},
 		{
-			name: "no enabled providers",
+			name: "no available providers (all disabled)",
 			config: &Config{
 				Service: ServiceConfig{
 					Name: "Test",
@@ -119,7 +118,7 @@ func TestConfig_Validate(t *testing.T) {
 				},
 				OAuth2: OAuth2Config{
 					Providers: []OAuth2Provider{
-						{Enabled: false},
+						{Disabled: true},
 					},
 				},
 			},
@@ -144,7 +143,7 @@ func TestConfig_ValidateForwarding(t *testing.T) {
 			Proxy:   ProxyConfig{Upstream: "http://localhost:8080"},
 			Session: SessionConfig{CookieSecret: "this-is-a-secret-key-with-32-characters"},
 			OAuth2: OAuth2Config{
-				Providers: []OAuth2Provider{{Enabled: true}},
+				Providers: []OAuth2Provider{{}},
 			},
 		}
 	}
