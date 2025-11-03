@@ -759,6 +759,17 @@ body {
   line-height: 1.5;
 }
 
+.settings-toggle {
+  background: none !important;
+  border: none !important;
+}
+
+@media (max-width: 639px) {
+  .auth-container, .auth-card {
+    padding: var(--spacing-xs);
+  }
+}
+
 @property --tw-border-style {
   syntax: "*";
   inherits: false;

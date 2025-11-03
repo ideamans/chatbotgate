@@ -461,3 +461,21 @@ body {
   white-space: pre-wrap;
   word-break: break-word;
 }
+
+/* Setting Toggle - Remove border and background */
+.settings-toggle {
+  border: none !important;
+  background: none !important;
+}
+
+/* Responsive adjustments for small screens */
+@media (max-width: 639px) {
+  /* Reduce padding for auth container and card on small screens */
+  .auth-container {
+    padding: var(--spacing-xs);
+  }
+
+  .auth-card {
+    padding: var(--spacing-xs);
+  }
+}
