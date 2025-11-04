@@ -122,6 +122,31 @@ export function extractLoginUrl(messageText: string): string | null {
 }
 
 /**
+ * Extract OTP code from message content
+ * Looks for 12-character OTP codes (uppercase letters and digits)
+ * The OTP may be formatted with spaces like "ABCD EFGH 1234"
+ */
+export function extractOTP(messageText: string): string | null {
+  // Remove HTML tags first if present
+  const cleanText = messageText.replace(/<[^>]*>/g, ' ');
+
+  // Look for pattern: 4 chars, space, 4 chars, space, 4 chars (all uppercase letters/digits)
+  const otpPattern = /([A-Z0-9]{4})\s+([A-Z0-9]{4})\s+([A-Z0-9]{4})/;
+  const match = cleanText.match(otpPattern);
+
+  if (match) {
+    // Return the OTP without spaces
+    return match[1] + match[2] + match[3];
+  }
+
+  // Also try to match a continuous 12-character OTP without spaces
+  const continuousPattern = /\b([A-Z0-9]{12})\b/;
+  const continuousMatch = cleanText.match(continuousPattern);
+
+  return continuousMatch ? continuousMatch[1] : null;
+}
+
+/**
  * Wait for an email and extract the login URL
  */
 export async function waitForLoginEmail(

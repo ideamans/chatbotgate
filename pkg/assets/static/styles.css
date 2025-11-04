@@ -324,6 +324,10 @@
     border-width: 1px;
   }
 
+  .uppercase {
+    text-transform: uppercase;
+  }
+
   .italic {
     font-style: italic;
   }
@@ -420,6 +424,19 @@ body {
 .btn:disabled {
   opacity: .5;
   cursor: not-allowed;
+  pointer-events: none;
+}
+
+.btn-success {
+  background-color: var(--color-success);
+  color: #fff;
+  border-color: var(--color-success);
+}
+
+.btn-success:hover:not(:disabled) {
+  box-shadow: var(--shadow-md);
+  background-color: #059669;
+  transform: translateY(-1px);
 }
 
 .btn-primary {

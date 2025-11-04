@@ -67,7 +67,7 @@ test.describe('QueryString preservation without forwarding (:4180)', () => {
     await page.getByLabel('Email Address').fill(TEST_EMAIL);
 
     await Promise.all([
-      page.waitForURL(/\/_auth\/email\/send/),
+      page.waitForURL(/\/_auth\/email\/sent/),
       page.getByRole('button', { name: 'Send Login Link' }).click(),
     ]);
 
@@ -161,7 +161,7 @@ test.describe('QueryString merging with forwarding (:4182)', () => {
     await page.getByLabel('Email Address').fill(TEST_EMAIL);
 
     await Promise.all([
-      page.waitForURL(/\/_auth\/email\/send/),
+      page.waitForURL(/\/_auth\/email\/sent/),
       page.getByRole('button', { name: 'Send Login Link' }).click(),
     ]);
 

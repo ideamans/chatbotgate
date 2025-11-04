@@ -82,9 +82,9 @@ func TestTokenStore_GenerateToken(t *testing.T) {
 		t.Error("GenerateToken() returned empty token")
 	}
 
-	// Verify token exists in store
-	if store.Count() != 1 {
-		t.Errorf("store should have 1 token, got %d", store.Count())
+	// Verify token exists in store (token + OTP mapping = 2 entries)
+	if store.Count() != 2 {
+		t.Errorf("store should have 2 entries (token + OTP mapping), got %d", store.Count())
 	}
 }
 
@@ -176,9 +176,9 @@ func TestTokenStore_CleanupExpired(t *testing.T) {
 	// Clean up
 	store.CleanupExpired()
 
-	// Should have only 1 token left
-	if store.Count() != 1 {
-		t.Errorf("after cleanup, store should have 1 token, got %d", store.Count())
+	// Should have only 2 entries left (1 token + 1 OTP mapping)
+	if store.Count() != 2 {
+		t.Errorf("after cleanup, store should have 2 entries (token + OTP mapping), got %d", store.Count())
 	}
 }
 

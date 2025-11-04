@@ -358,7 +358,6 @@ func containsHelper(s, substr string) bool {
 func TestServer_HandleEmailSend_Success(t *testing.T) {
 	server, _ := setupTestServerWithEmail(t)
 
-	form := "email=user@example.com"
 	req := httptest.NewRequest(http.MethodPost, "/_auth/email/send", nil)
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.Body = http.NoBody
@@ -368,13 +367,15 @@ func TestServer_HandleEmailSend_Success(t *testing.T) {
 
 	server.Handler().ServeHTTP(rec, req)
 
-	if rec.Code != http.StatusOK {
-		t.Errorf("handleEmailSend() status = %d, want %d (body: %s)", rec.Code, http.StatusOK, form)
+	// Should redirect to email sent page
+	if rec.Code != http.StatusSeeOther {
+		t.Errorf("handleEmailSend() status = %d, want %d", rec.Code, http.StatusSeeOther)
 	}
 
-	body := rec.Body.String()
-	if !contains(body, "Check Your Email") && !contains(body, "メールを確認してください") {
-		t.Error("handleEmailSend() should show success message")
+	// Check redirect location
+	location := rec.Header().Get("Location")
+	if !contains(location, "/_auth/email/sent") {
+		t.Errorf("handleEmailSend() should redirect to /_auth/email/sent, got %s", location)
 	}
 }
 

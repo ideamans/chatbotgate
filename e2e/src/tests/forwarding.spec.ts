@@ -140,7 +140,7 @@ test.describe('Email authentication forwarding', () => {
 
     // Submit form to send magic link
     await Promise.all([
-      page.waitForURL(/\/_auth\/email\/send/),
+      page.waitForURL(/\/_auth\/email\/sent/),
       page.getByRole('button', { name: 'Send Login Link' }).click(),
     ]);
 

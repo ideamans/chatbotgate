@@ -111,6 +111,20 @@ body {
 .btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* Button Success State */
+.btn-success {
+  background-color: var(--color-success);
+  color: white;
+  border-color: var(--color-success);
+}
+
+.btn-success:hover:not(:disabled) {
+  background-color: #059669; /* darker green */
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
 }
 
 /* Button Variants */
