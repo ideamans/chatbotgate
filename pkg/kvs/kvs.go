@@ -107,7 +107,7 @@ type RedisConfig struct {
 	PoolSize int `yaml:"pool_size"`
 }
 
-// New creates a new KVS store based on the provided config.
+// New creates a new KVS store based on the provided proxyserver.
 // The Namespace field provides logical isolation - implementation varies by backend:
 // - Memory: separate store instance per namespace
 // - LevelDB: separate directory per namespace

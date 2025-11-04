@@ -361,7 +361,7 @@ func (m *Middleware) handleLogout(w http.ResponseWriter, r *http.Request) {
 	cookie, err := r.Cookie(m.config.Session.CookieName)
 	if err == nil {
 		// Delete session
-		m.sessionStore.Delete(cookie.Value)
+		session.Delete(m.sessionStore, cookie.Value)
 	}
 
 	// Clear cookie
@@ -437,7 +437,7 @@ func (m *Middleware) handleOAuth2Start(w http.ResponseWriter, r *http.Request) {
 	// For now, we'll pass it directly and verify in callback
 
 	// Determine the base URL for OAuth2 callback
-	// Priority: 1. config.base_url, 2. request Host header
+	// Priority: 1. proxyserver.base_url, 2. request Host header
 	var authURL, redirectURL string
 	if m.config.Server.BaseURL != "" {
 		// Use configured base URL
@@ -615,7 +615,7 @@ func (m *Middleware) handleOAuth2Callback(w http.ResponseWriter, r *http.Request
 	}
 
 	// Store session
-	if err := m.sessionStore.Set(sessionID, sess); err != nil {
+	if err := session.Set(m.sessionStore, sessionID, sess); err != nil {
 		m.logger.Debug("Session store failed", "error", err)
 		m.logger.Error("OAuth2 authentication failed: could not store session")
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
@@ -931,7 +931,7 @@ func (m *Middleware) handleEmailVerify(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Store session
-	if err := m.sessionStore.Set(sessionID, sess); err != nil {
+	if err := session.Set(m.sessionStore, sessionID, sess); err != nil {
 		m.logger.Debug("Session store failed", "error", err)
 		m.logger.Error("Email authentication failed: could not store session")
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
@@ -1041,7 +1041,7 @@ func (m *Middleware) handleEmailVerifyOTP(w http.ResponseWriter, r *http.Request
 	}
 
 	// Store session
-	if err := m.sessionStore.Set(sessionID, sess); err != nil {
+	if err := session.Set(m.sessionStore, sessionID, sess); err != nil {
 		m.logger.Error("Failed to store session", "error", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return

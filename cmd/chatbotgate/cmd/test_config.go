@@ -3,7 +3,7 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/ideamans/chatbotgate/pkg/config"
+	"github.com/ideamans/chatbotgate/pkg/proxyserver"
 	"github.com/spf13/cobra"
 )
 
@@ -33,19 +33,12 @@ func runTestConfig(cmd *cobra.Command, args []string) error {
 	fmt.Printf("Testing configuration file: %s\n", cfgFile)
 
 	// Load configuration
-	loader := config.NewFileLoader(cfgFile)
-	cfg, err := loader.Load()
+	cfg, err := proxyserver.LoadConfig(cfgFile)
 	if err != nil {
 		return fmt.Errorf("failed to load configuration: %w", err)
 	}
 
 	fmt.Println("✓ Configuration file loaded successfully")
-
-	// Validate configuration
-	if err := cfg.Validate(); err != nil {
-		return fmt.Errorf("configuration validation failed: %w", err)
-	}
-
 	fmt.Println("✓ Configuration validation passed")
 
 	// Print summary

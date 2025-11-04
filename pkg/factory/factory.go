@@ -13,7 +13,6 @@ import (
 	"github.com/ideamans/chatbotgate/pkg/logging"
 	"github.com/ideamans/chatbotgate/pkg/middleware"
 	"github.com/ideamans/chatbotgate/pkg/passthrough"
-	"github.com/ideamans/chatbotgate/pkg/proxy"
 	"github.com/ideamans/chatbotgate/pkg/session"
 )
 
@@ -32,11 +31,14 @@ type Factory interface {
 	// Component factory methods (used internally by CreateMiddleware)
 
 	// CreateOAuth2Manager creates an OAuth2 manager with configured providers
-	CreateOAuth2Manager(cfg *config.Config, host string, port int) *oauth2.Manager
+	CreateOAuth2Manager(oauth2Cfg config.OAuth2Config, serverCfg config.ServerConfig, host string, port int) *oauth2.Manager
 
 	// CreateEmailHandler creates an email authentication handler if enabled
 	CreateEmailHandler(
-		cfg *config.Config,
+		emailAuthCfg config.EmailAuthConfig,
+		serviceCfg config.ServiceConfig,
+		serverCfg config.ServerConfig,
+		sessionCfg config.SessionConfig,
 		host string,
 		port int,
 		authzChecker authz.Checker,
@@ -46,13 +48,13 @@ type Factory interface {
 	) (*email.Handler, error)
 
 	// CreateAuthzChecker creates an authorization checker based on config
-	CreateAuthzChecker(cfg *config.Config) authz.Checker
+	CreateAuthzChecker(authzCfg config.AuthorizationConfig) authz.Checker
 
 	// CreateForwarder creates a forwarder for user info forwarding (may return nil)
-	CreateForwarder(cfg *config.Config) forwarding.Forwarder
+	CreateForwarder(forwardingCfg config.ForwardingConfig, providers []config.OAuth2Provider) forwarding.Forwarder
 
 	// CreatePassthroughMatcher creates a matcher for authentication bypass (may return nil)
-	CreatePassthroughMatcher(cfg *config.Config) passthrough.Matcher
+	CreatePassthroughMatcher(passthroughCfg config.PassthroughConfig) passthrough.Matcher
 
 	// CreateTranslator creates an i18n translator
 	CreateTranslator() *i18n.Translator
@@ -69,7 +71,4 @@ type Factory interface {
 
 	// CreateSessionStore creates a session store using the provided KVS
 	CreateSessionStore(kvsStore kvs.Store) session.Store
-
-	// CreateProxyHandler creates a proxy handler from configuration
-	CreateProxyHandler(cfg *config.Config) (*proxy.Handler, error)
 }

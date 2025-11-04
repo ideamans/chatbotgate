@@ -1,6 +1,16 @@
 package session
 
-import "time"
+import (
+	"errors"
+	"time"
+
+	"github.com/ideamans/chatbotgate/pkg/kvs"
+)
+
+// Common errors
+var (
+	ErrSessionNotFound = errors.New("session: session not found")
+)
 
 // Session represents a user session
 type Session struct {
@@ -22,9 +32,6 @@ func (s *Session) IsValid() bool {
 	return time.Now().Before(s.ExpiresAt)
 }
 
-// Store is an interface for session storage
-type Store interface {
-	Get(id string) (*Session, error)
-	Set(id string, session *Session) error
-	Delete(id string) error
-}
+// Store is an alias for kvs.Store for backward compatibility
+// Use the session helper functions (Get, Set, Delete) to work with sessions
+type Store = kvs.Store

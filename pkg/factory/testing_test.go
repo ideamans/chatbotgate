@@ -147,13 +147,13 @@ func TestTestingFactory_Integration(t *testing.T) {
 	}
 
 	// Create authz checker
-	authzChecker := factory.CreateAuthzChecker(cfg)
+	authzChecker := factory.CreateAuthzChecker(cfg.Authorization)
 	if authzChecker == nil {
 		t.Fatal("CreateAuthzChecker returned nil")
 	}
 
 	// Create OAuth2 manager
-	oauth2Manager := factory.CreateOAuth2Manager(cfg, "localhost", 4180)
+	oauth2Manager := factory.CreateOAuth2Manager(cfg.OAuth2, cfg.Server, "localhost", 4180)
 	if oauth2Manager == nil {
 		t.Fatal("CreateOAuth2Manager returned nil")
 	}

@@ -14,13 +14,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ideamans/chatbotgate/pkg/config"
 	"github.com/ideamans/chatbotgate/pkg/factory"
 	"github.com/ideamans/chatbotgate/pkg/forwarding"
 	"github.com/ideamans/chatbotgate/pkg/kvs"
 	"github.com/ideamans/chatbotgate/pkg/logging"
-	"github.com/ideamans/chatbotgate/pkg/manager"
-	"github.com/ideamans/chatbotgate/pkg/proxy"
+	"github.com/ideamans/chatbotgate/pkg/proxyserver"
 	"github.com/ideamans/chatbotgate/pkg/session"
 )
 
@@ -63,8 +61,7 @@ func TestForwarding_E2E(t *testing.T) {
 
 	// Load test configuration
 	configPath := filepath.Join("testdata", "config_forwarding.yaml")
-	loader := config.NewFileLoader(configPath)
-	cfg, err := loader.Load()
+	cfg, err := proxyserver.LoadConfig(configPath)
 	if err != nil {
 		t.Fatalf("Failed to load config: %v", err)
 	}
@@ -91,10 +88,10 @@ func TestForwarding_E2E(t *testing.T) {
 	defer sessionKVS.Close()
 
 	// Create session store
-	sessionStore := session.NewKVSStore(sessionKVS)
+	sessionStore := sessionKVS
 
 	// Create proxy handler
-	proxyHandler, err := proxy.NewHandler(cfg.Proxy.Upstream.URL)
+	proxyHandler, err := proxyserver.NewHandler(cfg.Proxy.Upstream.URL)
 	if err != nil {
 		t.Fatalf("Failed to create proxy handler: %v", err)
 	}
@@ -102,20 +99,14 @@ func TestForwarding_E2E(t *testing.T) {
 	// Create factory
 	mwFactory := factory.NewDefaultFactory("localhost", chatbotgatePort, logger)
 
-	// Create middleware manager
-	mgr, err := manager.New(manager.ManagerConfig{
-		Config:       cfg,
-		Factory:      mwFactory,
-		SessionStore: sessionStore,
-		ProxyHandler: proxyHandler,
-		Logger:       logger,
-	})
+	// Create middleware directly using factory
+	middleware, err := mwFactory.CreateMiddleware(cfg, sessionStore, proxyHandler, logger)
 	if err != nil {
-		t.Fatalf("Failed to create middleware manager: %v", err)
+		t.Fatalf("Failed to create middleware: %v", err)
 	}
 
 	// Start chatbotgate server
-	server := httptest.NewServer(mgr)
+	server := httptest.NewServer(middleware)
 	defer server.Close()
 
 	// Create HTTP client with cookie jar
@@ -141,7 +132,7 @@ func TestForwarding_E2E(t *testing.T) {
 			ExpiresAt:     time.Now().Add(1 * time.Hour),
 			Authenticated: true,
 		}
-		if err := sessionStore.Set(sess.ID, sess); err != nil {
+		if err := session.Set(sessionStore, sess.ID, sess); err != nil {
 			t.Fatalf("Failed to create session: %v", err)
 		}
 
@@ -298,7 +289,7 @@ func TestForwarding_E2E(t *testing.T) {
 			ExpiresAt:     time.Now().Add(1 * time.Hour),
 			Authenticated: true,
 		}
-		if err := sessionStore.Set(emailSess.ID, emailSess); err != nil {
+		if err := session.Set(sessionStore, emailSess.ID, emailSess); err != nil {
 			t.Fatalf("Failed to create email session: %v", err)
 		}
 
@@ -367,8 +358,7 @@ func TestCustomFieldsForwarding_E2E_Encrypted(t *testing.T) {
 
 	// Load test configuration with encryption enabled
 	configPath := filepath.Join("testdata", "config_custom_forwarding_encrypted.yaml")
-	loader := config.NewFileLoader(configPath)
-	cfg, err := loader.Load()
+	cfg, err := proxyserver.LoadConfig(configPath)
 	if err != nil {
 		t.Fatalf("Failed to load config: %v", err)
 	}
@@ -395,10 +385,10 @@ func TestCustomFieldsForwarding_E2E_Encrypted(t *testing.T) {
 	defer sessionKVS.Close()
 
 	// Create session store
-	sessionStore := session.NewKVSStore(sessionKVS)
+	sessionStore := sessionKVS
 
 	// Create proxy handler
-	proxyHandler, err := proxy.NewHandler(cfg.Proxy.Upstream.URL)
+	proxyHandler, err := proxyserver.NewHandler(cfg.Proxy.Upstream.URL)
 	if err != nil {
 		t.Fatalf("Failed to create proxy handler: %v", err)
 	}
@@ -406,20 +396,14 @@ func TestCustomFieldsForwarding_E2E_Encrypted(t *testing.T) {
 	// Create factory
 	mwFactory := factory.NewDefaultFactory("localhost", chatbotgatePort, logger)
 
-	// Create middleware manager
-	mgr, err := manager.New(manager.ManagerConfig{
-		Config:       cfg,
-		Factory:      mwFactory,
-		SessionStore: sessionStore,
-		ProxyHandler: proxyHandler,
-		Logger:       logger,
-	})
+	// Create middleware directly using factory
+	middleware, err := mwFactory.CreateMiddleware(cfg, sessionStore, proxyHandler, logger)
 	if err != nil {
-		t.Fatalf("Failed to create middleware manager: %v", err)
+		t.Fatalf("Failed to create middleware: %v", err)
 	}
 
 	// Start chatbotgate server
-	server := httptest.NewServer(mgr)
+	server := httptest.NewServer(middleware)
 	defer server.Close()
 
 	// Create HTTP client with cookie jar
@@ -456,7 +440,7 @@ func TestCustomFieldsForwarding_E2E_Encrypted(t *testing.T) {
 			ExpiresAt:     time.Now().Add(1 * time.Hour),
 			Authenticated: true,
 		}
-		if err := sessionStore.Set(sess.ID, sess); err != nil {
+		if err := session.Set(sessionStore, sess.ID, sess); err != nil {
 			t.Fatalf("Failed to create session: %v", err)
 		}
 

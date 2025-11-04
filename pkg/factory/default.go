@@ -15,7 +15,6 @@ import (
 	"github.com/ideamans/chatbotgate/pkg/logging"
 	"github.com/ideamans/chatbotgate/pkg/middleware"
 	"github.com/ideamans/chatbotgate/pkg/passthrough"
-	"github.com/ideamans/chatbotgate/pkg/proxy"
 	"github.com/ideamans/chatbotgate/pkg/session"
 )
 
@@ -45,8 +44,8 @@ func (f *DefaultFactory) CreateMiddleware(
 ) (*middleware.Middleware, error) {
 	// Create all components using factory methods
 	translator := f.CreateTranslator()
-	authzChecker := f.CreateAuthzChecker(cfg)
-	forwarder := f.CreateForwarder(cfg)
+	authzChecker := f.CreateAuthzChecker(cfg.Authorization)
+	forwarder := f.CreateForwarder(cfg.Forwarding, cfg.OAuth2.Providers)
 
 	// Create KVS stores for email auth (if needed)
 	var tokenKVS, rateLimitKVS kvs.Store
@@ -56,14 +55,17 @@ func (f *DefaultFactory) CreateMiddleware(
 	}
 
 	// Create OAuth2 manager with factory's host/port
-	oauthManager := f.CreateOAuth2Manager(cfg, f.host, f.port)
+	oauthManager := f.CreateOAuth2Manager(cfg.OAuth2, cfg.Server, f.host, f.port)
 
 	// Create email handler if enabled
 	var emailHandler *email.Handler
 	if cfg.EmailAuth.Enabled {
 		var err error
 		emailHandler, err = f.CreateEmailHandler(
-			cfg,
+			cfg.EmailAuth,
+			cfg.Service,
+			cfg.Server,
+			cfg.Session,
 			f.host,
 			f.port,
 			authzChecker,
@@ -97,11 +99,11 @@ func (f *DefaultFactory) CreateMiddleware(
 }
 
 // CreateOAuth2Manager creates an OAuth2 manager with configured providers
-func (f *DefaultFactory) CreateOAuth2Manager(cfg *config.Config, host string, port int) *oauth2.Manager {
+func (f *DefaultFactory) CreateOAuth2Manager(oauth2Cfg config.OAuth2Config, serverCfg config.ServerConfig, host string, port int) *oauth2.Manager {
 	manager := oauth2.NewManager()
 
 	// Setup OAuth2 providers
-	for _, providerCfg := range cfg.OAuth2.Providers {
+	for _, providerCfg := range oauth2Cfg.Providers {
 		if providerCfg.Disabled {
 			continue
 		}
@@ -113,7 +115,7 @@ func (f *DefaultFactory) CreateOAuth2Manager(cfg *config.Config, host string, po
 		if host == "0.0.0.0" {
 			normalizedHost = "localhost"
 		}
-		redirectURL := cfg.Server.GetCallbackURL(normalizedHost, port)
+		redirectURL := serverCfg.GetCallbackURL(normalizedHost, port)
 
 		// Determine provider type
 		providerType := providerCfg.Type
@@ -176,7 +178,10 @@ func (f *DefaultFactory) CreateOAuth2Manager(cfg *config.Config, host string, po
 
 // CreateEmailHandler creates an email authentication handler if enabled
 func (f *DefaultFactory) CreateEmailHandler(
-	cfg *config.Config,
+	emailAuthCfg config.EmailAuthConfig,
+	serviceCfg config.ServiceConfig,
+	serverCfg config.ServerConfig,
+	sessionCfg config.SessionConfig,
 	host string,
 	port int,
 	authzChecker authz.Checker,
@@ -184,11 +189,11 @@ func (f *DefaultFactory) CreateEmailHandler(
 	tokenKVS kvs.Store,
 	rateLimitKVS kvs.Store,
 ) (*email.Handler, error) {
-	authPrefix := cfg.Server.GetAuthPathPrefix()
+	authPrefix := serverCfg.GetAuthPathPrefix()
 
 	var emailBaseURL string
-	if cfg.Server.BaseURL != "" {
-		emailBaseURL = cfg.Server.BaseURL
+	if serverCfg.BaseURL != "" {
+		emailBaseURL = serverCfg.BaseURL
 	} else {
 		emailBaseURL = fmt.Sprintf("http://%s:%d", host, port)
 		if host == "0.0.0.0" {
@@ -197,13 +202,13 @@ func (f *DefaultFactory) CreateEmailHandler(
 	}
 
 	handler, err := email.NewHandler(
-		cfg.EmailAuth,
-		cfg.Service,
+		emailAuthCfg,
+		serviceCfg,
 		emailBaseURL,
 		authPrefix,
 		authzChecker,
 		translator,
-		cfg.Session.CookieSecret,
+		sessionCfg.CookieSecret,
 		tokenKVS,
 		rateLimitKVS,
 	)
@@ -211,15 +216,15 @@ func (f *DefaultFactory) CreateEmailHandler(
 		return nil, fmt.Errorf("failed to create email handler: %w", err)
 	}
 
-	f.logger.Debug("Email authentication handler initialized", "sender", cfg.EmailAuth.SenderType)
+	f.logger.Debug("Email authentication handler initialized", "sender", emailAuthCfg.SenderType)
 	return handler, nil
 }
 
 // CreateAuthzChecker creates an authorization checker based on config
-func (f *DefaultFactory) CreateAuthzChecker(cfg *config.Config) authz.Checker {
-	checker := authz.NewEmailChecker(cfg.Authorization)
-	if len(cfg.Authorization.Allowed) > 0 {
-		f.logger.Debug("Authorization checker initialized", "allowed_entries", len(cfg.Authorization.Allowed))
+func (f *DefaultFactory) CreateAuthzChecker(authzCfg config.AuthorizationConfig) authz.Checker {
+	checker := authz.NewEmailChecker(authzCfg)
+	if len(authzCfg.Allowed) > 0 {
+		f.logger.Debug("Authorization checker initialized", "allowed_entries", len(authzCfg.Allowed))
 	} else {
 		f.logger.Debug("Authorization checker initialized with no restrictions")
 	}
@@ -227,23 +232,23 @@ func (f *DefaultFactory) CreateAuthzChecker(cfg *config.Config) authz.Checker {
 }
 
 // CreateForwarder creates a forwarder for user info forwarding (may return nil)
-func (f *DefaultFactory) CreateForwarder(cfg *config.Config) forwarding.Forwarder {
-	if !cfg.Forwarding.QueryString.Enabled && !cfg.Forwarding.Header.Enabled {
+func (f *DefaultFactory) CreateForwarder(forwardingCfg config.ForwardingConfig, providers []config.OAuth2Provider) forwarding.Forwarder {
+	if !forwardingCfg.QueryString.Enabled && !forwardingCfg.Header.Enabled {
 		return nil
 	}
 
-	forwarder := forwarding.NewForwarder(&cfg.Forwarding, cfg.OAuth2.Providers)
+	forwarder := forwarding.NewForwarder(&forwardingCfg, providers)
 	f.logger.Debug("User info forwarder initialized",
-		"querystring_enabled", cfg.Forwarding.QueryString.Enabled,
-		"header_enabled", cfg.Forwarding.Header.Enabled,
-		"fields", len(cfg.Forwarding.Fields))
+		"querystring_enabled", forwardingCfg.QueryString.Enabled,
+		"header_enabled", forwardingCfg.Header.Enabled,
+		"fields", len(forwardingCfg.Fields))
 
 	return forwarder
 }
 
 // CreatePassthroughMatcher creates a matcher for authentication bypass (may return nil)
-func (f *DefaultFactory) CreatePassthroughMatcher(cfg *config.Config) passthrough.Matcher {
-	matcher := passthrough.NewMatcher(&cfg.Passthrough)
+func (f *DefaultFactory) CreatePassthroughMatcher(passthroughCfg config.PassthroughConfig) passthrough.Matcher {
+	matcher := passthrough.NewMatcher(&passthroughCfg)
 	if matcher.HasErrors() {
 		f.logger.Warn("Passthrough configuration has errors", "errors", matcher.Errors())
 	}
@@ -347,34 +352,7 @@ func (f *DefaultFactory) CreateKVSStores(cfg *config.Config) (session kvs.Store,
 }
 
 // CreateSessionStore creates a session store using the provided KVS
+// Since session.Store is now an alias for kvs.Store, this just returns the input
 func (f *DefaultFactory) CreateSessionStore(kvsStore kvs.Store) session.Store {
-	return session.NewKVSStore(kvsStore)
-}
-
-// CreateProxyHandler creates a proxy handler from configuration
-func (f *DefaultFactory) CreateProxyHandler(cfg *config.Config) (*proxy.Handler, error) {
-	handler, err := proxy.NewHandlerWithConfig(cfg.Proxy.Upstream, cfg.Proxy.Hosts)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create proxy handler: %w", err)
-	}
-
-	if len(cfg.Proxy.Hosts) > 0 {
-		f.logger.Debug("Proxy handler initialized with host routing",
-			"default_upstream", cfg.Proxy.Upstream.URL,
-			"hosts", len(cfg.Proxy.Hosts))
-	} else {
-		f.logger.Debug("Proxy handler initialized", "upstream", cfg.Proxy.Upstream.URL)
-	}
-
-	// Log secret header configuration (without exposing the actual secret value)
-	if cfg.Proxy.Upstream.Secret.Header != "" {
-		f.logger.Debug("Upstream secret header configured", "header", cfg.Proxy.Upstream.Secret.Header)
-	}
-	for host, hostConfig := range cfg.Proxy.Hosts {
-		if hostConfig.Secret.Header != "" {
-			f.logger.Debug("Host-specific secret header configured", "host", host, "header", hostConfig.Secret.Header)
-		}
-	}
-
-	return handler, nil
+	return kvsStore
 }

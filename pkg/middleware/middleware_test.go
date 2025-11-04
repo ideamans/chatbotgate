@@ -13,6 +13,7 @@ import (
 	"github.com/ideamans/chatbotgate/pkg/authz"
 	"github.com/ideamans/chatbotgate/pkg/config"
 	"github.com/ideamans/chatbotgate/pkg/i18n"
+	"github.com/ideamans/chatbotgate/pkg/kvs"
 	"github.com/ideamans/chatbotgate/pkg/logging"
 	"github.com/ideamans/chatbotgate/pkg/session"
 )
@@ -103,8 +104,7 @@ func TestMiddleware_RequiresEmail(t *testing.T) {
 				Authorization: tt.authzConfig,
 			}
 
-			sessionStore := session.NewMemoryStore(1 * time.Minute)
-			defer sessionStore.Close()
+			sessionStore := func() session.Store { store, _ := kvs.NewMemoryStore("test", kvs.MemoryConfig{}); return store }()
 
 			oauthManager := oauth2.NewManager()
 			oauthManager.AddProvider(&mockProvider{
@@ -154,8 +154,7 @@ func TestMiddleware_Authorization_NoWhitelist(t *testing.T) {
 		},
 	}
 
-	sessionStore := session.NewMemoryStore(1 * time.Minute)
-	defer sessionStore.Close()
+	sessionStore := func() session.Store { store, _ := kvs.NewMemoryStore("test", kvs.MemoryConfig{}); return store }()
 
 	oauthManager := oauth2.NewManager()
 	authzChecker := authz.NewEmailChecker(cfg.Authorization)
@@ -198,7 +197,7 @@ func TestMiddleware_Authorization_NoWhitelist(t *testing.T) {
 		Authenticated: true,
 	}
 
-	err := sessionStore.Set(sessionID, sess)
+	err := session.Set(sessionStore, sessionID, sess)
 	if err != nil {
 		t.Fatalf("Failed to create session: %v", err)
 	}
@@ -253,8 +252,7 @@ func TestMiddleware_Authorization_WithWhitelist(t *testing.T) {
 		},
 	}
 
-	sessionStore := session.NewMemoryStore(1 * time.Minute)
-	defer sessionStore.Close()
+	sessionStore := func() session.Store { store, _ := kvs.NewMemoryStore("test", kvs.MemoryConfig{}); return store }()
 
 	oauthManager := oauth2.NewManager()
 	authzChecker := authz.NewEmailChecker(cfg.Authorization)
@@ -303,7 +301,7 @@ func TestMiddleware_Authorization_WithWhitelist(t *testing.T) {
 		Authenticated: true,
 	}
 
-	err := sessionStore.Set(authorizedSessionID, authorizedSess)
+	err := session.Set(sessionStore, authorizedSessionID, authorizedSess)
 	if err != nil {
 		t.Fatalf("Failed to create authorized session: %v", err)
 	}

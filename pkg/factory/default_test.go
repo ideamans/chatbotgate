@@ -48,7 +48,7 @@ func TestDefaultFactory_CreateAuthzChecker(t *testing.T) {
 
 	cfg := CreateTestConfig()
 
-	checker := factory.CreateAuthzChecker(cfg)
+	checker := factory.CreateAuthzChecker(cfg.Authorization)
 	if checker == nil {
 		t.Fatal("CreateAuthzChecker returned nil")
 	}
@@ -98,7 +98,7 @@ func TestDefaultFactory_CreateForwarder(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			cfg := tt.configFunc()
-			forwarder := factory.CreateForwarder(cfg)
+			forwarder := factory.CreateForwarder(cfg.Forwarding, cfg.OAuth2.Providers)
 
 			if tt.expectNil {
 				if forwarder != nil {
@@ -138,7 +138,7 @@ func TestDefaultFactory_CreatePassthroughMatcher(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			cfg := tt.configFunc()
-			matcher := factory.CreatePassthroughMatcher(cfg)
+			matcher := factory.CreatePassthroughMatcher(cfg.Passthrough)
 
 			if tt.expectNil {
 				if matcher != nil {
@@ -264,49 +264,13 @@ func TestDefaultFactory_CreateSessionStore(t *testing.T) {
 	}
 }
 
-func TestDefaultFactory_CreateProxyHandler(t *testing.T) {
-	logger := logging.NewSimpleLogger("test", logging.LevelInfo, false)
-	factory := NewDefaultFactory("localhost", 4180, logger)
-
-	// Create a test upstream server
-	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("upstream response"))
-	}))
-	defer upstream.Close()
-
-	cfg := CreateTestConfig()
-	cfg.Proxy.Upstream.URL = upstream.URL
-
-	handler, err := factory.CreateProxyHandler(cfg)
-	if err != nil {
-		t.Fatalf("CreateProxyHandler failed: %v", err)
-	}
-	if handler == nil {
-		t.Fatal("CreateProxyHandler returned nil")
-	}
-
-	// Test proxy functionality
-	req := httptest.NewRequest("GET", "http://example.com/test", nil)
-	rec := httptest.NewRecorder()
-
-	handler.ServeHTTP(rec, req)
-
-	if rec.Code != http.StatusOK {
-		t.Errorf("Expected status 200, got %d", rec.Code)
-	}
-	if rec.Body.String() != "upstream response" {
-		t.Errorf("Expected 'upstream response', got '%s'", rec.Body.String())
-	}
-}
-
 func TestDefaultFactory_CreateOAuth2Manager(t *testing.T) {
 	logger := logging.NewSimpleLogger("test", logging.LevelInfo, false)
 	factory := NewDefaultFactory("localhost", 4180, logger)
 
 	cfg := CreateTestConfigWithOAuth2()
 
-	manager := factory.CreateOAuth2Manager(cfg, "localhost", 4180)
+	manager := factory.CreateOAuth2Manager(cfg.OAuth2, cfg.Server, "localhost", 4180)
 	if manager == nil {
 		t.Fatal("CreateOAuth2Manager returned nil")
 	}
@@ -334,10 +298,10 @@ func TestDefaultFactory_CreateMiddleware(t *testing.T) {
 	defer upstream.Close()
 
 	cfg.Proxy.Upstream.URL = upstream.URL
-	proxyHandler, err := factory.CreateProxyHandler(cfg)
-	if err != nil {
-		t.Fatalf("CreateProxyHandler failed: %v", err)
-	}
+	// Create a simple mock proxy handler for testing
+	proxyHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
 
 	// Create middleware
 	middleware, err := factory.CreateMiddleware(cfg, sessionStore, proxyHandler, logger)

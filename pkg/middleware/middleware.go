@@ -9,6 +9,7 @@ import (
 	"github.com/ideamans/chatbotgate/pkg/config"
 	"github.com/ideamans/chatbotgate/pkg/forwarding"
 	"github.com/ideamans/chatbotgate/pkg/i18n"
+	"github.com/ideamans/chatbotgate/pkg/kvs"
 	"github.com/ideamans/chatbotgate/pkg/logging"
 	"github.com/ideamans/chatbotgate/pkg/passthrough"
 	"github.com/ideamans/chatbotgate/pkg/session"
@@ -18,7 +19,7 @@ import (
 // It implements http.Handler and can wrap any http.Handler
 type Middleware struct {
 	config             *config.Config
-	sessionStore       session.Store
+	sessionStore       kvs.Store
 	oauthManager       *oauth2.Manager
 	emailHandler       *email.Handler
 	authzChecker       authz.Checker
@@ -32,7 +33,7 @@ type Middleware struct {
 // New creates a new authentication middleware
 func New(
 	cfg *config.Config,
-	sessionStore session.Store,
+	sessionStore kvs.Store,
 	oauthManager *oauth2.Manager,
 	emailHandler *email.Handler,
 	authzChecker authz.Checker,
@@ -147,7 +148,7 @@ func (m *Middleware) requireAuth(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get session from store
-	sess, err := m.sessionStore.Get(cookie.Value)
+	sess, err := session.Get(m.sessionStore, cookie.Value)
 	if err != nil || sess == nil {
 		// Session not found, redirect to login
 		m.redirectToLogin(w, r)
@@ -157,7 +158,7 @@ func (m *Middleware) requireAuth(w http.ResponseWriter, r *http.Request) {
 	// Check if session is valid
 	if !sess.IsValid() {
 		// Session expired or invalid, delete and redirect
-		m.sessionStore.Delete(cookie.Value)
+		session.Delete(m.sessionStore, cookie.Value)
 		m.redirectToLogin(w, r)
 		return
 	}
