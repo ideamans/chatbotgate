@@ -688,7 +688,6 @@ func generateSessionID() (string, error) {
 // handleEmailSend sends a login link to the provided email address
 func (m *Middleware) handleEmailSend(w http.ResponseWriter, r *http.Request) {
 	lang := i18n.DetectLanguage(r)
-	theme := i18n.DetectTheme(r)
 	t := func(key string) string { return m.translator.T(lang, key) }
 
 	if err := r.ParseForm(); err != nil {
@@ -719,6 +718,18 @@ func (m *Middleware) handleEmailSend(w http.ResponseWriter, r *http.Request) {
 	}
 	m.logger.Info("Login link sent", "email", email)
 
+	// Redirect to email sent page
+	prefix := m.config.Server.GetAuthPathPrefix()
+	emailSentPath := joinAuthPath(prefix, "/email/sent")
+	http.Redirect(w, r, emailSentPath, http.StatusSeeOther)
+}
+
+// handleEmailSent shows the email sent confirmation page with OTP input
+func (m *Middleware) handleEmailSent(w http.ResponseWriter, r *http.Request) {
+	lang := i18n.DetectLanguage(r)
+	theme := i18n.DetectTheme(r)
+	t := func(key string) string { return m.translator.T(lang, key) }
+
 	// Use embedded CSS
 	prefix := m.config.Server.GetAuthPathPrefix()
 	cssPath := joinAuthPath(prefix, "/assets/styles.css")
@@ -732,6 +743,8 @@ func (m *Middleware) handleEmailSend(w http.ResponseWriter, r *http.Request) {
 	}
 
 	iconPath := joinAuthPath(prefix, "/assets/icons/chatbotgate.svg")
+
+	verifyOTPPath := joinAuthPath(prefix, "/email/verify-otp")
 
 	html := `<!DOCTYPE html>
 <html lang="` + string(lang) + `" class="` + themeClass + `">
@@ -748,6 +761,28 @@ func (m *Middleware) handleEmailSend(w http.ResponseWriter, r *http.Request) {
 			` + m.buildAuthHeader(prefix) + `
 			` + m.buildAuthSubtitle(t("email.sent.heading")) + `
 			<div class="alert alert-success" style="text-align: left; margin-bottom: var(--spacing-md);">` + t("email.sent.message") + ` ` + t("email.sent.detail") + `</div>
+
+			<!-- OTP Input Section -->
+			<div style="text-align: center; margin-top: var(--spacing-lg); margin-bottom: var(--spacing-lg);">
+				<div style="margin-bottom: var(--spacing-sm);">
+					<span style="color: var(--color-text-secondary); font-size: 0.875rem;">` + t("email.sent.otp_label") + `</span>
+				</div>
+				<form method="POST" action="` + verifyOTPPath + `" style="display: flex; flex-direction: column; align-items: center; gap: var(--spacing-sm);">
+					<input
+						type="text"
+						name="otp"
+						id="otp-input"
+						class="input"
+						placeholder="` + t("email.sent.otp_placeholder") + `"
+						maxlength="14"
+						autocomplete="off"
+						style="text-align: center; font-family: 'Courier New', monospace; font-size: 1.125rem; font-weight: 600; letter-spacing: 0.05em; background-color: var(--color-bg-muted); border: 2px solid var(--color-border-default); max-width: 16rem; transition: border-color 0.2s ease, background-color 0.2s ease;">
+					<button type="submit" id="verify-button" class="btn btn-primary" disabled style="max-width: 16rem; width: 100%;">
+						` + t("email.sent.verify_button") + `
+					</button>
+				</form>
+			</div>
+
 			<a href="` + loginPath + `" class="btn btn-ghost" style="width: 100%; margin-top: var(--spacing-md);">` + t("email.sent.back") + `</a>
 		</div>
 		<a href="https://github.com/ideamans/chatbotgate" class="auth-credit">
@@ -756,6 +791,40 @@ func (m *Middleware) handleEmailSend(w http.ResponseWriter, r *http.Request) {
 		</a>
 	</div>
 </div>
+<script>
+(function() {
+	const otpInput = document.getElementById('otp-input');
+	const verifyButton = document.getElementById('verify-button');
+	if (!otpInput || !verifyButton) return;
+
+	function validateOTP(value) {
+		const cleaned = value.replace(/[^A-Z0-9]/gi, '').toUpperCase();
+		return cleaned.length === 12 && /^[A-Z0-9]{12}$/.test(cleaned);
+	}
+
+	function updateUI(isValid) {
+		if (isValid) {
+			// Input: Green border and background
+			otpInput.style.borderColor = 'var(--color-success)';
+			otpInput.style.backgroundColor = 'color-mix(in srgb, var(--color-success) 10%, var(--color-bg-muted))';
+
+			// Button: Enable (keep btn-primary style)
+			verifyButton.disabled = false;
+		} else {
+			// Input: Default style
+			otpInput.style.borderColor = 'var(--color-border-default)';
+			otpInput.style.backgroundColor = 'var(--color-bg-muted)';
+
+			// Button: Disable
+			verifyButton.disabled = true;
+		}
+	}
+
+	otpInput.addEventListener('input', function() {
+		updateUI(validateOTP(this.value));
+	});
+})();
+</script>
 </body>
 </html>`
 
@@ -881,6 +950,115 @@ func (m *Middleware) handleEmailVerify(w http.ResponseWriter, r *http.Request) {
 	})
 
 	m.logger.Info("Email authentication successful", "email", email)
+
+	// Get redirect URL
+	redirectURL := m.getRedirectURL(w, r)
+
+	// Add user info to query string if forwarding is enabled
+	if m.forwarder != nil {
+		userInfo := &forwarding.UserInfo{
+			Username: "", // Email auth has no username (name)
+			Email:    email,
+		}
+		if modifiedURL, err := m.forwarder.AddToQueryString(redirectURL, userInfo); err == nil {
+			redirectURL = modifiedURL
+		} else {
+			m.logger.Warn("Failed to add user info to redirect URL", "error", err)
+		}
+	}
+
+	// Redirect to original URL or home
+	http.Redirect(w, r, redirectURL, http.StatusFound)
+}
+
+// handleEmailVerifyOTP verifies the OTP and creates a session
+func (m *Middleware) handleEmailVerifyOTP(w http.ResponseWriter, r *http.Request) {
+	lang := i18n.DetectLanguage(r)
+	t := func(key string) string { return m.translator.T(lang, key) }
+
+	if r.Method != http.MethodPost {
+		http.Error(w, t("error.invalid_request"), http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Parse form data
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, t("error.invalid_request"), http.StatusBadRequest)
+		return
+	}
+
+	otp := r.FormValue("otp")
+	if otp == "" {
+		http.Error(w, t("error.invalid_request"), http.StatusBadRequest)
+		return
+	}
+
+	// Verify OTP
+	email, err := m.emailHandler.VerifyOTP(otp)
+	if err != nil {
+		m.logger.Debug("OTP verification failed", "error", err)
+		m.logger.Error("Email authentication failed: invalid or expired OTP")
+
+		// Redirect back to email sent page with error
+		prefix := m.config.Server.GetAuthPathPrefix()
+		emailSentPath := joinAuthPath(prefix, "/email/sent")
+		http.Redirect(w, r, emailSentPath+"?error=invalid_otp", http.StatusFound)
+		return
+	}
+
+	// Check authorization if whitelist is configured
+	if m.authzChecker.RequiresEmail() {
+		if !m.authzChecker.IsAllowed(email) {
+			m.logger.Info("Email authentication denied: user not authorized", "email", email)
+			m.handleForbidden(w, r)
+			return
+		}
+		m.logger.Debug("User authorized", "email", email)
+	} else {
+		m.logger.Debug("No whitelist configured, skipping authorization check", "email", email)
+	}
+
+	// Create session
+	sessionID, err := generateSessionID()
+	if err != nil {
+		m.logger.Error("Failed to generate session ID", "error", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	duration, err := m.config.Session.GetCookieExpireDuration()
+	if err != nil {
+		duration = 168 * time.Hour // Default 7 days
+	}
+
+	sess := &session.Session{
+		ID:            sessionID,
+		Email:         email,
+		Provider:      "email",
+		CreatedAt:     time.Now(),
+		ExpiresAt:     time.Now().Add(duration),
+		Authenticated: true,
+	}
+
+	// Store session
+	if err := m.sessionStore.Set(sessionID, sess); err != nil {
+		m.logger.Error("Failed to store session", "error", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	// Set session cookie
+	http.SetCookie(w, &http.Cookie{
+		Name:     m.config.Session.CookieName,
+		Value:    sessionID,
+		Path:     "/",
+		MaxAge:   int(duration.Seconds()),
+		HttpOnly: m.config.Session.CookieHTTPOnly,
+		Secure:   m.config.Session.CookieSecure,
+		SameSite: http.SameSiteLaxMode,
+	})
+
+	m.logger.Info("Email authentication successful via OTP", "email", email)
 
 	// Get redirect URL
 	redirectURL := m.getRedirectURL(w, r)

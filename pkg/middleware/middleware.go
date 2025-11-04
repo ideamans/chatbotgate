@@ -88,8 +88,14 @@ func (m *Middleware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case matchPath(r.URL.Path, prefix, "/email/send"):
 		m.handleEmailSend(w, r)
 		return
+	case matchPath(r.URL.Path, prefix, "/email/sent"):
+		m.handleEmailSent(w, r)
+		return
 	case matchPath(r.URL.Path, prefix, "/email/verify"):
 		m.handleEmailVerify(w, r)
+		return
+	case matchPath(r.URL.Path, prefix, "/email/verify-otp"):
+		m.handleEmailVerifyOTP(w, r)
 		return
 	case matchPath(r.URL.Path, prefix, "/assets/styles.css"):
 		m.handleStylesCSS(w, r)

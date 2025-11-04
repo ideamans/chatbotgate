@@ -1,6 +1,8 @@
 package email
 
 import (
+	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -109,8 +111,22 @@ func (h *Handler) SendLoginLink(email string, lang i18n.Language) error {
 	// Create login URL
 	loginURL := fmt.Sprintf("%s%s/email/verify?token=%s", h.baseURL, h.authPathPrefix, token)
 
-	// Generate HTML email using Hermes template
-	htmlBody, textBody, err := h.emailTemplate.GenerateLoginEmail(loginURL, int(duration.Minutes()), lang, h.translator)
+	// Get OTP from token for email display
+	ctx := context.Background()
+	tokenData, err := h.tokenStore.kvs.Get(ctx, token)
+	if err != nil {
+		h.tokenStore.DeleteToken(token)
+		return fmt.Errorf("failed to retrieve token data: %w", err)
+	}
+
+	var tokenObj Token
+	if err := json.Unmarshal(tokenData, &tokenObj); err != nil {
+		h.tokenStore.DeleteToken(token)
+		return fmt.Errorf("failed to unmarshal token: %w", err)
+	}
+
+	// Generate HTML email using Hermes template with OTP
+	htmlBody, textBody, err := h.emailTemplate.GenerateLoginEmail(loginURL, tokenObj.OTP, int(duration.Minutes()), lang, h.translator)
 	if err != nil {
 		// Clean up token if generation fails
 		h.tokenStore.DeleteToken(token)
@@ -131,6 +147,11 @@ func (h *Handler) SendLoginLink(email string, lang i18n.Language) error {
 // VerifyToken verifies a login token and returns the associated email
 func (h *Handler) VerifyToken(token string) (string, error) {
 	return h.tokenStore.VerifyToken(token)
+}
+
+// VerifyOTP verifies an OTP and returns the associated email
+func (h *Handler) VerifyOTP(otp string) (string, error) {
+	return h.tokenStore.VerifyOTP(otp)
 }
 
 // Cleanup removes expired tokens

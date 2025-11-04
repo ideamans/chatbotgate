@@ -133,7 +133,7 @@ test.describe('Whitelist Authorization - Email Authentication', () => {
     await page.getByLabel('Email Address').fill(ALLOWED_EMAIL_USER);
 
     await Promise.all([
-      page.waitForURL(/localhost:4181\/_auth\/email\/send/),
+      page.waitForURL(/localhost:4181\/_auth\/email\/sent/),
       page.getByRole('button', { name: 'Send Login Link' }).click(),
     ]);
 
@@ -158,7 +158,7 @@ test.describe('Whitelist Authorization - Email Authentication', () => {
     await page.getByLabel('Email Address').fill(ALLOWED_DOMAIN_USER);
 
     await Promise.all([
-      page.waitForURL(/localhost:4181\/_auth\/email\/send/),
+      page.waitForURL(/localhost:4181\/_auth\/email\/sent/),
       page.getByRole('button', { name: 'Send Login Link' }).click(),
     ]);
 

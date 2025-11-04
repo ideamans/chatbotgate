@@ -21,7 +21,7 @@ test.describe('Passwordless email flow', () => {
     await page.getByLabel('Email Address').fill(TEST_EMAIL);
 
     await Promise.all([
-      page.waitForURL(/\/_auth\/email\/send/),
+      page.waitForURL(/\/_auth\/email\/sent/),
       page.getByRole('button', { name: 'Send Login Link' }).click(),
     ]);
 

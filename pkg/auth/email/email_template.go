@@ -2,6 +2,7 @@ package email
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	hermes "github.com/ideamans/hermes"
@@ -29,7 +30,7 @@ func NewEmailTemplate(serviceName, logoURL, logoWidth, iconURL, baseURL string) 
 }
 
 // GenerateLoginEmail generates HTML and plain text for login link email
-func (t *EmailTemplate) GenerateLoginEmail(loginURL string, validMinutes int, lang i18n.Language, translator *i18n.Translator) (htmlBody, textBody string, err error) {
+func (t *EmailTemplate) GenerateLoginEmail(loginURL, otp string, validMinutes int, lang i18n.Language, translator *i18n.Translator) (htmlBody, textBody string, err error) {
 	// Translation helper
 	tr := func(key string, args ...interface{}) string {
 		text := translator.T(lang, key)
@@ -55,6 +56,9 @@ func (t *EmailTemplate) GenerateLoginEmail(loginURL string, validMinutes int, la
 		},
 	}
 
+	// Use a placeholder for OTP that we'll replace later
+	otpPlaceholder := "{{OTP_CODE_PLACEHOLDER}}"
+
 	email := hermes.Email{
 		Body: hermes.Body{
 			Name: "", // No personalization
@@ -74,6 +78,7 @@ func (t *EmailTemplate) GenerateLoginEmail(loginURL string, validMinutes int, la
 				},
 			},
 			Outros: []string{
+				otpPlaceholder,
 				tr("email.login.outro"),
 			},
 		},
@@ -85,11 +90,31 @@ func (t *EmailTemplate) GenerateLoginEmail(loginURL string, validMinutes int, la
 		return "", "", fmt.Errorf("failed to generate HTML email: %w", err)
 	}
 
+	// Format OTP: split into 4-digit groups
+	// Note: No whitespace between spans to prevent unwanted spaces when copying
+	otpHTML := fmt.Sprintf(
+		`<div style="text-align: center; margin: 24px 0;"><p style="color: #6b7280; font-size: 14px; margin-bottom: 12px;">%s</p><div style="font-family: 'Courier New', monospace; font-size: 18px; font-weight: 600; letter-spacing: 0.05em; background-color: #f3f4f6; border: 2px solid #d1d5db; border-radius: 8px; padding: 16px; display: inline-block;"><span style="margin: 0 4px;">%s</span><span style="margin: 0 4px;">%s</span><span style="margin: 0 4px;">%s</span></div></div>`,
+		tr("email.login.otp_label"),
+		otp[0:4], otp[4:8], otp[8:12],
+	)
+
+	// Replace placeholder with actual OTP HTML
+	htmlBody = strings.ReplaceAll(htmlBody, otpPlaceholder, otpHTML)
+
 	// Generate plain text body
 	textBody, err = h.GeneratePlainText(email)
 	if err != nil {
 		return "", "", fmt.Errorf("failed to generate plain text email: %w", err)
 	}
+
+	// Format OTP for plain text: just the code with spaces
+	otpPlainText := fmt.Sprintf("%s\n\n%s %s %s\n",
+		tr("email.login.otp_label"),
+		otp[0:4], otp[4:8], otp[8:12],
+	)
+
+	// Replace placeholder in plain text too
+	textBody = strings.ReplaceAll(textBody, otpPlaceholder, otpPlainText)
 
 	return htmlBody, textBody, nil
 }

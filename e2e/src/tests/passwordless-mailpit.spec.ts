@@ -21,7 +21,7 @@ test.describe('Passwordless email flow (Mailpit)', () => {
 
     // Click the send button and wait for the confirmation page
     await Promise.all([
-      page.waitForURL(/\/_auth\/email\/send/),
+      page.waitForURL(/\/_auth\/email\/sent/),
       page.getByRole('button', { name: 'Send Login Link' }).click(),
     ]);
 
@@ -56,7 +56,7 @@ test.describe('Passwordless email flow (Mailpit)', () => {
     // Send login email
     await page.getByLabel('Email Address').fill(TEST_EMAIL);
     await Promise.all([
-      page.waitForURL(/\/_auth\/email\/send/),
+      page.waitForURL(/\/_auth\/email\/sent/),
       page.getByRole('button', { name: 'Send Login Link' }).click(),
     ]);
 

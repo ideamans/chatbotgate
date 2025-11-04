@@ -335,6 +335,71 @@
   &lt;/div&gt;
   &lt;input type="email" id="email" class="input" placeholder="you@example.com"&gt;
 &lt;/div&gt;</div>
+
+      <h3>OTP Input with Validation</h3>
+      <p style="color: var(--color-text-secondary); margin-bottom: var(--spacing-md);">
+        One-Time Password input field that validates the format (12 uppercase letters/digits).
+        The border and background turn green when a valid code is entered. Try entering: ABCD EFGH 1234
+      </p>
+      <div class="component-demo">
+        <div style="text-align: center; max-width: 20rem; margin: 0 auto;">
+          <div style="margin-bottom: var(--spacing-sm);">
+            <label class="label" style="font-size: 0.875rem;">Enter OTP Code</label>
+          </div>
+          <input
+            type="text"
+            id="catalog-otp-input"
+            class="input"
+            placeholder="XXXX XXXX XXXX"
+            maxlength="14"
+            style="text-align: center; font-family: 'Courier New', monospace; font-size: 1.125rem; font-weight: 600; letter-spacing: 0.05em; background-color: var(--color-bg-muted); border: 2px solid var(--color-border-default); transition: border-color 0.2s ease, background-color 0.2s ease;">
+        </div>
+      </div>
+      <div class="code-block">&lt;input
+  type="text"
+  class="input"
+  placeholder="XXXX XXXX XXXX"
+  maxlength="14"
+  style="text-align: center; font-family: 'Courier New', monospace; font-size: 1.125rem; font-weight: 600; letter-spacing: 0.05em; background-color: var(--color-bg-muted); border: 2px solid var(--color-border-default); transition: border-color 0.2s ease, background-color 0.2s ease;"&gt;
+
+&lt;script&gt;
+const otpInput = document.getElementById('your-otp-input');
+function validateOTP(value) {
+  const cleaned = value.replace(/[^A-Z0-9]/gi, '').toUpperCase();
+  return cleaned.length === 12 && /^[A-Z0-9]{12}$/.test(cleaned);
+}
+otpInput.addEventListener('input', function() {
+  if (validateOTP(this.value)) {
+    this.style.borderColor = 'var(--color-success)';
+    this.style.backgroundColor = 'color-mix(in srgb, var(--color-success) 10%, var(--color-bg-muted))';
+  } else {
+    this.style.borderColor = 'var(--color-border-default)';
+    this.style.backgroundColor = 'var(--color-bg-muted)';
+  }
+});
+&lt;/script&gt;</div>
+      <script>
+      // OTP validation for catalog demo
+      (function() {
+        const otpInput = document.getElementById('catalog-otp-input');
+        if (!otpInput) return;
+
+        function validateOTP(value) {
+          const cleaned = value.replace(/[^A-Z0-9]/gi, '').toUpperCase();
+          return cleaned.length === 12 && /^[A-Z0-9]{12}$/.test(cleaned);
+        }
+
+        otpInput.addEventListener('input', function() {
+          if (validateOTP(this.value)) {
+            this.style.borderColor = 'var(--color-success)';
+            this.style.backgroundColor = 'color-mix(in srgb, var(--color-success) 10%, var(--color-bg-muted))';
+          } else {
+            this.style.borderColor = 'var(--color-border-default)';
+            this.style.backgroundColor = 'var(--color-bg-muted)';
+          }
+        });
+      })();
+      </script>
     </section>
 
     <!-- Cards Section -->
@@ -607,6 +672,52 @@
               <div class="alert alert-success" style="text-align: left; margin-bottom: var(--spacing-md);">
                 If your email address is authorized, you will receive a login link shortly. Please check your inbox and click the link to log in.
               </div>
+
+              <!-- OTP Input Section -->
+              <div style="text-align: center; margin-top: var(--spacing-lg); margin-bottom: var(--spacing-lg);">
+                <div style="margin-bottom: var(--spacing-sm);">
+                  <span style="color: var(--color-text-secondary); font-size: 0.875rem;">Or enter the code from your email:</span>
+                </div>
+                <form id="demo-otp-form" style="display: flex; flex-direction: column; align-items: center; gap: var(--spacing-sm);">
+                  <input
+                    type="text"
+                    id="demo-otp-input"
+                    class="input"
+                    placeholder="XXXX XXXX XXXX"
+                    maxlength="14"
+                    style="text-align: center; font-family: 'Courier New', monospace; font-size: 1.125rem; font-weight: 600; letter-spacing: 0.05em; background-color: var(--color-bg-muted); border: 2px solid var(--color-border-default); max-width: 16rem; transition: border-color 0.2s ease, background-color 0.2s ease;">
+                  <button type="submit" class="btn btn-primary" style="max-width: 16rem; width: 100%;">
+                    Verify Code
+                  </button>
+                </form>
+              </div>
+              <script>
+              // OTP validation
+              (function() {
+                const otpInput = document.getElementById('demo-otp-input');
+                if (!otpInput) return;
+
+                function validateOTP(value) {
+                  // Remove all non-alphanumeric characters
+                  const cleaned = value.replace(/[^A-Z0-9]/gi, '').toUpperCase();
+                  // Check if exactly 12 characters of uppercase letters and digits
+                  return cleaned.length === 12 && /^[A-Z0-9]{12}$/.test(cleaned);
+                }
+
+                otpInput.addEventListener('input', function() {
+                  if (validateOTP(this.value)) {
+                    // Valid: green border and light green background
+                    this.style.borderColor = 'var(--color-success)';
+                    this.style.backgroundColor = 'color-mix(in srgb, var(--color-success) 10%, var(--color-bg-muted))';
+                  } else {
+                    // Reset to default
+                    this.style.borderColor = 'var(--color-border-default)';
+                    this.style.backgroundColor = 'var(--color-bg-muted)';
+                  }
+                });
+              })();
+              </script>
+
               <a href="#" class="btn btn-ghost" style="width: 100%; margin-top: var(--spacing-md);">
                 Back to login
               </a>
