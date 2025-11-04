@@ -144,6 +144,9 @@ email_auth:
   #   api_key: "SG.xxxxxxxxxxxxxxxxxxxx"
   #   from: "noreply@example.com"
   #   from_name: "ChatbotGate"
+  #   # Optional: Custom endpoint URL (default: https://api.sendgrid.com)
+  #   # Useful for proxies, testing, or internal infrastructure routing
+  #   # endpoint_url: "https://custom-sendgrid-proxy.example.com"
 
   # Token expiration
   token:

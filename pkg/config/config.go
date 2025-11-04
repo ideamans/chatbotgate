@@ -150,9 +150,10 @@ type SMTPConfig struct {
 
 // SendGridConfig contains SendGrid API settings
 type SendGridConfig struct {
-	APIKey   string `yaml:"api_key" json:"api_key"`
-	From     string `yaml:"from" json:"from"`
-	FromName string `yaml:"from_name" json:"from_name"`
+	APIKey      string `yaml:"api_key" json:"api_key"`
+	From        string `yaml:"from" json:"from"`
+	FromName    string `yaml:"from_name" json:"from_name"`
+	EndpointURL string `yaml:"endpoint_url" json:"endpoint_url"` // Optional custom endpoint URL (default: https://api.sendgrid.com)
 }
 
 // EmailTokenConfig contains token expiration settings
