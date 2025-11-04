@@ -30,7 +30,9 @@ func createTestConfig(serviceName string, allowedEmails []string) *config.Config
 			AuthPathPrefix: "/_auth",
 		},
 		Proxy: config.ProxyConfig{
-			Upstream: "http://localhost:8080",
+			Upstream: config.UpstreamConfig{
+				URL: "http://localhost:8080",
+			},
 		},
 		Session: config.SessionConfig{
 			CookieName:     "_test_session",
@@ -169,7 +171,7 @@ func TestSingleDomainManager_ServeHTTP(t *testing.T) {
 	defer backend.Close()
 
 	cfg := createTestConfig("Test Service", nil)
-	cfg.Proxy.Upstream = backend.URL
+	cfg.Proxy.Upstream.URL = backend.URL
 
 	sessionStore := session.NewMemoryStore(1 * time.Minute)
 	defer sessionStore.Close()

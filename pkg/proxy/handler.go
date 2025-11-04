@@ -8,33 +8,64 @@ import (
 	"net/url"
 	"strings"
 	"time"
+
+	"github.com/ideamans/chatbotgate/pkg/config"
 )
 
 // Handler is a reverse proxy handler
 type Handler struct {
 	defaultUpstream *url.URL
 	defaultProxy    *httputil.ReverseProxy
+	defaultSecret   config.SecretConfig
 	hostProxies     map[string]*httputil.ReverseProxy
+	hostSecrets     map[string]config.SecretConfig
 }
 
 // NewHandler creates a new proxy handler with a default upstream
+// Deprecated: Use NewHandlerWithConfig instead
 func NewHandler(upstreamURL string) (*Handler, error) {
-	upstream, err := url.Parse(upstreamURL)
+	upstreamConfig := config.UpstreamConfig{
+		URL: upstreamURL,
+	}
+	return NewHandlerWithConfig(upstreamConfig, nil)
+}
+
+// NewHandlerWithConfig creates a new proxy handler with upstream configuration
+func NewHandlerWithConfig(upstreamConfig config.UpstreamConfig, hosts map[string]config.UpstreamConfig) (*Handler, error) {
+	// Parse default upstream
+	upstream, err := url.Parse(upstreamConfig.URL)
 	if err != nil {
 		return nil, fmt.Errorf("invalid upstream URL: %w", err)
 	}
 
-	proxy := createReverseProxy(upstream)
+	defaultProxy := createReverseProxy(upstream, upstreamConfig.Secret)
+
+	// Parse host-specific upstreams
+	hostProxies := make(map[string]*httputil.ReverseProxy)
+	hostSecrets := make(map[string]config.SecretConfig)
+
+	if hosts != nil {
+		for host, hostConfig := range hosts {
+			hostUpstream, err := url.Parse(hostConfig.URL)
+			if err != nil {
+				return nil, fmt.Errorf("invalid upstream URL for host %s: %w", host, err)
+			}
+			hostProxies[host] = createReverseProxy(hostUpstream, hostConfig.Secret)
+			hostSecrets[host] = hostConfig.Secret
+		}
+	}
 
 	return &Handler{
 		defaultUpstream: upstream,
-		defaultProxy:    proxy,
-		hostProxies:     make(map[string]*httputil.ReverseProxy),
+		defaultProxy:    defaultProxy,
+		defaultSecret:   upstreamConfig.Secret,
+		hostProxies:     hostProxies,
+		hostSecrets:     hostSecrets,
 	}, nil
 }
 
 // createReverseProxy creates a reverse proxy with WebSocket, SSE, and streaming support
-func createReverseProxy(target *url.URL) *httputil.ReverseProxy {
+func createReverseProxy(target *url.URL, secret config.SecretConfig) *httputil.ReverseProxy {
 	proxy := httputil.NewSingleHostReverseProxy(target)
 
 	// Preserve the original Director
@@ -43,6 +74,11 @@ func createReverseProxy(target *url.URL) *httputil.ReverseProxy {
 	// Custom Director to handle headers and protocol upgrades
 	proxy.Director = func(req *http.Request) {
 		originalDirector(req)
+
+		// Add secret header if configured
+		if secret.Header != "" && secret.Value != "" {
+			req.Header.Set(secret.Header, secret.Value)
+		}
 
 		// Add X-Forwarded-* headers for backend to know original request details
 		if clientIP, _, err := net.SplitHostPort(req.RemoteAddr); err == nil {
@@ -106,30 +142,17 @@ func (bp *bufferPool) Put(b []byte) {
 }
 
 // NewHandlerWithHosts creates a new proxy handler with host-based routing
+// Deprecated: Use NewHandlerWithConfig instead
 func NewHandlerWithHosts(defaultUpstream string, hosts map[string]string) (*Handler, error) {
-	// Parse default upstream
-	upstream, err := url.Parse(defaultUpstream)
-	if err != nil {
-		return nil, fmt.Errorf("invalid default upstream URL: %w", err)
-	}
-
-	defaultProxy := createReverseProxy(upstream)
-
-	// Parse host-specific upstreams
-	hostProxies := make(map[string]*httputil.ReverseProxy)
+	// Convert old string-based hosts to UpstreamConfig
+	hostConfigs := make(map[string]config.UpstreamConfig)
 	for host, upstreamURL := range hosts {
-		hostUpstream, err := url.Parse(upstreamURL)
-		if err != nil {
-			return nil, fmt.Errorf("invalid upstream URL for host %s: %w", host, err)
+		hostConfigs[host] = config.UpstreamConfig{
+			URL: upstreamURL,
 		}
-		hostProxies[host] = createReverseProxy(hostUpstream)
 	}
 
-	return &Handler{
-		defaultUpstream: upstream,
-		defaultProxy:    defaultProxy,
-		hostProxies:     hostProxies,
-	}, nil
+	return NewHandlerWithConfig(config.UpstreamConfig{URL: defaultUpstream}, hostConfigs)
 }
 
 // ServeHTTP handles the proxy request

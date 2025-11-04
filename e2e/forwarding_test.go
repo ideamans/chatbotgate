@@ -70,7 +70,7 @@ func TestForwarding_E2E(t *testing.T) {
 	}
 
 	// Override upstream to point to test backend
-	cfg.Proxy.Upstream = backendURL
+	cfg.Proxy.Upstream.URL = backendURL
 
 	// Create logger
 	logger := logging.NewSimpleLogger("e2e", logging.LevelDebug, true)
@@ -94,7 +94,7 @@ func TestForwarding_E2E(t *testing.T) {
 	sessionStore := session.NewKVSStore(sessionKVS)
 
 	// Create proxy handler
-	proxyHandler, err := proxy.NewHandler(cfg.Proxy.Upstream)
+	proxyHandler, err := proxy.NewHandler(cfg.Proxy.Upstream.URL)
 	if err != nil {
 		t.Fatalf("Failed to create proxy handler: %v", err)
 	}
@@ -374,7 +374,7 @@ func TestCustomFieldsForwarding_E2E_Encrypted(t *testing.T) {
 	}
 
 	// Override upstream to point to test backend
-	cfg.Proxy.Upstream = backendURL
+	cfg.Proxy.Upstream.URL = backendURL
 
 	// Create logger
 	logger := logging.NewSimpleLogger("e2e", logging.LevelDebug, true)
@@ -398,7 +398,7 @@ func TestCustomFieldsForwarding_E2E_Encrypted(t *testing.T) {
 	sessionStore := session.NewKVSStore(sessionKVS)
 
 	// Create proxy handler
-	proxyHandler, err := proxy.NewHandler(cfg.Proxy.Upstream)
+	proxyHandler, err := proxy.NewHandler(cfg.Proxy.Upstream.URL)
 	if err != nil {
 		t.Fatalf("Failed to create proxy handler: %v", err)
 	}

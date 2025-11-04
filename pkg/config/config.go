@@ -67,8 +67,20 @@ func (s ServerConfig) GetCallbackURL(host string, port int) string {
 
 // ProxyConfig contains proxy settings
 type ProxyConfig struct {
-	Upstream string            `yaml:"upstream" json:"upstream"` // Default upstream (required)
-	Hosts    map[string]string `yaml:"hosts" json:"hosts"`    // Host-based routing (optional)
+	Upstream UpstreamConfig            `yaml:"upstream" json:"upstream"` // Default upstream (required)
+	Hosts    map[string]UpstreamConfig `yaml:"hosts" json:"hosts"`       // Host-based routing (optional)
+}
+
+// UpstreamConfig represents upstream server configuration with optional secret header
+type UpstreamConfig struct {
+	URL    string       `yaml:"url" json:"url"`       // Upstream URL (required)
+	Secret SecretConfig `yaml:"secret" json:"secret"` // Secret header configuration (optional)
+}
+
+// SecretConfig represents secret header configuration for upstream authentication
+type SecretConfig struct {
+	Header string `yaml:"header" json:"header"` // HTTP header name (e.g., "X-Chatbotgate-Secret")
+	Value  string `yaml:"value" json:"value"`   // Secret value to send
 }
 
 // SessionConfig contains session management settings
@@ -230,7 +242,7 @@ func (c *Config) Validate() error {
 		return ErrServiceNameRequired
 	}
 
-	if c.Proxy.Upstream == "" {
+	if c.Proxy.Upstream.URL == "" {
 		return ErrUpstreamRequired
 	}
 

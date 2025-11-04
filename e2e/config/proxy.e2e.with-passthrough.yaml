@@ -7,7 +7,8 @@ server:
   base_url: "http://localhost:4180"
 
 proxy:
-  upstream: "http://target-app:3000/"
+  upstream:
+    url: "http://target-app:3000/"
 
 session:
   cookie_name: "mop-e2e"

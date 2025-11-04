@@ -276,7 +276,7 @@ func TestDefaultFactory_CreateProxyHandler(t *testing.T) {
 	defer upstream.Close()
 
 	cfg := CreateTestConfig()
-	cfg.Proxy.Upstream = upstream.URL
+	cfg.Proxy.Upstream.URL = upstream.URL
 
 	handler, err := factory.CreateProxyHandler(cfg)
 	if err != nil {
@@ -333,7 +333,7 @@ func TestDefaultFactory_CreateMiddleware(t *testing.T) {
 	}))
 	defer upstream.Close()
 
-	cfg.Proxy.Upstream = upstream.URL
+	cfg.Proxy.Upstream.URL = upstream.URL
 	proxyHandler, err := factory.CreateProxyHandler(cfg)
 	if err != nil {
 		t.Fatalf("CreateProxyHandler failed: %v", err)

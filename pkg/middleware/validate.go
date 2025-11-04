@@ -68,14 +68,6 @@ func ValidateConfig(cfg *config.Config) ValidationErrors {
 		}
 	}
 
-	// Validate Proxy
-	if cfg.Proxy.Upstream == "" {
-		errs = append(errs, ValidationError{
-			Field:   "proxy.upstream",
-			Message: "upstream URL is required",
-		})
-	}
-
 	// Validate Session
 	if cfg.Session.CookieName == "" {
 		errs = append(errs, ValidationError{

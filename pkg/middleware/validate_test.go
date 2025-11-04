@@ -17,7 +17,9 @@ func validConfig() *config.Config {
 			AuthPathPrefix: "/_auth",
 		},
 		Proxy: config.ProxyConfig{
-			Upstream: "http://localhost:8080",
+			Upstream: config.UpstreamConfig{
+				URL: "http://localhost:8080",
+			},
 		},
 		Session: config.SessionConfig{
 			CookieName:   "_oauth2_proxy",
@@ -115,26 +117,6 @@ func TestValidateConfig_InvalidAuthPathPrefix(t *testing.T) {
 				t.Error("Expected validation error for server.auth_path_prefix")
 			}
 		})
-	}
-}
-
-func TestValidateConfig_MissingUpstream(t *testing.T) {
-	cfg := validConfig()
-	cfg.Proxy.Upstream = ""
-
-	errs := ValidateConfig(cfg)
-	if errs == nil {
-		t.Fatal("Expected validation errors, got nil")
-	}
-
-	found := false
-	for _, err := range errs {
-		if err.Field == "proxy.upstream" {
-			found = true
-		}
-	}
-	if !found {
-		t.Error("Expected validation error for proxy.upstream")
 	}
 }
 
@@ -490,7 +472,9 @@ func TestValidateConfig_MultipleErrors(t *testing.T) {
 			Name: "", // Missing
 		},
 		Proxy: config.ProxyConfig{
-			Upstream: "", // Missing
+			Upstream: config.UpstreamConfig{
+				URL: "", // Missing
+			},
 		},
 		Session: config.SessionConfig{
 			CookieName:   "_oauth2_proxy",
@@ -507,15 +491,14 @@ func TestValidateConfig_MultipleErrors(t *testing.T) {
 		t.Fatal("Expected validation errors, got nil")
 	}
 
-	// Should have multiple errors
-	if len(errs) < 4 {
-		t.Errorf("Expected at least 4 validation errors, got %d", len(errs))
+	// Should have multiple errors (excluding proxy.upstream which is validated by config.Validate())
+	if len(errs) < 3 {
+		t.Errorf("Expected at least 3 validation errors, got %d", len(errs))
 	}
 
 	// Check that all expected errors are present
 	expectedFields := []string{
 		"service.name",
-		"proxy.upstream",
 		"session.cookie_secret",
 		"session.cookie_expire",
 	}
