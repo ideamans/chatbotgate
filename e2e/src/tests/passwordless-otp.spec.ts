@@ -121,8 +121,12 @@ test.describe('Passwordless OTP flow', () => {
     // Should NOT turn green (validation fails)
     await expect(otpInput).not.toHaveCSS('border-color', /rgb\(16, 185, 129\)/);
 
-    // Try to submit anyway
-    await page.getByRole('button', { name: 'Verify Code' }).click();
+    // Button should be disabled (client-side validation prevents submission)
+    const verifyButton = page.getByRole('button', { name: 'Verify Code' });
+    await expect(verifyButton).toBeDisabled();
+
+    // Try to submit anyway by forcing the click (to test server-side validation)
+    await verifyButton.click({ force: true });
 
     // Should redirect back to email sent page with error
     await expect(page).toHaveURL(/\/_auth\/email\/sent/);
