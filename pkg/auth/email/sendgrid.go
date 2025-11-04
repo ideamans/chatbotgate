@@ -17,6 +17,12 @@ type SendGridSender struct {
 // NewSendGridSender creates a new SendGrid email sender
 func NewSendGridSender(cfg config.SendGridConfig) *SendGridSender {
 	client := sendgrid.NewSendClient(cfg.APIKey)
+
+	// Set custom endpoint URL if configured
+	if cfg.EndpointURL != "" {
+		client.BaseURL = cfg.EndpointURL
+	}
+
 	return &SendGridSender{
 		config: cfg,
 		client: client,

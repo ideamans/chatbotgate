@@ -6,7 +6,8 @@ server:
   auth_path_prefix: "/_auth"
 
 proxy:
-  upstream: "http://target-app:3000/"
+  upstream:
+    url: "http://target-app:3000/"
 
 session:
   cookie_name: "mop-e2e"

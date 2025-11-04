@@ -24,7 +24,8 @@ server:
   auth_path_prefix: "/_auth"
 
 proxy:
-  upstream: "http://localhost:9090"
+  upstream:
+    url: "http://localhost:9090"
 
 session:
   cookie_name: "_test_cookie"
@@ -58,7 +59,7 @@ logging:
 				if cfg.Service.Name != "Test Service" {
 					t.Errorf("Service.Name = %s, want Test Service", cfg.Service.Name)
 				}
-				if cfg.Proxy.Upstream != "http://localhost:9090" {
+				if cfg.Proxy.Upstream.URL != "http://localhost:9090" {
 					t.Errorf("Proxy.Upstream = %s, want http://localhost:9090", cfg.Proxy.Upstream)
 				}
 				if cfg.Session.CookieName != "_test_cookie" {
@@ -79,7 +80,8 @@ server:
   auth_path_prefix: "/_auth"
 
 proxy:
-  upstream: "http://localhost:8080"
+  upstream:
+    url: "http://localhost:8080"
 
 session:
   cookie_secret: "this-is-a-very-long-secret-key-for-testing-purposes"
@@ -120,7 +122,8 @@ server:
   auth_path_prefix: "/_auth"
 
 proxy:
-  upstream: "http://localhost:8080"
+  upstream:
+    url: "http://localhost:8080"
 
 session:
   cookie_secret: "this-is-a-very-long-secret-key-for-testing-purposes"
@@ -193,7 +196,7 @@ func TestFileLoader_Load_JSON(t *testing.T) {
     "auth_path_prefix": "/_auth"
   },
   "proxy": {
-    "upstream": "http://localhost:9090"
+    "upstream": {"url": "http://localhost:9090"}
   },
   "session": {
     "cookie_name": "_test_cookie",
@@ -229,7 +232,7 @@ func TestFileLoader_Load_JSON(t *testing.T) {
 				if cfg.Service.Name != "Test Service" {
 					t.Errorf("Service.Name = %s, want Test Service", cfg.Service.Name)
 				}
-				if cfg.Proxy.Upstream != "http://localhost:9090" {
+				if cfg.Proxy.Upstream.URL != "http://localhost:9090" {
 					t.Errorf("Proxy.Upstream = %s, want http://localhost:9090", cfg.Proxy.Upstream)
 				}
 				if cfg.Session.CookieName != "_test_cookie" {
@@ -245,7 +248,7 @@ func TestFileLoader_Load_JSON(t *testing.T) {
 			content: `{
   "service": {"name": "Test Service"},
   "server": {"auth_path_prefix": "/_auth"},
-  "proxy": {"upstream": "http://localhost:8080"},
+  "proxy": {"upstream": {"url": "http://localhost:8080"}},
   "session": {
     "cookie_secret": "this-is-a-very-long-secret-key-for-testing-purposes"
   },

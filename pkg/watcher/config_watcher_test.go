@@ -43,7 +43,8 @@ server:
   auth_path_prefix: "/_auth"
 
 proxy:
-  upstream: "http://localhost:8080"
+  upstream:
+    url: "http://localhost:8080"
 
 session:
   cookie_name: "_test_session"
@@ -94,7 +95,8 @@ server:
   auth_path_prefix: "/_auth"
 
 proxy:
-  upstream: "http://localhost:8080"
+  upstream:
+    url: "http://localhost:8080"
 
 session:
   cookie_name: "_test_session"

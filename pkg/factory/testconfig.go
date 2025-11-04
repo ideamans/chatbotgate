@@ -24,7 +24,9 @@ func CreateTestConfig() *config.Config {
 			CookieSameSite: "lax",
 		},
 		Proxy: config.ProxyConfig{
-			Upstream: "http://localhost:8080",
+			Upstream: config.UpstreamConfig{
+				URL: "http://localhost:8080",
+			},
 		},
 		OAuth2: config.OAuth2Config{
 			Providers: []config.OAuth2Provider{},

@@ -353,21 +353,28 @@ func (f *DefaultFactory) CreateSessionStore(kvsStore kvs.Store) session.Store {
 
 // CreateProxyHandler creates a proxy handler from configuration
 func (f *DefaultFactory) CreateProxyHandler(cfg *config.Config) (*proxy.Handler, error) {
-	if len(cfg.Proxy.Hosts) > 0 {
-		handler, err := proxy.NewHandlerWithHosts(cfg.Proxy.Upstream, cfg.Proxy.Hosts)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create proxy handler with hosts: %w", err)
-		}
-		f.logger.Debug("Proxy handler initialized with host routing",
-			"default_upstream", cfg.Proxy.Upstream,
-			"hosts", len(cfg.Proxy.Hosts))
-		return handler, nil
-	}
-
-	handler, err := proxy.NewHandler(cfg.Proxy.Upstream)
+	handler, err := proxy.NewHandlerWithConfig(cfg.Proxy.Upstream, cfg.Proxy.Hosts)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create proxy handler: %w", err)
 	}
-	f.logger.Debug("Proxy handler initialized", "upstream", cfg.Proxy.Upstream)
+
+	if len(cfg.Proxy.Hosts) > 0 {
+		f.logger.Debug("Proxy handler initialized with host routing",
+			"default_upstream", cfg.Proxy.Upstream.URL,
+			"hosts", len(cfg.Proxy.Hosts))
+	} else {
+		f.logger.Debug("Proxy handler initialized", "upstream", cfg.Proxy.Upstream.URL)
+	}
+
+	// Log secret header configuration (without exposing the actual secret value)
+	if cfg.Proxy.Upstream.Secret.Header != "" {
+		f.logger.Debug("Upstream secret header configured", "header", cfg.Proxy.Upstream.Secret.Header)
+	}
+	for host, hostConfig := range cfg.Proxy.Hosts {
+		if hostConfig.Secret.Header != "" {
+			f.logger.Debug("Host-specific secret header configured", "host", host, "header", hostConfig.Secret.Header)
+		}
+	}
+
 	return handler, nil
 }

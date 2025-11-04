@@ -8,7 +8,8 @@ server:
 
 # Proxy to test backend server
 proxy:
-  upstream: "http://localhost:8083"
+  upstream:
+    url: "http://localhost:8083"
 
 # Session configuration
 session:

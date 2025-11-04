@@ -96,7 +96,9 @@ func setupTestServer(t *testing.T) (*Server, *session.MemoryStore, func()) {
 			AuthPathPrefix: "/_auth",
 		},
 		Proxy: config.ProxyConfig{
-			Upstream: backend.URL, // Use real backend URL
+			Upstream: config.UpstreamConfig{
+			URL: backend.URL, // Use real backend URL
+		},
 		},
 		Session: config.SessionConfig{
 			CookieName:     "_test_session",
@@ -129,7 +131,7 @@ func setupTestServer(t *testing.T) (*Server, *session.MemoryStore, func()) {
 
 	authzChecker := &MockAuthzChecker{allowed: true}
 
-	proxyHandler, err := proxy.NewHandler(cfg.Proxy.Upstream)
+	proxyHandler, err := proxy.NewHandler(cfg.Proxy.Upstream.URL)
 	if err != nil {
 		t.Fatalf("Failed to create proxy handler: %v", err)
 	}
@@ -547,7 +549,9 @@ func setupTestServerWithEmail(t *testing.T) (*Server, *session.MemoryStore) {
 			AuthPathPrefix: "/_auth",
 		},
 		Proxy: config.ProxyConfig{
-			Upstream: "http://backend.test",
+			Upstream: config.UpstreamConfig{
+				URL: "http://backend.test",
+			},
 		},
 		Session: config.SessionConfig{
 			CookieName:     "_test_session",
@@ -606,7 +610,7 @@ func setupTestServerWithEmail(t *testing.T) (*Server, *session.MemoryStore) {
 	// Replace sender with mock
 	emailHandler.SetSender(&email.MockSender{})
 
-	proxyHandler, err := proxy.NewHandler(cfg.Proxy.Upstream)
+	proxyHandler, err := proxy.NewHandler(cfg.Proxy.Upstream.URL)
 	if err != nil {
 		t.Fatalf("Failed to create proxy handler: %v", err)
 	}
@@ -681,7 +685,9 @@ func TestServer_Authorization_WithWhitelist_AuthorizedEmail(t *testing.T) {
 			AuthPathPrefix: "/_auth",
 		},
 		Proxy: config.ProxyConfig{
-			Upstream: backend.URL,
+			Upstream: config.UpstreamConfig{
+				URL: backend.URL,
+			},
 		},
 		Session: config.SessionConfig{
 			CookieName:     "_oauth2_proxy",
@@ -712,7 +718,7 @@ func TestServer_Authorization_WithWhitelist_AuthorizedEmail(t *testing.T) {
 	oauthManager := oauth2.NewManager()
 	authzChecker := authz.NewEmailChecker(cfg.Authorization)
 
-	proxyHandler, err := proxy.NewHandler(cfg.Proxy.Upstream)
+	proxyHandler, err := proxy.NewHandler(cfg.Proxy.Upstream.URL)
 	if err != nil {
 		t.Fatalf("Failed to create proxy handler: %v", err)
 	}
