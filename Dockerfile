@@ -38,8 +38,8 @@ WORKDIR /app
 # Copy binary from builder
 COPY --from=builder /build/chatbotgate /app/chatbotgate
 
-# Copy water.css (if exists)
-COPY --from=builder /build/web /app/web
+# Note: Web assets are embedded in the binary via Go embed
+# No need to copy /build/web directory
 
 # Create config directory
 RUN mkdir -p /app/config && \
