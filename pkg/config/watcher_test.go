@@ -17,9 +17,6 @@ service:
 server:
   host: "localhost"
   port: 4180
-proxy:
-  upstream:
-    url: "http://localhost:8080"
 session:
   cookie_name: "_test"
   cookie_secret: "test-secret-key-with-32-characters"
@@ -65,9 +62,6 @@ service:
 server:
   host: "localhost"
   port: 4180
-proxy:
-  upstream:
-    url: "http://localhost:8080"
 session:
   cookie_name: "_test"
   cookie_secret: "test-secret-key-with-32-characters"
@@ -115,9 +109,6 @@ service:
 server:
   host: "localhost"
   port: 4180
-proxy:
-  upstream:
-    url: "http://localhost:9090"
 session:
   cookie_name: "_test"
   cookie_secret: "test-secret-key-with-32-characters"
@@ -144,9 +135,6 @@ logging:
 		if cfg.Service.Name != "Updated Service" {
 			t.Errorf("Service name = %s, want Updated Service", cfg.Service.Name)
 		}
-		if cfg.Proxy.Upstream.URL != "http://localhost:9090" {
-			t.Errorf("Proxy upstream = %s, want http://localhost:9090", cfg.Proxy.Upstream)
-		}
 		if cfg.Logging.Level != "debug" {
 			t.Errorf("Logging level = %s, want debug", cfg.Logging.Level)
 		}
@@ -165,9 +153,6 @@ service:
 server:
   host: "localhost"
   port: 4180
-proxy:
-  upstream:
-    url: "http://localhost:8080"
 session:
   cookie_name: "_test"
   cookie_secret: "test-secret-key-with-32-characters"

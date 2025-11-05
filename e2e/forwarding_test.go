@@ -14,6 +14,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ideamans/chatbotgate/pkg/config"
 	"github.com/ideamans/chatbotgate/pkg/factory"
 	"github.com/ideamans/chatbotgate/pkg/forwarding"
 	"github.com/ideamans/chatbotgate/pkg/kvs"
@@ -61,13 +62,12 @@ func TestForwarding_E2E(t *testing.T) {
 
 	// Load test configuration
 	configPath := filepath.Join("testdata", "config_forwarding.yaml")
-	cfg, err := proxyserver.LoadConfig(configPath)
+	cfg, err := config.NewFileLoader(configPath).Load()
 	if err != nil {
 		t.Fatalf("Failed to load config: %v", err)
 	}
 
-	// Override upstream to point to test backend
-	cfg.Proxy.Upstream.URL = backendURL
+	backendURL = backendURL
 
 	// Create logger
 	logger := logging.NewSimpleLogger("e2e", logging.LevelDebug, true)
@@ -91,7 +91,7 @@ func TestForwarding_E2E(t *testing.T) {
 	sessionStore := sessionKVS
 
 	// Create proxy handler
-	proxyHandler, err := proxyserver.NewHandler(cfg.Proxy.Upstream.URL)
+	proxyHandler, err := proxyserver.NewHandler(backendURL)
 	if err != nil {
 		t.Fatalf("Failed to create proxy handler: %v", err)
 	}
@@ -358,13 +358,12 @@ func TestCustomFieldsForwarding_E2E_Encrypted(t *testing.T) {
 
 	// Load test configuration with encryption enabled
 	configPath := filepath.Join("testdata", "config_custom_forwarding_encrypted.yaml")
-	cfg, err := proxyserver.LoadConfig(configPath)
+	cfg, err := config.NewFileLoader(configPath).Load()
 	if err != nil {
 		t.Fatalf("Failed to load config: %v", err)
 	}
 
-	// Override upstream to point to test backend
-	cfg.Proxy.Upstream.URL = backendURL
+	backendURL = backendURL
 
 	// Create logger
 	logger := logging.NewSimpleLogger("e2e", logging.LevelDebug, true)
@@ -388,7 +387,7 @@ func TestCustomFieldsForwarding_E2E_Encrypted(t *testing.T) {
 	sessionStore := sessionKVS
 
 	// Create proxy handler
-	proxyHandler, err := proxyserver.NewHandler(cfg.Proxy.Upstream.URL)
+	proxyHandler, err := proxyserver.NewHandler(backendURL)
 	if err != nil {
 		t.Fatalf("Failed to create proxy handler: %v", err)
 	}

@@ -8,30 +8,28 @@ import (
 	"net/url"
 	"strings"
 	"time"
-
-	"github.com/ideamans/chatbotgate/pkg/config"
 )
 
 // Handler is a reverse proxy handler
 type Handler struct {
 	defaultUpstream *url.URL
 	defaultProxy    *httputil.ReverseProxy
-	defaultSecret   config.SecretConfig
+	defaultSecret   SecretConfig
 	hostProxies     map[string]*httputil.ReverseProxy
-	hostSecrets     map[string]config.SecretConfig
+	hostSecrets     map[string]SecretConfig
 }
 
 // NewHandler creates a new proxy handler with a default upstream
 // Deprecated: Use NewHandlerWithConfig instead
 func NewHandler(upstreamURL string) (*Handler, error) {
-	upstreamConfig := config.UpstreamConfig{
+	upstreamConfig := UpstreamConfig{
 		URL: upstreamURL,
 	}
 	return NewHandlerWithConfig(upstreamConfig, nil)
 }
 
 // NewHandlerWithConfig creates a new proxy handler with upstream configuration
-func NewHandlerWithConfig(upstreamConfig config.UpstreamConfig, hosts map[string]config.UpstreamConfig) (*Handler, error) {
+func NewHandlerWithConfig(upstreamConfig UpstreamConfig, hosts map[string]UpstreamConfig) (*Handler, error) {
 	// Parse default upstream
 	upstream, err := url.Parse(upstreamConfig.URL)
 	if err != nil {
@@ -42,7 +40,7 @@ func NewHandlerWithConfig(upstreamConfig config.UpstreamConfig, hosts map[string
 
 	// Parse host-specific upstreams
 	hostProxies := make(map[string]*httputil.ReverseProxy)
-	hostSecrets := make(map[string]config.SecretConfig)
+	hostSecrets := make(map[string]SecretConfig)
 
 	if hosts != nil {
 		for host, hostConfig := range hosts {
@@ -65,7 +63,7 @@ func NewHandlerWithConfig(upstreamConfig config.UpstreamConfig, hosts map[string
 }
 
 // createReverseProxy creates a reverse proxy with WebSocket, SSE, and streaming support
-func createReverseProxy(target *url.URL, secret config.SecretConfig) *httputil.ReverseProxy {
+func createReverseProxy(target *url.URL, secret SecretConfig) *httputil.ReverseProxy {
 	proxy := httputil.NewSingleHostReverseProxy(target)
 
 	// Preserve the original Director
@@ -145,14 +143,14 @@ func (bp *bufferPool) Put(b []byte) {
 // Deprecated: Use NewHandlerWithConfig instead
 func NewHandlerWithHosts(defaultUpstream string, hosts map[string]string) (*Handler, error) {
 	// Convert old string-based hosts to UpstreamConfig
-	hostConfigs := make(map[string]config.UpstreamConfig)
+	hostConfigs := make(map[string]UpstreamConfig)
 	for host, upstreamURL := range hosts {
-		hostConfigs[host] = config.UpstreamConfig{
+		hostConfigs[host] = UpstreamConfig{
 			URL: upstreamURL,
 		}
 	}
 
-	return NewHandlerWithConfig(config.UpstreamConfig{URL: defaultUpstream}, hostConfigs)
+	return NewHandlerWithConfig(UpstreamConfig{URL: defaultUpstream}, hostConfigs)
 }
 
 // ServeHTTP handles the proxy request

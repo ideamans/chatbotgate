@@ -297,7 +297,6 @@ func TestDefaultFactory_CreateMiddleware(t *testing.T) {
 	}))
 	defer upstream.Close()
 
-	cfg.Proxy.Upstream.URL = upstream.URL
 	// Create a simple mock proxy handler for testing
 	proxyHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)

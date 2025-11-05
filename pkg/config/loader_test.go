@@ -23,9 +23,6 @@ service:
 server:
   auth_path_prefix: "/_auth"
 
-proxy:
-  upstream:
-    url: "http://localhost:9090"
 
 session:
   cookie_name: "_test_cookie"
@@ -59,9 +56,6 @@ logging:
 				if cfg.Service.Name != "Test Service" {
 					t.Errorf("Service.Name = %s, want Test Service", cfg.Service.Name)
 				}
-				if cfg.Proxy.Upstream.URL != "http://localhost:9090" {
-					t.Errorf("Proxy.Upstream = %s, want http://localhost:9090", cfg.Proxy.Upstream)
-				}
 				if cfg.Session.CookieName != "_test_cookie" {
 					t.Errorf("Session.CookieName = %s, want _test_cookie", cfg.Session.CookieName)
 				}
@@ -79,9 +73,6 @@ service:
 server:
   auth_path_prefix: "/_auth"
 
-proxy:
-  upstream:
-    url: "http://localhost:8080"
 
 session:
   cookie_secret: "this-is-a-very-long-secret-key-for-testing-purposes"
@@ -121,9 +112,6 @@ this is not valid yaml: [
 server:
   auth_path_prefix: "/_auth"
 
-proxy:
-  upstream:
-    url: "http://localhost:8080"
 
 session:
   cookie_secret: "this-is-a-very-long-secret-key-for-testing-purposes"
@@ -231,9 +219,6 @@ func TestFileLoader_Load_JSON(t *testing.T) {
 			validate: func(t *testing.T, cfg *Config) {
 				if cfg.Service.Name != "Test Service" {
 					t.Errorf("Service.Name = %s, want Test Service", cfg.Service.Name)
-				}
-				if cfg.Proxy.Upstream.URL != "http://localhost:9090" {
-					t.Errorf("Proxy.Upstream = %s, want http://localhost:9090", cfg.Proxy.Upstream)
 				}
 				if cfg.Session.CookieName != "_test_cookie" {
 					t.Errorf("Session.CookieName = %s, want _test_cookie", cfg.Session.CookieName)

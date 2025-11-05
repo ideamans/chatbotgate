@@ -21,9 +21,6 @@ func TestConfig_Validate(t *testing.T) {
 				Server: ServerConfig{
 					AuthPathPrefix: "/_auth",
 				},
-				Proxy: ProxyConfig{
-					Upstream: UpstreamConfig{URL: "http://localhost:8080"},
-				},
 				Session: SessionConfig{
 					CookieSecret: "this-is-a-secret-key-with-32-characters",
 				},
@@ -47,9 +44,6 @@ func TestConfig_Validate(t *testing.T) {
 					Name: "",
 				},
 				Server: ServerConfig{},
-				Proxy: ProxyConfig{
-					Upstream: UpstreamConfig{URL: "http://localhost:8080"},
-				},
 				Session: SessionConfig{
 					CookieSecret: "this-is-a-secret-key-with-32-characters",
 				},
@@ -62,36 +56,12 @@ func TestConfig_Validate(t *testing.T) {
 			wantErr: ErrServiceNameRequired,
 		},
 		{
-			name: "missing upstream",
-			config: &Config{
-				Service: ServiceConfig{
-					Name: "Test",
-				},
-				Server: ServerConfig{},
-				Proxy: ProxyConfig{
-					Upstream: UpstreamConfig{URL: ""},
-				},
-				Session: SessionConfig{
-					CookieSecret: "this-is-a-secret-key-with-32-characters",
-				},
-				OAuth2: OAuth2Config{
-					Providers: []OAuth2Provider{
-						{},
-					},
-				},
-			},
-			wantErr: ErrUpstreamRequired,
-		},
-		{
 			name: "cookie secret too short",
 			config: &Config{
 				Service: ServiceConfig{
 					Name: "Test",
 				},
 				Server: ServerConfig{},
-				Proxy: ProxyConfig{
-					Upstream: UpstreamConfig{URL: "http://localhost:8080"},
-				},
 				Session: SessionConfig{
 					CookieSecret: "short",
 				},
@@ -110,9 +80,6 @@ func TestConfig_Validate(t *testing.T) {
 					Name: "Test",
 				},
 				Server: ServerConfig{},
-				Proxy: ProxyConfig{
-					Upstream: UpstreamConfig{URL: "http://localhost:8080"},
-				},
 				Session: SessionConfig{
 					CookieSecret: "this-is-a-secret-key-with-32-characters",
 				},
@@ -140,7 +107,6 @@ func TestConfig_ValidateForwarding(t *testing.T) {
 	baseConfig := func() *Config {
 		return &Config{
 			Service: ServiceConfig{Name: "Test Service"},
-			Proxy:   ProxyConfig{Upstream: UpstreamConfig{URL: "http://localhost:8080"}},
 			Session: SessionConfig{CookieSecret: "this-is-a-secret-key-with-32-characters"},
 			OAuth2: OAuth2Config{
 				Providers: []OAuth2Provider{{}},

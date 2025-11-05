@@ -12,26 +12,34 @@ import (
 
 // Server represents the proxy server with middleware
 type Server struct {
-	cfg     *config.Config
-	handler http.Handler
-	logger  logging.Logger
-	host    string
-	port    int
+	middlewareCfg *config.Config
+	proxyCfg      *ProxyConfig
+	handler       http.Handler
+	logger        logging.Logger
+	host          string
+	port          int
 }
 
 // New creates a new Server from configuration file
+// The config file should contain both middleware and proxy configurations
 func New(configPath string, host string, port int, logger logging.Logger) (*Server, error) {
-	// Load configuration
-	cfg, err := LoadConfig(configPath)
+	// Load middleware configuration
+	middlewareCfg, err := config.NewFileLoader(configPath).Load()
 	if err != nil {
-		return nil, fmt.Errorf("failed to load config: %w", err)
+		return nil, fmt.Errorf("failed to load middleware config: %w", err)
 	}
 
-	return NewFromConfig(cfg, host, port, logger)
+	// Load proxy configuration
+	proxyCfg, err := LoadProxyConfig(configPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load proxy config: %w", err)
+	}
+
+	return NewFromConfigs(middlewareCfg, proxyCfg, host, port, logger)
 }
 
-// NewFromConfig creates a new Server from a Config object
-func NewFromConfig(cfg *config.Config, host string, port int, logger logging.Logger) (*Server, error) {
+// NewFromConfigs creates a new Server from both middleware and proxy Config objects
+func NewFromConfigs(middlewareCfg *config.Config, proxyCfg *ProxyConfig, host string, port int, logger logging.Logger) (*Server, error) {
 	if logger == nil {
 		logger = logging.NewSimpleLogger("proxyserver", logging.LevelInfo, true)
 	}
@@ -40,7 +48,7 @@ func NewFromConfig(cfg *config.Config, host string, port int, logger logging.Log
 	f := factory.NewDefaultFactory(host, port, logger)
 
 	// Create KVS stores
-	sessionKVS, tokenKVS, rateLimitKVS, err := f.CreateKVSStores(cfg)
+	sessionKVS, tokenKVS, rateLimitKVS, err := f.CreateKVSStores(middlewareCfg)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create KVS stores: %w", err)
 	}
@@ -49,14 +57,14 @@ func NewFromConfig(cfg *config.Config, host string, port int, logger logging.Log
 	sessionStore := f.CreateSessionStore(sessionKVS)
 
 	// Create proxy handler directly (not via factory)
-	proxyHandler, err := NewHandlerWithConfig(cfg.Proxy.Upstream, cfg.Proxy.Hosts)
+	proxyHandler, err := NewHandlerWithConfig(proxyCfg.Proxy.Upstream, proxyCfg.Proxy.Hosts)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create proxy handler: %w", err)
 	}
-	logger.Debug("Proxy handler initialized", "upstream", cfg.Proxy.Upstream.URL)
+	logger.Debug("Proxy handler initialized", "upstream", proxyCfg.Proxy.Upstream.URL)
 
 	// Build middleware using factory
-	middleware, err := f.CreateMiddleware(cfg, sessionStore, proxyHandler, logger)
+	middleware, err := f.CreateMiddleware(middlewareCfg, sessionStore, proxyHandler, logger)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create middleware: %w", err)
 	}
@@ -67,18 +75,19 @@ func NewFromConfig(cfg *config.Config, host string, port int, logger logging.Log
 	_ = rateLimitKVS
 
 	return &Server{
-		cfg:     cfg,
-		handler: middleware,
-		logger:  logger,
-		host:    host,
-		port:    port,
+		middlewareCfg: middlewareCfg,
+		proxyCfg:      proxyCfg,
+		handler:       middleware,
+		logger:        logger,
+		host:          host,
+		port:          port,
 	}, nil
 }
 
 // Start starts the HTTP server
 func (s *Server) Start(ctx context.Context) error {
 	addr := fmt.Sprintf("%s:%d", s.host, s.port)
-	s.logger.Info("Starting server", "addr", addr, "upstream", s.cfg.Proxy.Upstream.URL)
+	s.logger.Info("Starting server", "addr", addr, "upstream", s.proxyCfg.Proxy.Upstream.URL)
 
 	server := &http.Server{
 		Addr:    addr,

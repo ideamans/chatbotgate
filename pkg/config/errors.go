@@ -6,9 +6,6 @@ var (
 	// ErrServiceNameRequired is returned when service name is not provided
 	ErrServiceNameRequired = errors.New("service name is required")
 
-	// ErrUpstreamRequired is returned when upstream is not provided
-	ErrUpstreamRequired = errors.New("proxy upstream is required")
-
 	// ErrCookieSecretRequired is returned when cookie secret is not provided
 	ErrCookieSecretRequired = errors.New("cookie secret is required")
 

@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 
+	"github.com/ideamans/chatbotgate/pkg/config"
 	"github.com/ideamans/chatbotgate/pkg/proxyserver"
 	"github.com/spf13/cobra"
 )
@@ -32,10 +33,16 @@ func init() {
 func runTestConfig(cmd *cobra.Command, args []string) error {
 	fmt.Printf("Testing configuration file: %s\n", cfgFile)
 
-	// Load configuration
-	cfg, err := proxyserver.LoadConfig(cfgFile)
+	// Load middleware configuration
+	middlewareCfg, err := config.NewFileLoader(cfgFile).Load()
 	if err != nil {
-		return fmt.Errorf("failed to load configuration: %w", err)
+		return fmt.Errorf("failed to load middleware configuration: %w", err)
+	}
+
+	// Load proxy configuration
+	proxyCfg, err := proxyserver.LoadProxyConfig(cfgFile)
+	if err != nil {
+		return fmt.Errorf("failed to load proxy configuration: %w", err)
 	}
 
 	fmt.Println("✓ Configuration file loaded successfully")
@@ -43,34 +50,34 @@ func runTestConfig(cmd *cobra.Command, args []string) error {
 
 	// Print summary
 	fmt.Println("\nConfiguration Summary:")
-	fmt.Printf("  Service Name: %s\n", cfg.Service.Name)
-	fmt.Printf("  Upstream: %s\n", cfg.Proxy.Upstream)
+	fmt.Printf("  Service Name: %s\n", middlewareCfg.Service.Name)
+	fmt.Printf("  Upstream: %s\n", proxyCfg.Proxy.Upstream.URL)
 
 	// Count available OAuth2 providers (not disabled)
 	availableProviders := 0
-	for _, p := range cfg.OAuth2.Providers {
+	for _, p := range middlewareCfg.OAuth2.Providers {
 		if !p.Disabled {
 			availableProviders++
 		}
 	}
 	fmt.Printf("  OAuth2 Providers: %d available\n", availableProviders)
 
-	if cfg.EmailAuth.Enabled {
-		fmt.Printf("  Email Auth: enabled (%s)\n", cfg.EmailAuth.SenderType)
+	if middlewareCfg.EmailAuth.Enabled {
+		fmt.Printf("  Email Auth: enabled (%s)\n", middlewareCfg.EmailAuth.SenderType)
 	} else {
 		fmt.Println("  Email Auth: disabled")
 	}
 
 	// KVS configuration
-	fmt.Printf("  Default KVS: %s\n", cfg.KVS.Default.Type)
-	if cfg.KVS.Session != nil {
-		fmt.Printf("  Session KVS: %s (dedicated)\n", cfg.KVS.Session.Type)
+	fmt.Printf("  Default KVS: %s\n", middlewareCfg.KVS.Default.Type)
+	if middlewareCfg.KVS.Session != nil {
+		fmt.Printf("  Session KVS: %s (dedicated)\n", middlewareCfg.KVS.Session.Type)
 	} else {
-		fmt.Printf("  Session KVS: %s (shared with namespace: %s)\n", cfg.KVS.Default.Type, cfg.KVS.Namespaces.Session)
+		fmt.Printf("  Session KVS: %s (shared with namespace: %s)\n", middlewareCfg.KVS.Default.Type, middlewareCfg.KVS.Namespaces.Session)
 	}
 
 	// Authorization
-	allowedCount := len(cfg.Authorization.Allowed)
+	allowedCount := len(middlewareCfg.Authorization.Allowed)
 	if allowedCount > 0 {
 		fmt.Printf("  Allowed Users/Domains: %d entries\n", allowedCount)
 	} else {

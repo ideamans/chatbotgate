@@ -11,7 +11,6 @@ import (
 type Config struct {
 	Service       ServiceConfig       `yaml:"service" json:"service"`
 	Server        ServerConfig        `yaml:"server" json:"server"`
-	Proxy         ProxyConfig         `yaml:"proxy" json:"proxy"`
 	Session       SessionConfig       `yaml:"session" json:"session"`
 	OAuth2        OAuth2Config        `yaml:"oauth2" json:"oauth2"`
 	EmailAuth     EmailAuthConfig     `yaml:"email_auth" json:"email_auth"`
@@ -63,24 +62,6 @@ func (s ServerConfig) GetCallbackURL(host string, port int) string {
 
 	prefix := s.GetAuthPathPrefix()
 	return baseURL + prefix + "/oauth2/callback"
-}
-
-// ProxyConfig contains proxy settings
-type ProxyConfig struct {
-	Upstream UpstreamConfig            `yaml:"upstream" json:"upstream"` // Default upstream (required)
-	Hosts    map[string]UpstreamConfig `yaml:"hosts" json:"hosts"`       // Host-based routing (optional)
-}
-
-// UpstreamConfig represents upstream server configuration with optional secret header
-type UpstreamConfig struct {
-	URL    string       `yaml:"url" json:"url"`       // Upstream URL (required)
-	Secret SecretConfig `yaml:"secret" json:"secret"` // Secret header configuration (optional)
-}
-
-// SecretConfig represents secret header configuration for upstream authentication
-type SecretConfig struct {
-	Header string `yaml:"header" json:"header"` // HTTP header name (e.g., "X-Chatbotgate-Secret")
-	Value  string `yaml:"value" json:"value"`   // Secret value to send
 }
 
 // SessionConfig contains session management settings
@@ -242,9 +223,6 @@ func (c *Config) Validate() error {
 		return ErrServiceNameRequired
 	}
 
-	if c.Proxy.Upstream.URL == "" {
-		return ErrUpstreamRequired
-	}
 
 	if c.Session.CookieSecret == "" {
 		return ErrCookieSecretRequired

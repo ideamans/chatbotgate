@@ -16,11 +16,6 @@ func validConfig() *config.Config {
 		Server: config.ServerConfig{
 			AuthPathPrefix: "/_auth",
 		},
-		Proxy: config.ProxyConfig{
-			Upstream: config.UpstreamConfig{
-				URL: "http://localhost:8080",
-			},
-		},
 		Session: config.SessionConfig{
 			CookieName:   "_oauth2_proxy",
 			CookieSecret: "this-is-a-very-long-secret-key-with-at-least-32-characters",
@@ -470,11 +465,6 @@ func TestValidateConfig_MultipleErrors(t *testing.T) {
 	cfg := &config.Config{
 		Service: config.ServiceConfig{
 			Name: "", // Missing
-		},
-		Proxy: config.ProxyConfig{
-			Upstream: config.UpstreamConfig{
-				URL: "", // Missing
-			},
 		},
 		Session: config.SessionConfig{
 			CookieName:   "_oauth2_proxy",

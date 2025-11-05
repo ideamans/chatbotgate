@@ -9,10 +9,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ideamans/chatbotgate/pkg/config"
 	"github.com/ideamans/chatbotgate/pkg/logging"
 )
 
-func TestLoadConfig(t *testing.T) {
+func TestLoadProxyConfig(t *testing.T) {
 	tests := []struct {
 		name    string
 		setup   func() (string, func())
@@ -96,13 +97,13 @@ logging:
 			path, cleanup := tt.setup()
 			defer cleanup()
 
-			cfg, err := LoadConfig(path)
+			cfg, err := LoadProxyConfig(path)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("LoadConfig() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("LoadProxyConfig() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if !tt.wantErr && cfg == nil {
-				t.Error("LoadConfig() returned nil config without error")
+				t.Error("LoadProxyConfig() returned nil config without error")
 			}
 		})
 	}
@@ -182,7 +183,7 @@ logging:
 	})
 }
 
-func TestNewFromConfig(t *testing.T) {
+func TestNewFromConfigs(t *testing.T) {
 	logger := logging.NewSimpleLogger("test", logging.LevelInfo, false)
 
 	// Create a temporary config file and load it
@@ -232,31 +233,37 @@ logging:
 		t.Fatal(err)
 	}
 
-	cfg, err := LoadConfig(configPath)
+	// Load both configs
+	middlewareCfg, err := config.NewFileLoader(configPath).Load()
 	if err != nil {
-		t.Fatalf("LoadConfig() error = %v", err)
+		t.Fatalf("Failed to load middleware config: %v", err)
+	}
+
+	proxyCfg, err := LoadProxyConfig(configPath)
+	if err != nil {
+		t.Fatalf("LoadProxyConfig() error = %v", err)
 	}
 
 	t.Run("valid config", func(t *testing.T) {
-		server, err := NewFromConfig(cfg, "localhost", 4180, logger)
+		server, err := NewFromConfigs(middlewareCfg, proxyCfg, "localhost", 4180, logger)
 		if err != nil {
-			t.Fatalf("NewFromConfig() error = %v", err)
+			t.Fatalf("NewFromConfigs() error = %v", err)
 		}
 		if server == nil {
-			t.Fatal("NewFromConfig() returned nil server")
+			t.Fatal("NewFromConfigs() returned nil server")
 		}
 	})
 
 	t.Run("nil logger creates default", func(t *testing.T) {
-		server, err := NewFromConfig(cfg, "localhost", 4180, nil)
+		server, err := NewFromConfigs(middlewareCfg, proxyCfg, "localhost", 4180, nil)
 		if err != nil {
-			t.Fatalf("NewFromConfig() error = %v", err)
+			t.Fatalf("NewFromConfigs() error = %v", err)
 		}
 		if server == nil {
-			t.Fatal("NewFromConfig() returned nil server")
+			t.Fatal("NewFromConfigs() returned nil server")
 		}
 		if server.logger == nil {
-			t.Error("NewFromConfig() did not create default logger")
+			t.Error("NewFromConfigs() did not create default logger")
 		}
 	})
 }
