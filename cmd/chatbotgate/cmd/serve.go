@@ -8,9 +8,11 @@ import (
 	"os/signal"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/ideamans/chatbotgate/cmd/chatbotgate/cmd/server"
 	"github.com/ideamans/chatbotgate/pkg/middleware/config"
+	"github.com/ideamans/chatbotgate/pkg/shared/filewatcher"
 	"github.com/ideamans/chatbotgate/pkg/shared/logging"
 	"github.com/spf13/cobra"
 )
@@ -56,6 +58,20 @@ func runServe(cmd *cobra.Command, args []string) error {
 
 	logger.Info("Middleware manager initialized successfully")
 
+	// Create file watcher for hot reload (100ms debounce)
+	watcher, err := filewatcher.NewWatcher(cfgFile, 100*time.Millisecond)
+	if err != nil {
+		logger.Error("Failed to create file watcher", "error", err)
+		return fmt.Errorf("failed to create file watcher: %w", err)
+	}
+	defer watcher.Close()
+
+	// Register managers as listeners for config file changes
+	watcher.AddListener(middlewareManager)
+	watcher.AddListener(proxyManager)
+
+	logger.Info("File watcher initialized for hot reload", "config_file", cfgFile)
+
 	// Create server with middleware manager
 	srv, err := server.New(middlewareManager, host, port, logger)
 	if err != nil {
@@ -68,6 +84,13 @@ func runServe(cmd *cobra.Command, args []string) error {
 	// Setup context for graceful shutdown
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+
+	// Start file watcher in background
+	go func() {
+		if err := watcher.Start(ctx); err != nil && err != context.Canceled {
+			logger.Error("File watcher error", "error", err)
+		}
+	}()
 
 	// Setup signal handling
 	stop := make(chan os.Signal, 1)

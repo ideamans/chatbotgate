@@ -74,4 +74,70 @@ test.describe('Dynamic Configuration Reload', () => {
     const reloadCountFinal = (logsFinal.match(/Configuration reloaded successfully/g) || []).length;
     expect(reloadCountFinal).toBeGreaterThan(reloadCountAfter);
   });
+
+  test('should keep running with old config when invalid YAML is provided', async ({ page }) => {
+    // Step 1: Verify server is running with valid config
+    await page.goto('http://localhost:4181/_auth/login');
+    await expect(page.locator('h1')).toContainText('chatbotgate');
+
+    // Step 2: Write invalid YAML (malformed syntax)
+    const invalidYaml = 'invalid: yaml: content:\n  this is: [not valid yaml';
+    writeConfig(invalidYaml);
+
+    // Step 3: Wait for watcher to detect change
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
+    // Step 4: Get logs and check for error message (not reload success)
+    const logsAfter = getContainerLogs();
+    const hasErrorMessage = logsAfter.includes('Keeping current') || logsAfter.includes('Failed to reload');
+
+    // Verify that reload was attempted but failed
+    expect(hasErrorMessage).toBe(true);
+
+    // Step 5: Verify server is still running with old config
+    await page.goto('http://localhost:4181/_auth/login');
+    await expect(page.locator('h1')).toContainText('chatbotgate');
+
+    // Step 5: Restore original config
+    writeConfig(originalConfig);
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
+    // Step 6: Verify server is still accessible after restoration
+    await page.goto('http://localhost:4181/_auth/login');
+    await expect(page.locator('h1')).toContainText('chatbotgate');
+  });
+
+  test('should keep running when config has validation errors', async ({ page }) => {
+    // Step 1: Verify server is running
+    await page.goto('http://localhost:4181/_auth/login');
+    await expect(page.locator('h1')).toContainText('chatbotgate');
+
+    // Step 2: Write config with validation error (missing required field)
+    const invalidConfig = originalConfig.replace(
+      /cookie_secret: .+/,
+      'cookie_secret: ""  # Empty secret should fail validation'
+    );
+    writeConfig(invalidConfig);
+
+    // Step 3: Wait for watcher to detect
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
+    // Step 4: Check that reload failed
+    const logsAfter = getContainerLogs();
+    const hasValidationError = logsAfter.includes('validation failed') || logsAfter.includes('Failed to reload');
+
+    expect(hasValidationError).toBe(true);
+
+    // Step 5: Verify server still works with old config
+    await page.goto('http://localhost:4181/_auth/login');
+    await expect(page.locator('h1')).toContainText('chatbotgate');
+
+    // Step 6: Restore original config
+    writeConfig(originalConfig);
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
+    // Step 7: Verify server is accessible after restoration
+    await page.goto('http://localhost:4181/_auth/login');
+    await expect(page.locator('h1')).toContainText('chatbotgate');
+  });
 });

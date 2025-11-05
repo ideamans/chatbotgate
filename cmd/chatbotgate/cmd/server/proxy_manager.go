@@ -8,10 +8,12 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 
 	"github.com/ideamans/chatbotgate/pkg/middleware/config"
 	"github.com/ideamans/chatbotgate/pkg/shared/logging"
 	"github.com/ideamans/chatbotgate/pkg/proxy/core"
+	"github.com/ideamans/chatbotgate/pkg/shared/filewatcher"
 	"gopkg.in/yaml.v3"
 )
 
@@ -31,10 +33,11 @@ type ProxyServerConfig struct {
 	Upstream proxy.UpstreamConfig `yaml:"upstream" json:"upstream"`
 }
 
-// SimpleProxyManager is a simple implementation of ProxyManager
+// SimpleProxyManager is a simple implementation of ProxyManager with hot reload support
 type SimpleProxyManager struct {
-	handler *proxy.Handler
-	logger  logging.Logger
+	handler    atomic.Value // Stores *proxy.Handler
+	configPath string
+	logger     logging.Logger
 }
 
 // NewProxyManager creates a new SimpleProxyManager from config file
@@ -43,13 +46,34 @@ func NewProxyManager(configPath string, logger logging.Logger) (*SimpleProxyMana
 		logger = logging.NewSimpleLogger("proxy-manager", logging.LevelInfo, true)
 	}
 
+	m := &SimpleProxyManager{
+		configPath: configPath,
+		logger:     logger,
+	}
+
+	// Build initial proxy handler
+	handler, err := m.buildProxyHandler(configPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to build initial proxy handler: %w", err)
+	}
+
+	// Store initial handler atomically
+	m.handler.Store(handler)
+
+	logger.Info("Proxy manager initialized", "config_path", configPath)
+
+	return m, nil
+}
+
+// buildProxyHandler builds proxy handler from configuration file
+func (m *SimpleProxyManager) buildProxyHandler(configPath string) (*proxy.Handler, error) {
 	// Load proxy configuration from YAML
 	upstreamCfg, err := loadProxyConfig(configPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load proxy config: %w", err)
 	}
 
-	logger.Debug("Proxy configuration loaded and validated", "config_path", configPath, "upstream", upstreamCfg.URL)
+	m.logger.Debug("Proxy configuration loaded and validated", "config_path", configPath, "upstream", upstreamCfg.URL)
 
 	// Create proxy handler
 	handler, err := proxy.NewHandlerWithConfig(upstreamCfg)
@@ -57,12 +81,9 @@ func NewProxyManager(configPath string, logger logging.Logger) (*SimpleProxyMana
 		return nil, fmt.Errorf("failed to create proxy handler: %w", err)
 	}
 
-	logger.Debug("Proxy handler initialized")
+	m.logger.Debug("Proxy handler initialized")
 
-	return &SimpleProxyManager{
-		handler: handler,
-		logger:  logger,
-	}, nil
+	return handler, nil
 }
 
 // loadProxyConfig loads and validates proxy configuration from a YAML or JSON file
@@ -119,7 +140,39 @@ func validateProxyConfig(cfg *ProxyConfig) error {
 	return verr.ErrorOrNil()
 }
 
+// OnFileChange implements filewatcher.ChangeListener interface
+// This method is called when the configuration file changes
+func (m *SimpleProxyManager) OnFileChange(event filewatcher.ChangeEvent) {
+	if event.Error != nil {
+		m.logger.Error("File change event error", "error", event.Error)
+		return
+	}
+
+	m.logger.Info("Config content change detected, starting reload", "path", event.Path, "component", "proxy")
+	m.reload(event.Path)
+}
+
+// reload reloads the proxy configuration and replaces the current handler atomically
+func (m *SimpleProxyManager) reload(configPath string) {
+	// Build new proxy handler
+	newHandler, err := m.buildProxyHandler(configPath)
+	if err != nil {
+		m.logger.Error("Failed to reload proxy", "error", err, "path", configPath)
+		m.logger.Error("Keeping current proxy configuration")
+		return
+	}
+
+	// Atomically replace the handler
+	m.handler.Store(newHandler)
+	m.logger.Info("Configuration reloaded successfully", "component", "proxy")
+}
+
 // Handler returns the HTTP handler
+// The handler always uses the latest proxy handler stored atomically
 func (m *SimpleProxyManager) Handler() http.Handler {
-	return m.handler
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Load the current handler atomically
+		h := m.handler.Load().(*proxy.Handler)
+		h.ServeHTTP(w, r)
+	})
 }
