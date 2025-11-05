@@ -27,12 +27,20 @@ func (m *Middleware) handleReady(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("READY"))
 }
 
-// handleStylesCSS serves the embedded CSS
-func (m *Middleware) handleStylesCSS(w http.ResponseWriter, r *http.Request) {
+// handleMainCSS serves the embedded CSS
+func (m *Middleware) handleMainCSS(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/css; charset=utf-8")
 	w.Header().Set("Cache-Control", "public, max-age=31536000") // Cache for 1 year
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(assets.GetEmbeddedCSS()))
+}
+
+// handleDifyCSS serves the embedded Dify CSS for iframe optimizations
+func (m *Middleware) handleDifyCSS(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/css; charset=utf-8")
+	w.Header().Set("Cache-Control", "public, max-age=31536000") // Cache for 1 year
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(assets.GetEmbeddedDifyCSS()))
 }
 
 // handleIcon serves the embedded SVG icons
@@ -92,6 +100,22 @@ func (m *Middleware) buildAuthSubtitle(subtitle string) string {
 	return `<h2 class="auth-subtitle">` + subtitle + `</h2>`
 }
 
+// buildStyleLinks generates stylesheet link tags based on configuration
+func (m *Middleware) buildStyleLinks() string {
+	prefix := m.config.Server.GetAuthPathPrefix()
+	cssPath := joinAuthPath(prefix, "/assets/main.css")
+	links := `<link rel="stylesheet" href="` + cssPath + `">`
+
+	// Add dify.css if optimization is enabled
+	if m.config.Assets.Optimization.Dify {
+		difyCSSPath := joinAuthPath(prefix, "/assets/dify.css")
+		links += `
+<link rel="stylesheet" href="` + difyCSSPath + `">`
+	}
+
+	return links
+}
+
 // handleLogin displays the login page
 func (m *Middleware) handleLogin(w http.ResponseWriter, r *http.Request) {
 	lang := i18n.DetectLanguage(r)
@@ -99,7 +123,6 @@ func (m *Middleware) handleLogin(w http.ResponseWriter, r *http.Request) {
 	t := func(key string) string { return m.translator.T(lang, key) }
 
 	// Use embedded CSS
-	cssPath := joinAuthPath(m.config.Server.GetAuthPathPrefix(), "/assets/styles.css")
 	themeClass := ""
 	if theme == i18n.ThemeDark {
 		themeClass = "dark"
@@ -114,7 +137,7 @@ func (m *Middleware) handleLogin(w http.ResponseWriter, r *http.Request) {
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>` + t("login.title") + ` - ` + m.config.Service.Name + `</title>
-<link rel="stylesheet" href="` + cssPath + `">
+` + m.buildStyleLinks() + `
 <style>
 .settings-toggle {
 	position: fixed;
@@ -375,7 +398,6 @@ func (m *Middleware) handleLogout(w http.ResponseWriter, r *http.Request) {
 
 	// Use embedded CSS
 	prefix := m.config.Server.GetAuthPathPrefix()
-	cssPath := joinAuthPath(prefix, "/assets/styles.css")
 	loginPath := joinAuthPath(prefix, "/login")
 
 	themeClass := ""
@@ -393,7 +415,7 @@ func (m *Middleware) handleLogout(w http.ResponseWriter, r *http.Request) {
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>` + t("logout.title") + ` - ` + m.config.Service.Name + `</title>
-<link rel="stylesheet" href="` + cssPath + `">
+` + m.buildStyleLinks() + `
 </head>
 <body>
 <div class="auth-container">
@@ -732,7 +754,6 @@ func (m *Middleware) handleEmailSent(w http.ResponseWriter, r *http.Request) {
 
 	// Use embedded CSS
 	prefix := m.config.Server.GetAuthPathPrefix()
-	cssPath := joinAuthPath(prefix, "/assets/styles.css")
 	loginPath := joinAuthPath(prefix, "/login")
 
 	themeClass := ""
@@ -752,7 +773,7 @@ func (m *Middleware) handleEmailSent(w http.ResponseWriter, r *http.Request) {
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>` + t("email.sent.title") + ` - ` + m.config.Service.Name + `</title>
-<link rel="stylesheet" href="` + cssPath + `">
+` + m.buildStyleLinks() + `
 </head>
 <body>
 <div class="auth-container">
@@ -853,7 +874,6 @@ func (m *Middleware) handleEmailVerify(w http.ResponseWriter, r *http.Request) {
 
 		// Use embedded CSS
 		prefix := m.config.Server.GetAuthPathPrefix()
-		cssPath := joinAuthPath(prefix, "/assets/styles.css")
 		loginPath := joinAuthPath(prefix, "/login")
 
 		themeClass := ""
@@ -871,7 +891,7 @@ func (m *Middleware) handleEmailVerify(w http.ResponseWriter, r *http.Request) {
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>` + t("email.invalid.title") + ` - ` + m.config.Service.Name + `</title>
-<link rel="stylesheet" href="` + cssPath + `">
+` + m.buildStyleLinks() + `
 </head>
 <body>
 <div class="auth-container">
@@ -1087,7 +1107,6 @@ func (m *Middleware) handleForbidden(w http.ResponseWriter, r *http.Request) {
 	t := func(key string) string { return m.translator.T(lang, key) }
 
 	prefix := normalizeAuthPrefix(m.config.Server.GetAuthPathPrefix())
-	cssPath := joinAuthPath(prefix, "/assets/styles.css")
 	loginPath := joinAuthPath(prefix, "/login")
 
 	themeClass := ""
@@ -1106,7 +1125,7 @@ func (m *Middleware) handleForbidden(w http.ResponseWriter, r *http.Request) {
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>` + t("error.forbidden.title") + ` - ` + m.config.Service.Name + `</title>
-<link rel="stylesheet" href="` + cssPath + `">
+` + m.buildStyleLinks() + `
 </head>
 <body>
 <div class="auth-container">
@@ -1138,7 +1157,6 @@ func (m *Middleware) handleEmailFetchError(w http.ResponseWriter, r *http.Reques
 	t := func(key string) string { return m.translator.T(lang, key) }
 
 	prefix := normalizeAuthPrefix(m.config.Server.GetAuthPathPrefix())
-	cssPath := joinAuthPath(prefix, "/assets/styles.css")
 	loginPath := joinAuthPath(prefix, "/login")
 
 	themeClass := ""
@@ -1156,7 +1174,7 @@ func (m *Middleware) handleEmailFetchError(w http.ResponseWriter, r *http.Reques
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>` + t("error.email_required.title") + ` - ` + m.config.Service.Name + `</title>
-<link rel="stylesheet" href="` + cssPath + `">
+` + m.buildStyleLinks() + `
 </head>
 <body>
 <div class="auth-container">
@@ -1188,7 +1206,6 @@ func (m *Middleware) handle404(w http.ResponseWriter, r *http.Request) {
 	t := func(key string) string { return m.translator.T(lang, key) }
 
 	prefix := normalizeAuthPrefix(m.config.Server.GetAuthPathPrefix())
-	cssPath := joinAuthPath(prefix, "/assets/styles.css")
 	iconPath := joinAuthPath(prefix, "/assets/icons/chatbotgate.svg")
 
 	themeClass := ""
@@ -1204,7 +1221,7 @@ func (m *Middleware) handle404(w http.ResponseWriter, r *http.Request) {
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>` + t("error.notfound.title") + ` - ` + m.config.Service.Name + `</title>
-<link rel="stylesheet" href="` + cssPath + `">
+` + m.buildStyleLinks() + `
 </head>
 <body>
 <div class="auth-container">
@@ -1236,7 +1253,6 @@ func (m *Middleware) handle500(w http.ResponseWriter, r *http.Request, err error
 	t := func(key string) string { return m.translator.T(lang, key) }
 
 	prefix := normalizeAuthPrefix(m.config.Server.GetAuthPathPrefix())
-	cssPath := joinAuthPath(prefix, "/assets/styles.css")
 	iconPath := joinAuthPath(prefix, "/assets/icons/chatbotgate.svg")
 
 	themeClass := ""
@@ -1267,7 +1283,7 @@ func (m *Middleware) handle500(w http.ResponseWriter, r *http.Request, err error
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>` + t("error.server.title") + ` - ` + m.config.Service.Name + `</title>
-<link rel="stylesheet" href="` + cssPath + `">
+` + m.buildStyleLinks() + `
 </head>
 <body>
 <div class="auth-container">
