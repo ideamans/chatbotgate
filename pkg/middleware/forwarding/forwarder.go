@@ -66,10 +66,18 @@ func (f *DefaultForwarder) AddToQueryString(targetURL string, userInfo *UserInfo
 	// Get existing query parameters
 	q := u.Query()
 
+	// Track which query parameters have been set (for priority: first successful path wins)
+	setParams := make(map[string]bool)
+
 	// Process each field
 	for _, field := range f.config.Fields {
 		// Skip if query is not specified for this field
 		if field.Query == "" {
+			continue
+		}
+
+		// Skip if this query parameter was already set by a previous field
+		if setParams[field.Query] {
 			continue
 		}
 
@@ -86,8 +94,9 @@ func (f *DefaultForwarder) AddToQueryString(targetURL string, userInfo *UserInfo
 			return "", fmt.Errorf("field %s: %w", field.Path, err)
 		}
 
-		// Add to query string
+		// Add to query string and mark as set
 		q.Set(field.Query, processed)
+		setParams[field.Query] = true
 	}
 
 	// Update URL with merged query parameters
@@ -104,10 +113,18 @@ func (f *DefaultForwarder) AddToHeaders(headers http.Header, userInfo *UserInfo)
 		result[key] = values
 	}
 
+	// Track which headers have been set (for priority: first successful path wins)
+	setHeaders := make(map[string]bool)
+
 	// Process each field
 	for _, field := range f.config.Fields {
 		// Skip if header is not specified for this field
 		if field.Header == "" {
+			continue
+		}
+
+		// Skip if this header was already set by a previous field
+		if setHeaders[field.Header] {
 			continue
 		}
 
@@ -125,8 +142,9 @@ func (f *DefaultForwarder) AddToHeaders(headers http.Header, userInfo *UserInfo)
 			continue
 		}
 
-		// Add to headers
+		// Add to headers and mark as set
 		result.Set(field.Header, processed)
+		setHeaders[field.Header] = true
 	}
 
 	return result
