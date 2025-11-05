@@ -206,15 +206,15 @@ func TestForwarding_E2E(t *testing.T) {
 			t.Fatalf("Failed to add querystring: %v", err)
 		}
 
-		// Verify URL contains chatbotgate.user and chatbotgate.email parameters
+		// Verify URL contains username and email parameters
 		parsedURL, _ := url.Parse(modifiedURL)
-		encryptedUser := parsedURL.Query().Get("chatbotgate.user")
-		encryptedEmail := parsedURL.Query().Get("chatbotgate.email")
+		encryptedUser := parsedURL.Query().Get("username")
+		encryptedEmail := parsedURL.Query().Get("email")
 		if encryptedUser == "" {
-			t.Fatal("Expected chatbotgate.user query parameter, got empty")
+			t.Fatal("Expected username query parameter, got empty")
 		}
 		if encryptedEmail == "" {
-			t.Fatal("Expected chatbotgate.email query parameter, got empty")
+			t.Fatal("Expected email query parameter, got empty")
 		}
 
 		// Make request to the modified URL (directly to backend)

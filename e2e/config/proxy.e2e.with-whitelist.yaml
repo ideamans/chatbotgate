@@ -73,22 +73,15 @@ kvs:
 
 # User information forwarding configuration
 forwarding:
-  # Forward both username and email
-  fields:
-    - "username"
-    - "email"
-
-  # QueryString forwarding (disabled for basic tests)
-  querystring:
-    enabled: false
-
-  # Header forwarding (plain text for testing)
-  header:
-    enabled: true
-    encrypt: false
-
-  # Encryption settings (for when encrypt: true)
+  # Encryption settings (for when encrypt filter is used)
   encryption:
     # E2E test encryption key (32+ characters)
     key: "e2e-test-encryption-key-32-chars-long-1234567890"
     algorithm: "aes-256-gcm"
+
+  # Forward both username and email (plain text, header only)
+  fields:
+    - path: "username"
+      header: "X-ChatbotGate-User"
+    - path: "email"
+      header: "X-ChatbotGate-Email"

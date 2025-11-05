@@ -144,8 +144,7 @@ func formatConfigError(component string, err error) error {
 		errors.Is(err, config.ErrNoEnabledProviders) ||
 		errors.Is(err, config.ErrEncryptionKeyRequired) ||
 		errors.Is(err, config.ErrEncryptionKeyTooShort) ||
-		errors.Is(err, config.ErrForwardingFieldsRequired) ||
-		errors.Is(err, config.ErrInvalidForwardingField) {
+		errors.Is(err, config.ErrEncryptionConfigRequired) {
 		return fmt.Errorf("Configuration validation error in %s:\n  %v\n\nPlease check your configuration file and fix the issue above.", component, err)
 	}
 

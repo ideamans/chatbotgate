@@ -58,16 +58,27 @@ function decrypt(encryptedBase64: string): string {
 /**
  * Decode value - try decryption first, fall back to plain text
  * This handles both encrypted and plain text values
+ *
+ * Note: The filter chain auto-applies base64 encoding when encrypt filter outputs binary type,
+ * so encrypted data is double base64-encoded. We need to decode the outer layer first.
  */
 function decodeValue(value: string): string {
   if (!value) return '';
 
   try {
-    // Try decryption first
-    return decrypt(value);
+    // First, try to decode the outer base64 layer (added by filter chain)
+    const outerDecoded = Buffer.from(value, 'base64').toString('utf8');
+
+    // Now try to decrypt (which will decode the inner base64 internally)
+    return decrypt(outerDecoded);
   } catch (error) {
-    // If decryption fails, assume it's plain text
-    return value;
+    // If that fails, try decrypting directly (for backward compatibility)
+    try {
+      return decrypt(value);
+    } catch (error2) {
+      // If decryption fails completely, assume it's plain text
+      return value;
+    }
   }
 }
 
