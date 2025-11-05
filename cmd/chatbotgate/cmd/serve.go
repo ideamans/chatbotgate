@@ -2,12 +2,15 @@ package cmd
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 
 	"github.com/ideamans/chatbotgate/cmd/chatbotgate/cmd/server"
+	"github.com/ideamans/chatbotgate/pkg/config"
 	"github.com/ideamans/chatbotgate/pkg/logging"
 	"github.com/spf13/cobra"
 )
@@ -40,8 +43,7 @@ func runServe(cmd *cobra.Command, args []string) error {
 	// Create proxy manager from config file
 	proxyManager, err := server.NewProxyManager(cfgFile, logger)
 	if err != nil {
-		logger.Error("Failed to create proxy manager", "error", err)
-		return fmt.Errorf("failed to create proxy manager: %w", err)
+		return formatConfigError("proxy", err)
 	}
 
 	logger.Info("Proxy manager initialized successfully")
@@ -49,8 +51,7 @@ func runServe(cmd *cobra.Command, args []string) error {
 	// Create middleware manager from config file (with proxy as next handler)
 	middlewareManager, err := server.NewMiddlewareManager(cfgFile, host, port, proxyManager.Handler(), logger)
 	if err != nil {
-		logger.Error("Failed to create middleware manager", "error", err)
-		return fmt.Errorf("failed to create middleware manager: %w", err)
+		return formatConfigError("middleware", err)
 	}
 
 	logger.Info("Middleware manager initialized successfully")
@@ -97,4 +98,32 @@ func runServe(cmd *cobra.Command, args []string) error {
 
 	logger.Info("Server stopped successfully")
 	return nil
+}
+
+// formatConfigError formats configuration errors with helpful messages
+func formatConfigError(component string, err error) error {
+	// Check if it's a validation error
+	if errors.Is(err, config.ErrServiceNameRequired) ||
+		errors.Is(err, config.ErrCookieSecretRequired) ||
+		errors.Is(err, config.ErrCookieSecretTooShort) ||
+		errors.Is(err, config.ErrNoEnabledProviders) ||
+		errors.Is(err, config.ErrEncryptionKeyRequired) ||
+		errors.Is(err, config.ErrEncryptionKeyTooShort) ||
+		errors.Is(err, config.ErrForwardingFieldsRequired) ||
+		errors.Is(err, config.ErrInvalidForwardingField) {
+		return fmt.Errorf("Configuration validation error in %s:\n  %v\n\nPlease check your configuration file and fix the issue above.", component, err)
+	}
+
+	// Check if it's a config file not found error
+	if errors.Is(err, config.ErrConfigFileNotFound) {
+		return fmt.Errorf("Configuration file not found:\n  %v\n\nPlease create a configuration file or specify the correct path with --config flag.", err)
+	}
+
+	// Check if it contains "validation failed" in the error message
+	if strings.Contains(err.Error(), "validation failed") {
+		return fmt.Errorf("Configuration validation error in %s:\n  %v\n\nPlease check your configuration file and fix the validation errors above.", component, err)
+	}
+
+	// Generic error
+	return fmt.Errorf("Failed to initialize %s:\n  %v", component, err)
 }

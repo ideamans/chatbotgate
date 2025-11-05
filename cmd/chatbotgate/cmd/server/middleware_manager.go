@@ -34,7 +34,12 @@ func NewMiddlewareManager(configPath string, host string, port int, next http.Ha
 		return nil, fmt.Errorf("failed to load middleware config: %w", err)
 	}
 
-	logger.Debug("Middleware configuration loaded", "config_path", configPath)
+	// Validate configuration
+	if err := cfg.Validate(); err != nil {
+		return nil, fmt.Errorf("middleware config validation failed: %w", err)
+	}
+
+	logger.Debug("Middleware configuration loaded and validated", "config_path", configPath)
 
 	// Create factory for building middleware components
 	f := factory.NewDefaultFactory(host, port, logger)

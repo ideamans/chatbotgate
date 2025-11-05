@@ -47,7 +47,7 @@ func NewProxyManager(configPath string, logger logging.Logger) (*SimpleProxyMana
 		return nil, fmt.Errorf("failed to load proxy config: %w", err)
 	}
 
-	logger.Debug("Proxy configuration loaded", "config_path", configPath, "upstream", upstreamCfg.URL)
+	logger.Debug("Proxy configuration loaded and validated", "config_path", configPath, "upstream", upstreamCfg.URL)
 
 	// Create proxy handler
 	handler, err := proxy.NewHandlerWithConfig(upstreamCfg)
@@ -63,7 +63,7 @@ func NewProxyManager(configPath string, logger logging.Logger) (*SimpleProxyMana
 	}, nil
 }
 
-// loadProxyConfig loads proxy configuration from a YAML or JSON file
+// loadProxyConfig loads and validates proxy configuration from a YAML or JSON file
 func loadProxyConfig(path string) (proxy.UpstreamConfig, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -86,12 +86,26 @@ func loadProxyConfig(path string) (proxy.UpstreamConfig, error) {
 		return proxy.UpstreamConfig{}, fmt.Errorf("unsupported config file format: %s (supported: .yaml, .yml, .json)", ext)
 	}
 
-	// Validate required fields
-	if cfg.Proxy.Upstream.URL == "" {
-		return proxy.UpstreamConfig{}, fmt.Errorf("proxy.upstream.url is required")
+	// Validate proxy configuration
+	if err := validateProxyConfig(&cfg); err != nil {
+		return proxy.UpstreamConfig{}, fmt.Errorf("proxy config validation failed: %w", err)
 	}
 
 	return cfg.Proxy.Upstream, nil
+}
+
+// validateProxyConfig validates the proxy configuration
+func validateProxyConfig(cfg *ProxyConfig) error {
+	// Validate required fields
+	if cfg.Proxy.Upstream.URL == "" {
+		return fmt.Errorf("proxy.upstream.url is required")
+	}
+
+	// Add more validation as needed
+	// For example, validate URL format
+	// url.Parse() could be used here
+
+	return nil
 }
 
 // Handler returns the HTTP handler
