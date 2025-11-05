@@ -31,8 +31,9 @@ export type MailpitMessagesResponse = {
   messages: MailpitMessage[];
 };
 
-// Use localhost for local development, mailpit for Docker Compose
-const DEFAULT_MAILPIT_URL = process.env.CI || process.env.DOCKER ? 'http://mailpit:8025' : 'http://localhost:8025';
+// Use 'mailpit' hostname only when running inside Docker Compose (DOCKER env var set)
+// CI environments run tests on the runner (outside Docker network), so use localhost
+const DEFAULT_MAILPIT_URL = process.env.DOCKER ? 'http://mailpit:8025' : 'http://localhost:8025';
 
 /**
  * Get all messages from Mailpit

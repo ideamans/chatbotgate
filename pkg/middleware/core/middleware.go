@@ -127,7 +127,7 @@ func (m *Middleware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				m.next.ServeHTTP(w, r)
 			} else {
 				w.WriteHeader(http.StatusOK)
-				w.Write([]byte("Allowed"))
+				_, _ = w.Write([]byte("Allowed"))
 			}
 			return
 
@@ -172,7 +172,7 @@ func (m *Middleware) requireAuth(w http.ResponseWriter, r *http.Request) {
 	// Check if session is valid
 	if !sess.IsValid() {
 		// Session expired or invalid, delete and redirect
-		session.Delete(m.sessionStore, cookie.Value)
+		_ = session.Delete(m.sessionStore, cookie.Value)
 		m.redirectToLogin(w, r)
 		return
 	}
@@ -185,7 +185,7 @@ func (m *Middleware) requireAuth(w http.ResponseWriter, r *http.Request) {
 	} else {
 		// If no next handler, return 200 OK (useful for testing)
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("Authenticated"))
+		_, _ = w.Write([]byte("Authenticated"))
 	}
 }
 

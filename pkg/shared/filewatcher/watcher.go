@@ -46,7 +46,7 @@ func NewWatcher(filePath string, debounceDelay time.Duration) (*Watcher, error) 
 
 	// Add the file to watch
 	if err := fsWatcher.Add(absPath); err != nil {
-		fsWatcher.Close()
+		_ = fsWatcher.Close()
 		return nil, fmt.Errorf("failed to add file to watcher: %w", err)
 	}
 

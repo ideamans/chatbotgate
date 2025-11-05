@@ -54,7 +54,7 @@ func (f *TestingFactory) CreateKVSStores(cfg *config.Config) (session kvs.Store,
 	}
 	token, err = kvs.New(tokenCfg)
 	if err != nil {
-		session.Close()
+		_ = session.Close()
 		return nil, nil, nil, err
 	}
 
@@ -64,8 +64,8 @@ func (f *TestingFactory) CreateKVSStores(cfg *config.Config) (session kvs.Store,
 	}
 	rateLimit, err = kvs.New(rateLimitCfg)
 	if err != nil {
-		session.Close()
-		token.Close()
+		_ = session.Close()
+		_ = token.Close()
 		return nil, nil, nil, err
 	}
 

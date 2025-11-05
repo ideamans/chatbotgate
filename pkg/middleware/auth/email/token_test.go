@@ -165,10 +165,14 @@ func TestTokenStore_CleanupExpired(t *testing.T) {
 	store := createTestTokenStore("test-secret")
 
 	// Create an expired token
-	store.GenerateToken("expired@example.com", 1*time.Millisecond)
+	if _, err := store.GenerateToken("expired@example.com", 1*time.Millisecond); err != nil {
+		t.Fatalf("GenerateToken() error = %v", err)
+	}
 
 	// Create a valid token
-	store.GenerateToken("valid@example.com", 15*time.Minute)
+	if _, err := store.GenerateToken("valid@example.com", 15*time.Minute); err != nil {
+		t.Fatalf("GenerateToken() error = %v", err)
+	}
 
 	// Wait for first token to expire
 	time.Sleep(10 * time.Millisecond)

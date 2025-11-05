@@ -14,10 +14,9 @@ import (
 // ContractTestSuite runs a comprehensive test suite against any Store implementation
 // This ensures all backends (Memory, LevelDB, Redis) behave consistently
 type ContractTestSuite struct {
-	t         *testing.T
-	store     Store
-	cleanup   func()
-	skipRedis bool // Skip tests that require Redis to be running
+	t       *testing.T
+	store   Store
+	cleanup func()
 }
 
 // NewContractTestSuite creates a new contract test suite
@@ -333,7 +332,7 @@ func TestMemoryStoreContract(t *testing.T) {
 	require.NoError(t, err, "Should create MemoryStore")
 
 	cleanup := func() {
-		store.Close()
+		_ = store.Close()
 	}
 
 	suite := NewContractTestSuite(t, store, cleanup)
@@ -359,8 +358,8 @@ func TestLevelDBStoreContract(t *testing.T) {
 	require.NoError(t, err, "Should create LevelDBStore")
 
 	cleanup := func() {
-		store.Close()
-		os.RemoveAll(tmpDir)
+		_ = store.Close()
+		_ = os.RemoveAll(tmpDir)
 	}
 
 	suite := NewContractTestSuite(t, store, cleanup)
@@ -399,7 +398,7 @@ func TestRedisStoreContract(t *testing.T) {
 		for _, key := range keys {
 			_ = store.Delete(ctx, key)
 		}
-		store.Close()
+		_ = store.Close()
 	}
 
 	suite := NewContractTestSuite(t, store, cleanup)
@@ -448,7 +447,7 @@ func TestMemoryStoreCloseOperations(t *testing.T) {
 func TestLevelDBStoreCloseOperations(t *testing.T) {
 	tmpDir, err := os.MkdirTemp("", "kvs-leveldb-close-test-*")
 	require.NoError(t, err, "Should create temp dir")
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	config := Config{
 		Type: "leveldb",
