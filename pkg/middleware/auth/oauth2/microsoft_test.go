@@ -34,6 +34,87 @@ func TestNewMicrosoftProvider(t *testing.T) {
 	if len(config.Scopes) != len(expectedScopes) {
 		t.Errorf("Scopes count = %d, want %d", len(config.Scopes), len(expectedScopes))
 	}
+
+	for i, scope := range expectedScopes {
+		if i >= len(config.Scopes) || config.Scopes[i] != scope {
+			t.Errorf("Scopes = %v, want %v", config.Scopes, expectedScopes)
+			break
+		}
+	}
+}
+
+func TestMicrosoftProvider_CustomScopes(t *testing.T) {
+	// Test with custom scopes - should use only custom scopes (no defaults added)
+	customScopes := []string{"Calendars.Read", "Mail.Read"}
+	provider := NewMicrosoftProvider("test-client-id", "test-client-secret", "http://localhost/callback", customScopes, false)
+
+	config := provider.Config()
+
+	// Should have only custom scopes (defaults not added)
+	expectedScopes := []string{
+		"Calendars.Read",
+		"Mail.Read",
+	}
+
+	if len(config.Scopes) != len(expectedScopes) {
+		t.Errorf("Scopes length = %d, want %d", len(config.Scopes), len(expectedScopes))
+	}
+
+	for i, scope := range expectedScopes {
+		if i >= len(config.Scopes) || config.Scopes[i] != scope {
+			t.Errorf("Scopes[%d] = %s, want %s", i, config.Scopes[i], scope)
+		}
+	}
+}
+
+func TestMicrosoftProvider_CustomScopesWithResetFlag(t *testing.T) {
+	// Test with custom scopes and reset_scopes: true
+	// Behavior is same as reset_scopes: false (only custom scopes are used)
+	customScopes := []string{"Calendars.Read", "Mail.Read"}
+	provider := NewMicrosoftProvider("test-client-id", "test-client-secret", "http://localhost/callback", customScopes, true)
+
+	config := provider.Config()
+
+	// Should have only custom scopes
+	expectedScopes := []string{
+		"Calendars.Read",
+		"Mail.Read",
+	}
+
+	if len(config.Scopes) != len(expectedScopes) {
+		t.Errorf("Scopes length = %d, want %d", len(config.Scopes), len(expectedScopes))
+	}
+
+	for i, scope := range expectedScopes {
+		if i >= len(config.Scopes) || config.Scopes[i] != scope {
+			t.Errorf("Scopes[%d] = %s, want %s", i, config.Scopes[i], scope)
+		}
+	}
+}
+
+func TestMicrosoftProvider_EmptyScopes(t *testing.T) {
+	// Test with empty scopes - should use default scopes
+	provider := NewMicrosoftProvider("test-client-id", "test-client-secret", "http://localhost/callback", nil, true)
+
+	config := provider.Config()
+
+	// Should use default scopes when scopes are empty
+	expectedScopes := []string{
+		"openid",
+		"profile",
+		"email",
+		"User.Read",
+	}
+
+	if len(config.Scopes) != len(expectedScopes) {
+		t.Errorf("Scopes length = %d, want %d", len(config.Scopes), len(expectedScopes))
+	}
+
+	for i, scope := range expectedScopes {
+		if i >= len(config.Scopes) || config.Scopes[i] != scope {
+			t.Errorf("Scopes[%d] = %s, want %s", i, config.Scopes[i], scope)
+		}
+	}
 }
 
 func TestMicrosoftProvider_GetUserEmail(t *testing.T) {

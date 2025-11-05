@@ -158,6 +158,25 @@ type Provider interface {
 - `MicrosoftProvider`: Microsoft/Azure AD OAuth2
 - `CustomProvider`: Generic OIDC provider
 
+**Default Scopes:**
+
+Each provider has default scopes that are used when `scopes` configuration is empty. These defaults are designed to retrieve user email, name, and avatar (where supported).
+
+- **Google**: `openid`, `userinfo.email`, `userinfo.profile`
+- **GitHub**: `user:email`, `read:user`
+- **Microsoft**: `openid`, `profile`, `email`, `User.Read`
+- **Custom**: `openid`, `email`, `profile`
+
+**Note**: If you specify custom scopes in configuration, the defaults are NOT added automatically. You must explicitly include the default scopes if you want user information.
+
+**Standardized Fields:**
+
+All OAuth2 providers populate standardized fields in `UserInfo.Extra` for consistent access:
+
+- `_email`: User email address (string)
+- `_username`: User display name (string, GitHub fallback: name → login)
+- `_avatar_url`: User profile picture URL (string, empty for Microsoft and custom providers that don't support it)
+
 **Creating a Custom Provider:**
 
 ```go
@@ -605,14 +624,19 @@ func (p *MyCustomProvider) Exchange(ctx context.Context, code string) (*oauth2.U
         return nil, fmt.Errorf("userinfo decode failed: %w", err)
     }
 
-    // Return user info
+    // Return user info with standardized fields
     return &oauth2.UserInfo{
         Email:    user.Email,
         Username: user.Name,
         Provider: p.Name(),
-        Extra: map[string]interface{}{
+        Extra: map[string]any{
+            // Standardized fields (common across all providers)
+            "_email":      user.Email,
+            "_username":   user.Name,
+            "_avatar_url": user.Picture,
+            // Provider-specific fields
             "avatar_url": user.Picture,
-            "secrets": map[string]interface{}{
+            "secrets": map[string]any{
                 "access_token":  token.AccessToken,
                 "refresh_token": token.RefreshToken,
             },
@@ -973,17 +997,33 @@ func TestOAuth2Flow(t *testing.T) {
 ```go
 type UserInfo struct {
     Email    string                 // User email address
-    Username string                 // Username (provider-dependent)
-    Provider string                 // Provider name (google, github, etc.)
-    Extra    map[string]interface{} // Additional provider-specific data
+    Username string                 // Username (provider-dependent, empty for email auth)
+    Provider string                 // Provider name (google, github, microsoft, email)
+    Extra    map[string]any         // Additional provider-specific data
 }
 ```
 
-**Extra Fields:**
-- `avatar_url`: User avatar URL (if available)
-- `secrets`: OAuth2 tokens
-  - `access_token`: OAuth2 access token
-  - `refresh_token`: OAuth2 refresh token
+**Standardized Extra Fields** (common across all OAuth2 providers):
+- `_email` (string): User email address (same as `Email`)
+- `_username` (string): User display name
+  - Google: `name`
+  - GitHub: `name` (fallback to `login` if not set)
+  - Microsoft: `displayName`
+  - Email auth: empty
+- `_avatar_url` (string): User profile picture URL
+  - Google: `picture` URL
+  - GitHub: `avatar_url` URL
+  - Microsoft: empty (requires separate photo endpoint)
+  - Email auth: empty
+
+**Provider-Specific Extra Fields:**
+- Google: `email`, `name`, `picture`, `verified_email`, `given_name`, `family_name`
+- GitHub: `email`, `name`, `login`, `avatar_url`, plus other public profile data
+- Microsoft: `email`, `displayName`, `userPrincipalName`, `preferredUsername`
+
+**OAuth2 Tokens** (under `secrets`):
+- `secrets.access_token` (string): OAuth2 access token
+- `secrets.refresh_token` (string): OAuth2 refresh token (if available)
 
 #### `middleware/core.Middleware`
 

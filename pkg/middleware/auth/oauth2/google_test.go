@@ -26,6 +26,7 @@ func TestNewGoogleProvider(t *testing.T) {
 
 	// Should have default scopes
 	expectedScopes := []string{
+		"openid",
 		"https://www.googleapis.com/auth/userinfo.email",
 		"https://www.googleapis.com/auth/userinfo.profile",
 	}
@@ -40,17 +41,15 @@ func TestNewGoogleProvider(t *testing.T) {
 	}
 }
 
-func TestGoogleProvider_AddScopes(t *testing.T) {
-	// Test adding scopes to default scopes (reset_scopes: false)
+func TestGoogleProvider_CustomScopes(t *testing.T) {
+	// Test with custom scopes - should use only custom scopes (no defaults added)
 	customScopes := []string{"https://www.googleapis.com/auth/analytics.readonly"}
 	provider := NewGoogleProvider("test-client-id", "test-client-secret", "http://localhost/callback", customScopes, false)
 
 	config := provider.Config()
 
-	// Should have default scopes + custom scopes
+	// Should have only custom scopes (defaults not added)
 	expectedScopes := []string{
-		"https://www.googleapis.com/auth/userinfo.email",
-		"https://www.googleapis.com/auth/userinfo.profile",
 		"https://www.googleapis.com/auth/analytics.readonly",
 	}
 
@@ -65,14 +64,15 @@ func TestGoogleProvider_AddScopes(t *testing.T) {
 	}
 }
 
-func TestGoogleProvider_ResetScopes(t *testing.T) {
-	// Test resetting scopes (reset_scopes: true)
+func TestGoogleProvider_CustomScopesWithResetFlag(t *testing.T) {
+	// Test with custom scopes and reset_scopes: true
+	// Behavior is same as reset_scopes: false (only custom scopes are used)
 	customScopes := []string{"https://www.googleapis.com/auth/analytics.readonly"}
 	provider := NewGoogleProvider("test-client-id", "test-client-secret", "http://localhost/callback", customScopes, true)
 
 	config := provider.Config()
 
-	// Should have only custom scopes (default scopes replaced)
+	// Should have only custom scopes
 	expectedScopes := []string{
 		"https://www.googleapis.com/auth/analytics.readonly",
 	}
@@ -88,14 +88,15 @@ func TestGoogleProvider_ResetScopes(t *testing.T) {
 	}
 }
 
-func TestGoogleProvider_ResetScopesEmpty(t *testing.T) {
-	// Test resetting with empty scopes - should fallback to default
+func TestGoogleProvider_EmptyScopes(t *testing.T) {
+	// Test with empty scopes - should use default scopes
 	provider := NewGoogleProvider("test-client-id", "test-client-secret", "http://localhost/callback", nil, true)
 
 	config := provider.Config()
 
-	// Should fallback to default scopes
+	// Should use default scopes when scopes are empty
 	expectedScopes := []string{
+		"openid",
 		"https://www.googleapis.com/auth/userinfo.email",
 		"https://www.googleapis.com/auth/userinfo.profile",
 	}

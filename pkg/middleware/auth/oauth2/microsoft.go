@@ -16,7 +16,7 @@ type MicrosoftProvider struct {
 
 // NewMicrosoftProvider creates a new Microsoft OAuth2 provider
 func NewMicrosoftProvider(clientID, clientSecret, redirectURL string, scopes []string, resetScopes bool) *MicrosoftProvider {
-	// Default scopes
+	// Default scopes (used only when scopes is empty)
 	defaultScopes := []string{
 		"openid",
 		"profile",
@@ -24,18 +24,12 @@ func NewMicrosoftProvider(clientID, clientSecret, redirectURL string, scopes []s
 		"User.Read",
 	}
 
-	// Determine final scopes based on resetScopes flag
+	// Use default scopes only when no scopes are provided
 	var finalScopes []string
-	if resetScopes {
-		// Replace default scopes with provided scopes
-		if len(scopes) == 0 {
-			finalScopes = defaultScopes // Fallback to default if no scopes provided
-		} else {
-			finalScopes = scopes
-		}
+	if len(scopes) == 0 {
+		finalScopes = defaultScopes
 	} else {
-		// Add provided scopes to default scopes
-		finalScopes = append(defaultScopes, scopes...)
+		finalScopes = scopes
 	}
 
 	return &MicrosoftProvider{
@@ -100,9 +94,20 @@ func (p *MicrosoftProvider) GetUserInfo(ctx context.Context, token *oauth2.Token
 		return nil, ErrEmailNotFound
 	}
 
+	// Note: Microsoft Graph /me/photo endpoint returns binary data, not a URL
+	// For now, we don't support avatar URL for Microsoft provider
+	// Future enhancement: proxy the photo through our own endpoint
+
+	// Set common fields for forwarding
+	extra := make(map[string]any)
+	extra["_email"] = email
+	extra["_username"] = apiUserInfo.DisplayName
+	extra["_avatar_url"] = "" // Microsoft doesn't provide a direct URL
+
 	return &UserInfo{
 		Email: email,
 		Name:  apiUserInfo.DisplayName,
+		Extra: extra,
 	}, nil
 }
 

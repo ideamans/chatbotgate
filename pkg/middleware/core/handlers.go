@@ -683,11 +683,13 @@ func (m *Middleware) handleOAuth2Callback(w http.ResponseWriter, r *http.Request
 
 	// Add user info to query string if forwarding is enabled
 	if m.forwarder != nil {
-		userInfo := &forwarding.UserInfo{
+		fwdUserInfo := &forwarding.UserInfo{
 			Username: name,
 			Email:    email,
+			Extra:    userInfo.Extra,
+			Provider: providerName,
 		}
-		if modifiedURL, err := m.forwarder.AddToQueryString(redirectURL, userInfo); err == nil {
+		if modifiedURL, err := m.forwarder.AddToQueryString(redirectURL, fwdUserInfo); err == nil {
 			redirectURL = modifiedURL
 		} else {
 			m.logger.Warn("Failed to add user info to redirect URL", "error", err)
@@ -976,11 +978,13 @@ func (m *Middleware) handleEmailVerify(w http.ResponseWriter, r *http.Request) {
 
 	// Add user info to query string if forwarding is enabled
 	if m.forwarder != nil {
-		userInfo := &forwarding.UserInfo{
+		fwdUserInfo := &forwarding.UserInfo{
 			Username: "", // Email auth has no username (name)
 			Email:    email,
+			Extra:    make(map[string]any), // Email auth has no extra data
+			Provider: "email",
 		}
-		if modifiedURL, err := m.forwarder.AddToQueryString(redirectURL, userInfo); err == nil {
+		if modifiedURL, err := m.forwarder.AddToQueryString(redirectURL, fwdUserInfo); err == nil {
 			redirectURL = modifiedURL
 		} else {
 			m.logger.Warn("Failed to add user info to redirect URL", "error", err)
@@ -1085,11 +1089,13 @@ func (m *Middleware) handleEmailVerifyOTP(w http.ResponseWriter, r *http.Request
 
 	// Add user info to query string if forwarding is enabled
 	if m.forwarder != nil {
-		userInfo := &forwarding.UserInfo{
+		fwdUserInfo := &forwarding.UserInfo{
 			Username: "", // Email auth has no username (name)
 			Email:    email,
+			Extra:    make(map[string]any), // Email auth has no extra data
+			Provider: "email",
 		}
-		if modifiedURL, err := m.forwarder.AddToQueryString(redirectURL, userInfo); err == nil {
+		if modifiedURL, err := m.forwarder.AddToQueryString(redirectURL, fwdUserInfo); err == nil {
 			redirectURL = modifiedURL
 		} else {
 			m.logger.Warn("Failed to add user info to redirect URL", "error", err)

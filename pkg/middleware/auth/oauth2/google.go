@@ -16,24 +16,19 @@ type GoogleProvider struct {
 
 // NewGoogleProvider creates a new Google OAuth2 provider
 func NewGoogleProvider(clientID, clientSecret, redirectURL string, scopes []string, resetScopes bool) *GoogleProvider {
-	// Default scopes
+	// Default scopes (used only when scopes is empty)
 	defaultScopes := []string{
+		"openid",
 		"https://www.googleapis.com/auth/userinfo.email",
 		"https://www.googleapis.com/auth/userinfo.profile",
 	}
 
-	// Determine final scopes based on resetScopes flag
+	// Use default scopes only when no scopes are provided
 	var finalScopes []string
-	if resetScopes {
-		// Replace default scopes with provided scopes
-		if len(scopes) == 0 {
-			finalScopes = defaultScopes // Fallback to default if no scopes provided
-		} else {
-			finalScopes = scopes
-		}
+	if len(scopes) == 0 {
+		finalScopes = defaultScopes
 	} else {
-		// Add provided scopes to default scopes
-		finalScopes = append(defaultScopes, scopes...)
+		finalScopes = scopes
 	}
 
 	return &GoogleProvider{
@@ -77,6 +72,7 @@ func (p *GoogleProvider) GetUserInfo(ctx context.Context, token *oauth2.Token) (
 		Name          string `json:"name"`
 		GivenName     string `json:"given_name"`
 		FamilyName    string `json:"family_name"`
+		Picture       string `json:"picture"`
 	}
 
 	if err := json.NewDecoder(resp.Body).Decode(&apiUserInfo); err != nil {
@@ -87,9 +83,20 @@ func (p *GoogleProvider) GetUserInfo(ctx context.Context, token *oauth2.Token) (
 		return nil, ErrEmailNotFound
 	}
 
+	// Set common fields for forwarding
+	extra := make(map[string]any)
+	extra["_email"] = apiUserInfo.Email
+	extra["_username"] = apiUserInfo.Name
+	if apiUserInfo.Picture != "" {
+		extra["_avatar_url"] = apiUserInfo.Picture
+	} else {
+		extra["_avatar_url"] = ""
+	}
+
 	return &UserInfo{
 		Email: apiUserInfo.Email,
 		Name:  apiUserInfo.Name,
+		Extra: extra,
 	}, nil
 }
 

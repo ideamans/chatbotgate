@@ -42,6 +42,78 @@ func TestNewGitHubProvider(t *testing.T) {
 	}
 }
 
+func TestGitHubProvider_CustomScopes(t *testing.T) {
+	// Test with custom scopes - should use only custom scopes (no defaults added)
+	customScopes := []string{"repo", "read:org"}
+	provider := NewGitHubProvider("test-client-id", "test-client-secret", "http://localhost/callback", customScopes, false)
+
+	config := provider.Config()
+
+	// Should have only custom scopes (defaults not added)
+	expectedScopes := []string{
+		"repo",
+		"read:org",
+	}
+
+	if len(config.Scopes) != len(expectedScopes) {
+		t.Errorf("Scopes length = %d, want %d", len(config.Scopes), len(expectedScopes))
+	}
+
+	for i, scope := range expectedScopes {
+		if i >= len(config.Scopes) || config.Scopes[i] != scope {
+			t.Errorf("Scopes[%d] = %s, want %s", i, config.Scopes[i], scope)
+		}
+	}
+}
+
+func TestGitHubProvider_CustomScopesWithResetFlag(t *testing.T) {
+	// Test with custom scopes and reset_scopes: true
+	// Behavior is same as reset_scopes: false (only custom scopes are used)
+	customScopes := []string{"repo", "read:org"}
+	provider := NewGitHubProvider("test-client-id", "test-client-secret", "http://localhost/callback", customScopes, true)
+
+	config := provider.Config()
+
+	// Should have only custom scopes
+	expectedScopes := []string{
+		"repo",
+		"read:org",
+	}
+
+	if len(config.Scopes) != len(expectedScopes) {
+		t.Errorf("Scopes length = %d, want %d", len(config.Scopes), len(expectedScopes))
+	}
+
+	for i, scope := range expectedScopes {
+		if i >= len(config.Scopes) || config.Scopes[i] != scope {
+			t.Errorf("Scopes[%d] = %s, want %s", i, config.Scopes[i], scope)
+		}
+	}
+}
+
+func TestGitHubProvider_EmptyScopes(t *testing.T) {
+	// Test with empty scopes - should use default scopes
+	provider := NewGitHubProvider("test-client-id", "test-client-secret", "http://localhost/callback", nil, true)
+
+	config := provider.Config()
+
+	// Should use default scopes when scopes are empty
+	expectedScopes := []string{
+		"user:email",
+		"read:user",
+	}
+
+	if len(config.Scopes) != len(expectedScopes) {
+		t.Errorf("Scopes length = %d, want %d", len(config.Scopes), len(expectedScopes))
+	}
+
+	for i, scope := range expectedScopes {
+		if i >= len(config.Scopes) || config.Scopes[i] != scope {
+			t.Errorf("Scopes[%d] = %s, want %s", i, config.Scopes[i], scope)
+		}
+	}
+}
+
 func TestGitHubProvider_GetUserEmail(t *testing.T) {
 	tests := []struct {
 		name        string
