@@ -12,11 +12,9 @@ import (
 
 // Handler is a reverse proxy handler
 type Handler struct {
-	defaultUpstream *url.URL
-	defaultProxy    *httputil.ReverseProxy
-	defaultSecret   SecretConfig
-	hostProxies     map[string]*httputil.ReverseProxy
-	hostSecrets     map[string]SecretConfig
+	upstream *url.URL
+	proxy    *httputil.ReverseProxy
+	secret   SecretConfig
 }
 
 // NewHandler creates a new proxy handler with a default upstream
@@ -25,40 +23,23 @@ func NewHandler(upstreamURL string) (*Handler, error) {
 	upstreamConfig := UpstreamConfig{
 		URL: upstreamURL,
 	}
-	return NewHandlerWithConfig(upstreamConfig, nil)
+	return NewHandlerWithConfig(upstreamConfig)
 }
 
 // NewHandlerWithConfig creates a new proxy handler with upstream configuration
-func NewHandlerWithConfig(upstreamConfig UpstreamConfig, hosts map[string]UpstreamConfig) (*Handler, error) {
-	// Parse default upstream
+func NewHandlerWithConfig(upstreamConfig UpstreamConfig) (*Handler, error) {
+	// Parse upstream
 	upstream, err := url.Parse(upstreamConfig.URL)
 	if err != nil {
 		return nil, fmt.Errorf("invalid upstream URL: %w", err)
 	}
 
-	defaultProxy := createReverseProxy(upstream, upstreamConfig.Secret)
-
-	// Parse host-specific upstreams
-	hostProxies := make(map[string]*httputil.ReverseProxy)
-	hostSecrets := make(map[string]SecretConfig)
-
-	if hosts != nil {
-		for host, hostConfig := range hosts {
-			hostUpstream, err := url.Parse(hostConfig.URL)
-			if err != nil {
-				return nil, fmt.Errorf("invalid upstream URL for host %s: %w", host, err)
-			}
-			hostProxies[host] = createReverseProxy(hostUpstream, hostConfig.Secret)
-			hostSecrets[host] = hostConfig.Secret
-		}
-	}
+	proxy := createReverseProxy(upstream, upstreamConfig.Secret)
 
 	return &Handler{
-		defaultUpstream: upstream,
-		defaultProxy:    defaultProxy,
-		defaultSecret:   upstreamConfig.Secret,
-		hostProxies:     hostProxies,
-		hostSecrets:     hostSecrets,
+		upstream: upstream,
+		proxy:    proxy,
+		secret:   upstreamConfig.Secret,
 	}, nil
 }
 
@@ -139,30 +120,9 @@ func (bp *bufferPool) Put(b []byte) {
 	// Go 1.13+ has optimized GC for short-lived objects
 }
 
-// NewHandlerWithHosts creates a new proxy handler with host-based routing
-// Deprecated: Use NewHandlerWithConfig instead
-func NewHandlerWithHosts(defaultUpstream string, hosts map[string]string) (*Handler, error) {
-	// Convert old string-based hosts to UpstreamConfig
-	hostConfigs := make(map[string]UpstreamConfig)
-	for host, upstreamURL := range hosts {
-		hostConfigs[host] = UpstreamConfig{
-			URL: upstreamURL,
-		}
-	}
-
-	return NewHandlerWithConfig(UpstreamConfig{URL: defaultUpstream}, hostConfigs)
-}
-
 // ServeHTTP handles the proxy request
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	// Check for host-specific proxy
-	if proxy, ok := h.hostProxies[r.Host]; ok {
-		proxy.ServeHTTP(w, r)
-		return
-	}
-
-	// Fall back to default proxy
-	h.defaultProxy.ServeHTTP(w, r)
+	h.proxy.ServeHTTP(w, r)
 }
 
 // AddAuthHeaders adds authentication headers to the request

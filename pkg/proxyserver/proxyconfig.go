@@ -17,8 +17,7 @@ type ProxyConfig struct {
 
 // ProxyServerConfig represents proxy server settings
 type ProxyServerConfig struct {
-	Upstream UpstreamConfig            `yaml:"upstream" json:"upstream"` // Default upstream (required)
-	Hosts    map[string]UpstreamConfig `yaml:"hosts" json:"hosts"`       // Host-based routing (optional)
+	Upstream UpstreamConfig `yaml:"upstream" json:"upstream"` // Upstream configuration (required)
 }
 
 // UpstreamConfig represents upstream server configuration with optional secret header

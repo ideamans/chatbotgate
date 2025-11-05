@@ -57,7 +57,7 @@ func NewFromConfigs(middlewareCfg *config.Config, proxyCfg *ProxyConfig, host st
 	sessionStore := f.CreateSessionStore(sessionKVS)
 
 	// Create proxy handler directly (not via factory)
-	proxyHandler, err := NewHandlerWithConfig(proxyCfg.Proxy.Upstream, proxyCfg.Proxy.Hosts)
+	proxyHandler, err := NewHandlerWithConfig(proxyCfg.Proxy.Upstream)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create proxy handler: %w", err)
 	}
