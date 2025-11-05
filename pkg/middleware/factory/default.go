@@ -235,15 +235,14 @@ func (f *DefaultFactory) CreateAuthzChecker(authzCfg config.AuthorizationConfig)
 
 // CreateForwarder creates a forwarder for user info forwarding (may return nil)
 func (f *DefaultFactory) CreateForwarder(forwardingCfg config.ForwardingConfig, providers []config.OAuth2Provider) forwarding.Forwarder {
-	if !forwardingCfg.QueryString.Enabled && !forwardingCfg.Header.Enabled {
+	if len(forwardingCfg.Fields) == 0 {
 		return nil
 	}
 
 	forwarder := forwarding.NewForwarder(&forwardingCfg, providers)
 	f.logger.Debug("User info forwarder initialized",
-		"querystring_enabled", forwardingCfg.QueryString.Enabled,
-		"header_enabled", forwardingCfg.Header.Enabled,
-		"fields", len(forwardingCfg.Fields))
+		"fields", len(forwardingCfg.Fields),
+		"encryption_enabled", forwardingCfg.Encryption != nil)
 
 	return forwarder
 }

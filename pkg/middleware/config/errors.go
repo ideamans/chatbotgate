@@ -24,9 +24,6 @@ var (
 	// ErrEncryptionKeyTooShort is returned when encryption key is too short
 	ErrEncryptionKeyTooShort = errors.New("encryption key must be at least 32 characters")
 
-	// ErrForwardingFieldsRequired is returned when forwarding is enabled but no fields are specified
-	ErrForwardingFieldsRequired = errors.New("at least one field must be specified when forwarding is enabled")
-
-	// ErrInvalidForwardingField is returned when an invalid field is specified
-	ErrInvalidForwardingField = errors.New("invalid forwarding field (allowed: username, email)")
+	// ErrEncryptionConfigRequired is returned when encrypt filter is used but encryption config is not provided
+	ErrEncryptionConfigRequired = errors.New("encryption configuration is required when 'encrypt' filter is used")
 )

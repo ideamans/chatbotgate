@@ -38,27 +38,6 @@ oauth2:
         - "email"
         - "profile"
         - "analytics"  # This will trigger stub-auth to return secrets.access_token
-      # Forward custom fields from OAuth2 response
-      forwarding:
-        custom:
-          # Forward access token via header
-          - path: "secrets.access_token"
-            header: "X-Access-Token"
-          # Forward access token via query (only on login redirect)
-          - path: "secrets.access_token"
-            query: "access_token"
-          # Forward analytics user_id via header
-          - path: "analytics.user_id"
-            header: "X-Analytics-User-Id"
-          # Test missing path (should not send anything)
-          - path: "nonexistent.field"
-            header: "X-Should-Not-Exist"
-          # Test header-only forwarding (no query)
-          - path: "analytics.tier"
-            header: "X-Analytics-Tier"
-          # Test query-only forwarding (no header)
-          - path: "secrets.refresh_token"
-            query: "refresh_token"
 
 # Email authentication (disabled for this test)
 email_auth:
@@ -83,22 +62,35 @@ kvs:
 
 # Global user information forwarding with encryption enabled
 forwarding:
-  # Forward both username and email
-  fields:
-    - "username"
-    - "email"
-
-  # QueryString forwarding (ENCRYPTED)
-  querystring:
-    enabled: true
-    encrypt: true
-
-  # Header forwarding (ENCRYPTED)
-  header:
-    enabled: true
-    encrypt: true
-    prefix: "X-Chatbotgate-"
-
   # Encryption configuration
   encryption:
     key: "e2e-test-encryption-key-32-chars-long-1234567890"
+
+  # Forward custom fields from OAuth2 response (all encrypted)
+  fields:
+    # Forward username and email (base fields)
+    - path: "username"
+      query: "username"
+      header: "X-ChatbotGate-User"
+      filters: encrypt
+    - path: "email"
+      query: "email"
+      header: "X-ChatbotGate-Email"
+      filters: encrypt
+    # Forward access token via header and query (encrypted)
+    - path: "extra.secrets.access_token"
+      header: "X-Access-Token"
+      query: "access_token"
+      filters: encrypt
+    # Forward analytics user_id via header (encrypted)
+    - path: "extra.analytics.user_id"
+      header: "X-Analytics-User-Id"
+      filters: encrypt
+    # Test header-only forwarding (encrypted)
+    - path: "extra.analytics.tier"
+      header: "X-Analytics-Tier"
+      filters: encrypt
+    # Test query-only forwarding (encrypted)
+    - path: "extra.secrets.refresh_token"
+      query: "refresh_token"
+      filters: encrypt

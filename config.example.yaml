@@ -234,35 +234,63 @@ kvs:
 # User information forwarding configuration
 # Forward authenticated user information to upstream applications
 forwarding:
-  # Fields to forward (username, email)
-  # These are the user attributes that will be forwarded to the upstream
+  # Optional: Encryption settings (required if any field uses 'encrypt' filter)
+  # encryption:
+  #   key: "CHANGE-THIS-TO-A-RANDOM-KEY-AT-LEAST-32-CHARACTERS"  # Must be at least 32 characters
+  #   algorithm: "aes-256-gcm"  # Default: "aes-256-gcm"
+
+  # Field forwarding definitions
+  # Each field specifies:
+  # - path: Dot-separated path to the field (e.g., "email", "extra.avatar_url", "." for entire object)
+  # - query: Query parameter name for login redirect (optional)
+  # - header: HTTP header name for all requests (optional)
+  # - filters: Processing filters (optional, e.g., "encrypt,zip" or ["encrypt", "zip"])
+  #
+  # At least one of 'query' or 'header' must be specified for each field.
+  #
+  # Available filters:
+  # - encrypt: AES-256-GCM encryption (requires encryption config)
+  # - zip: gzip compression
+  # - base64: base64 encoding (auto-added if final output is binary)
+  #
+  # Filter processing order: left to right (e.g., "encrypt,zip" → encrypt first, then zip)
+  # Final output is automatically base64-encoded if binary.
   fields:
-    - "username"
-    - "email"
+    # Example 1: Forward email as query parameter and header (plain text)
+    # - path: email
+    #   query: email
+    #   header: X-Auth-Email
 
-  # QueryString forwarding (only on login redirect)
-  # When enabled, user info is appended to the redirect URL after successful login
-  # Example: https://app.example.com/?username=john&email=john@example.com
-  querystring:
-    enabled: false
-    encrypt: false  # Set to true to encrypt the query parameters
+    # Example 2: Forward username with encryption
+    # - path: username
+    #   header: X-Auth-User
+    #   filters: encrypt
 
-  # Header forwarding (on all requests to upstream)
-  # When enabled, user info is added as HTTP headers on every proxied request
-  # Example headers: X-Chatbotgate-Username: john, X-Chatbotgate-Email: john@example.com
-  header:
-    enabled: false
-    encrypt: false  # Set to true to encrypt the header values
-    # Header prefix (default: "X-Chatbotgate-")
-    # prefix: "X-Chatbotgate-"
+    # Example 3: Forward email with encryption and compression
+    # - path: email
+    #   query: user_email
+    #   header: X-Auth-Email
+    #   filters: encrypt,zip
 
-  # Encryption settings (required if querystring.encrypt or header.encrypt is true)
-  encryption:
-    # Encryption key (must be at least 32 characters)
-    # Generate a random key: openssl rand -base64 32
-    # key: "CHANGE-THIS-TO-A-RANDOM-KEY-AT-LEAST-32-CHARACTERS"
-    # Algorithm (default: "aes-256-gcm")
-    # algorithm: "aes-256-gcm"
+    # Example 4: Forward avatar URL from OAuth2 extra data
+    # - path: extra.avatar_url
+    #   header: X-Avatar-URL
+
+    # Example 5: Forward entire user object as JSON (encrypted and compressed)
+    # - path: .
+    #   query: userinfo
+    #   filters:
+    #     - encrypt
+    #     - zip
+
+    # Example 6: Forward access token from OAuth2 provider
+    # - path: extra.secrets.access_token
+    #   header: X-Access-Token
+    #   filters: encrypt,zip
+
+    # Example 7: Forward provider name
+    # - path: provider
+    #   header: X-Auth-Provider
 
 # Passthrough configuration
 # Paths matching these patterns will bypass authentication

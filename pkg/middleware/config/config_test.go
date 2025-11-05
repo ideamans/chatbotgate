@@ -110,7 +110,7 @@ func TestConfig_ValidateForwarding(t *testing.T) {
 			Service: ServiceConfig{Name: "Test Service"},
 			Session: SessionConfig{CookieSecret: "this-is-a-secret-key-with-32-characters"},
 			OAuth2: OAuth2Config{
-				Providers: []OAuth2Provider{{}},
+				Providers: []OAuth2Provider{{Name: "google", ClientID: "test", ClientSecret: "test"}},
 			},
 		}
 	}
@@ -121,89 +121,122 @@ func TestConfig_ValidateForwarding(t *testing.T) {
 		wantErr    error
 	}{
 		{
-			name: "valid querystring forwarding without encryption",
+			name: "valid plain text field",
 			forwarding: ForwardingConfig{
-				Fields:      []string{"username", "email"},
-				QueryString: ForwardingMethodConfig{Enabled: true, Encrypt: false},
+				Fields: []ForwardingField{
+					{Path: "email", Query: "email"},
+				},
 			},
 			wantErr: nil,
 		},
 		{
-			name: "valid header forwarding without encryption",
+			name: "valid header forwarding",
 			forwarding: ForwardingConfig{
-				Fields: []string{"username", "email"},
-				Header: ForwardingHeaderConfig{Enabled: true, Encrypt: false, Prefix: "X-Custom-"},
+				Fields: []ForwardingField{
+					{Path: "username", Header: "X-User"},
+				},
 			},
 			wantErr: nil,
 		},
 		{
-			name: "valid forwarding with encryption",
+			name: "valid both query and header",
 			forwarding: ForwardingConfig{
-				Fields:      []string{"username", "email"},
-				QueryString: ForwardingMethodConfig{Enabled: true, Encrypt: true},
-				Header:      ForwardingHeaderConfig{Enabled: true, Encrypt: true},
-				Encryption:  EncryptionConfig{Key: "this-is-a-32-character-encryption-key", Algorithm: "aes-256-gcm"},
+				Fields: []ForwardingField{
+					{Path: "email", Query: "email", Header: "X-Email"},
+				},
 			},
 			wantErr: nil,
 		},
 		{
-			name: "forwarding disabled - no validation",
+			name: "valid with encrypt filter",
 			forwarding: ForwardingConfig{
-				Fields:      []string{}, // Empty fields should be OK when forwarding is disabled
-				QueryString: ForwardingMethodConfig{Enabled: false},
-				Header:      ForwardingHeaderConfig{Enabled: false},
+				Encryption: &EncryptionConfig{
+					Key:       "this-is-a-32-character-encryption-key",
+					Algorithm: "aes-256-gcm",
+				},
+				Fields: []ForwardingField{
+					{Path: "email", Header: "X-Email", Filters: []string{"encrypt"}},
+				},
 			},
 			wantErr: nil,
 		},
 		{
-			name: "missing fields when forwarding enabled",
+			name: "valid with multiple filters",
 			forwarding: ForwardingConfig{
-				Fields:      []string{},
-				QueryString: ForwardingMethodConfig{Enabled: true},
+				Encryption: &EncryptionConfig{
+					Key: "this-is-a-32-character-encryption-key",
+				},
+				Fields: []ForwardingField{
+					{Path: "email", Query: "email", Filters: []string{"encrypt", "zip"}},
+				},
 			},
-			wantErr: ErrForwardingFieldsRequired,
+			wantErr: nil,
 		},
 		{
-			name: "invalid field name",
+			name: "valid entire object",
 			forwarding: ForwardingConfig{
-				Fields:      []string{"username", "invalid_field"},
-				QueryString: ForwardingMethodConfig{Enabled: true},
+				Fields: []ForwardingField{
+					{Path: ".", Query: "userinfo"},
+				},
 			},
-			wantErr: ErrInvalidForwardingField,
+			wantErr: nil,
 		},
 		{
-			name: "encryption enabled but key missing",
+			name: "valid nested path",
 			forwarding: ForwardingConfig{
-				Fields:      []string{"username"},
-				QueryString: ForwardingMethodConfig{Enabled: true, Encrypt: true},
-				Encryption:  EncryptionConfig{Key: ""},
+				Fields: []ForwardingField{
+					{Path: "extra.avatar_url", Header: "X-Avatar"},
+				},
 			},
-			wantErr: ErrEncryptionKeyRequired,
+			wantErr: nil,
+		},
+		{
+			name: "missing path",
+			forwarding: ForwardingConfig{
+				Fields: []ForwardingField{
+					{Query: "test"},
+				},
+			},
+			wantErr: errors.New("path is required"),
+		},
+		{
+			name: "missing query and header",
+			forwarding: ForwardingConfig{
+				Fields: []ForwardingField{
+					{Path: "email"},
+				},
+			},
+			wantErr: errors.New("at least one of 'query' or 'header' must be specified"),
+		},
+		{
+			name: "encrypt filter without encryption config",
+			forwarding: ForwardingConfig{
+				Fields: []ForwardingField{
+					{Path: "email", Query: "email", Filters: []string{"encrypt"}},
+				},
+			},
+			wantErr: ErrEncryptionConfigRequired,
+		},
+		{
+			name: "invalid filter name",
+			forwarding: ForwardingConfig{
+				Fields: []ForwardingField{
+					{Path: "email", Query: "email", Filters: []string{"invalid"}},
+				},
+			},
+			wantErr: errors.New("invalid filter"),
 		},
 		{
 			name: "encryption key too short",
 			forwarding: ForwardingConfig{
-				Fields:      []string{"username"},
-				Header:      ForwardingHeaderConfig{Enabled: true, Encrypt: true},
-				Encryption:  EncryptionConfig{Key: "short-key"},
+				Encryption: &EncryptionConfig{
+					Key: "short",
+				},
+				Fields: []ForwardingField{
+					{Path: "email", Query: "email", Filters: []string{"encrypt"}},
+				},
 			},
 			wantErr: ErrEncryptionKeyTooShort,
-		},
-		{
-			name: "only username field",
-			forwarding: ForwardingConfig{
-				Fields:      []string{"username"},
-				QueryString: ForwardingMethodConfig{Enabled: true},
-			},
-			wantErr: nil,
-		},
-		{
-			name: "only email field",
-			forwarding: ForwardingConfig{
-				Fields: []string{"email"},
-				Header: ForwardingHeaderConfig{Enabled: true},
-			},
-			wantErr: nil,
 		},
 	}
 
@@ -212,40 +245,34 @@ func TestConfig_ValidateForwarding(t *testing.T) {
 			cfg := baseConfig()
 			cfg.Forwarding = tt.forwarding
 			err := cfg.Validate()
-			if !errors.Is(err, tt.wantErr) {
-				t.Errorf("Validate() error = %v, wantErr %v", err, tt.wantErr)
+			if tt.wantErr == nil {
+				if err != nil {
+					t.Errorf("Validate() unexpected error = %v", err)
+				}
+			} else {
+				if err == nil {
+					t.Errorf("Validate() expected error containing %v, got nil", tt.wantErr)
+				} else if !errors.Is(err, tt.wantErr) && !containsError(err.Error(), tt.wantErr.Error()) {
+					t.Errorf("Validate() error = %v, wantErr %v", err, tt.wantErr)
+				}
 			}
 		})
 	}
 }
 
-func TestForwardingHeaderConfig_GetPrefix(t *testing.T) {
-	tests := []struct {
-		name   string
-		prefix string
-		want   string
-	}{
-		{
-			name:   "default prefix",
-			prefix: "",
-			want:   "X-Chatbotgate-",
-		},
-		{
-			name:   "custom prefix",
-			prefix: "X-Custom-",
-			want:   "X-Custom-",
-		},
-	}
+// Helper function to check if error message contains expected text
+func containsError(got, want string) bool {
+	return len(want) > 0 && len(got) >= len(want) &&
+		(got == want || containsSubstring(got, want))
+}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			cfg := ForwardingHeaderConfig{Prefix: tt.prefix}
-			got := cfg.GetPrefix()
-			if got != tt.want {
-				t.Errorf("GetPrefix() = %v, want %v", got, tt.want)
-			}
-		})
+func containsSubstring(s, substr string) bool {
+	for i := 0; i <= len(s)-len(substr); i++ {
+		if s[i:i+len(substr)] == substr {
+			return true
+		}
 	}
+	return false
 }
 
 func TestEncryptionConfig_GetAlgorithm(t *testing.T) {

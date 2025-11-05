@@ -86,8 +86,9 @@ func TestDefaultFactory_CreateForwarder(t *testing.T) {
 			name: "forwarding configured",
 			configFunc: func() *config.Config {
 				cfg := CreateTestConfig()
-				cfg.Forwarding.Fields = []string{"email"}
-				cfg.Forwarding.Header.Enabled = true
+				cfg.Forwarding.Fields = []config.ForwardingField{
+					{Path: "email", Header: "X-Email"},
+				}
 				return cfg
 			},
 			expectNil:   false,

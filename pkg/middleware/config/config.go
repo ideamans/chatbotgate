@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/ideamans/chatbotgate/pkg/shared/kvs"
@@ -114,10 +115,6 @@ type OAuth2Provider struct {
 	// OAuth2 scopes to request
 	Scopes      []string `yaml:"scopes" json:"scopes"`             // OAuth2 scopes to request (e.g., ["openid", "email", "profile", "analytics"])
 	ResetScopes bool     `yaml:"reset_scopes" json:"reset_scopes"` // If true, replaces default scopes; if false, adds to default scopes (default: false)
-
-	// Custom forwarding configuration for this provider
-	// Allows forwarding additional user data obtained from OAuth2 to upstream
-	Forwarding *ProviderForwardingConfig `yaml:"forwarding,omitempty" json:"forwarding,omitempty"`
 }
 
 // EmailAuthConfig contains email authentication settings
@@ -258,36 +255,67 @@ func (c *Config) Validate() error {
 func (c *Config) validateForwarding() error {
 	fwd := &c.Forwarding
 
-	// Check if any forwarding method is enabled
-	isForwardingEnabled := fwd.QueryString.Enabled || fwd.Header.Enabled
-	if !isForwardingEnabled {
-		return nil // No forwarding enabled, no validation needed
+	// No fields defined, nothing to validate
+	if len(fwd.Fields) == 0 {
+		return nil
 	}
 
 	verr := NewValidationError()
 
-	// Check that fields are specified when forwarding is enabled
-	if len(fwd.Fields) == 0 {
-		verr.Add(ErrForwardingFieldsRequired)
-	}
-
-	// Validate field names
-	validFields := map[string]bool{"username": true, "email": true}
+	// Check if encryption is needed
+	needsEncryption := false
 	for _, field := range fwd.Fields {
-		if !validFields[field] {
-			verr.Add(ErrInvalidForwardingField)
-			break // Only report once
+		for _, filter := range field.Filters {
+			if filter == "encrypt" {
+				needsEncryption = true
+				break
+			}
+		}
+		if needsEncryption {
+			break
 		}
 	}
 
-	// Check encryption requirements
-	needsEncryption := fwd.QueryString.Encrypt || fwd.Header.Encrypt
-
+	// Validate encryption config if needed
 	if needsEncryption {
-		if fwd.Encryption.Key == "" {
-			verr.Add(ErrEncryptionKeyRequired)
-		} else if len(fwd.Encryption.Key) < 32 {
-			verr.Add(ErrEncryptionKeyTooShort)
+		if fwd.Encryption == nil {
+			verr.Add(ErrEncryptionConfigRequired)
+		} else {
+			if fwd.Encryption.Key == "" {
+				verr.Add(ErrEncryptionKeyRequired)
+			} else if len(fwd.Encryption.Key) < 32 {
+				verr.Add(ErrEncryptionKeyTooShort)
+			}
+		}
+	}
+
+	// Validate each field
+	for i, field := range fwd.Fields {
+		// Path is required
+		if field.Path == "" {
+			verr.Add(fmt.Errorf("forwarding.fields[%d]: path is required", i))
+			continue
+		}
+
+		// At least one of Query or Header must be specified
+		if field.Query == "" && field.Header == "" {
+			verr.Add(fmt.Errorf("forwarding.fields[%d]: at least one of 'query' or 'header' must be specified", i))
+		}
+
+		// Validate filters
+		validFilters := map[string]bool{"encrypt": true, "zip": true, "base64": true}
+		for _, filter := range field.Filters {
+			if !validFilters[filter] {
+				verr.Add(fmt.Errorf("forwarding.fields[%d]: invalid filter '%s' (valid: encrypt, zip, base64)", i, filter))
+			}
+		}
+
+		// Warn if base64 is explicitly specified (it's auto-added)
+		for _, filter := range field.Filters {
+			if filter == "base64" {
+				// Note: This is just a warning, not an error
+				// In a production system, you might want to log this
+			}
 		}
 	}
 
@@ -296,37 +324,58 @@ func (c *Config) validateForwarding() error {
 
 // ForwardingConfig contains user info forwarding settings
 type ForwardingConfig struct {
-	Fields      []string               `yaml:"fields" json:"fields"`           // Fields to forward (e.g., username, email)
-	QueryString ForwardingMethodConfig `yaml:"querystring" json:"querystring"` // QueryString forwarding (only on login redirect)
-	Header      ForwardingHeaderConfig `yaml:"header" json:"header"`           // Header forwarding (on all requests)
-	Encryption  EncryptionConfig       `yaml:"encryption" json:"encryption"`   // Encryption settings
+	Encryption *EncryptionConfig `yaml:"encryption,omitempty" json:"encryption,omitempty"` // Optional encryption settings
+	Fields     []ForwardingField `yaml:"fields" json:"fields"`                             // Field forwarding definitions
 }
 
-// ForwardingMethodConfig contains settings for a forwarding method (querystring)
-type ForwardingMethodConfig struct {
-	Enabled bool `yaml:"enabled" json:"enabled"` // Enable forwarding
-	Encrypt bool `yaml:"encrypt" json:"encrypt"` // Encrypt the data
+// ForwardingField defines how to forward a single field
+type ForwardingField struct {
+	Path    string        `yaml:"path" json:"path"`               // Dot-separated path to field (e.g., "email", "userinfo.avatar_url", "." for entire object)
+	Query   string        `yaml:"query,omitempty" json:"query,omitempty"`   // Query parameter name for login redirect (optional)
+	Header  string        `yaml:"header,omitempty" json:"header,omitempty"` // HTTP header name for all requests (optional)
+	Filters FilterList    `yaml:"filters,omitempty" json:"filters,omitempty"` // Filters to apply (e.g., "encrypt,zip" or ["encrypt", "zip"])
 }
 
-// ForwardingHeaderConfig contains settings for header forwarding
-type ForwardingHeaderConfig struct {
-	Enabled bool   `yaml:"enabled" json:"enabled"` // Enable forwarding
-	Encrypt bool   `yaml:"encrypt" json:"encrypt"` // Encrypt the data
-	Prefix  string `yaml:"prefix" json:"prefix"`   // Header prefix (default: "X-Chatbotgate-")
-}
+// FilterList represents a list of filters (can be comma-separated string or array)
+type FilterList []string
 
-// GetPrefix returns the header prefix with default value
-func (h ForwardingHeaderConfig) GetPrefix() string {
-	if h.Prefix == "" {
-		return "X-Chatbotgate-"
+// UnmarshalYAML implements custom YAML unmarshaling to support both string and array formats
+func (f *FilterList) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	// Try array format first
+	var arr []string
+	if err := unmarshal(&arr); err == nil {
+		*f = arr
+		return nil
 	}
-	return h.Prefix
+
+	// Try comma-separated string format
+	var str string
+	if err := unmarshal(&str); err != nil {
+		return err
+	}
+
+	// Split by comma and trim spaces
+	if str == "" {
+		*f = []string{}
+		return nil
+	}
+
+	parts := strings.Split(str, ",")
+	result := make([]string, 0, len(parts))
+	for _, part := range parts {
+		trimmed := strings.TrimSpace(part)
+		if trimmed != "" {
+			result = append(result, trimmed)
+		}
+	}
+	*f = result
+	return nil
 }
 
 // EncryptionConfig contains encryption settings
 type EncryptionConfig struct {
-	Key       string `yaml:"key" json:"key"`               // Encryption key (required if encrypt is enabled)
-	Algorithm string `yaml:"algorithm" json:"algorithm"` // Encryption algorithm (default: "aes-256-gcm")
+	Key       string `yaml:"key" json:"key"`             // Encryption key (required if encrypt filter is used)
+	Algorithm string `yaml:"algorithm,omitempty" json:"algorithm,omitempty"` // Encryption algorithm (default: "aes-256-gcm")
 }
 
 // GetAlgorithm returns the encryption algorithm with default value
@@ -343,19 +392,4 @@ type PassthroughConfig struct {
 	Prefix    []string `yaml:"prefix" json:"prefix"`       // Exact prefix matches (e.g., "/embed.js", "/public/")
 	Regex     []string `yaml:"regex" json:"regex"`         // Regular expression patterns (e.g., "^/api/public/.*$")
 	Minimatch []string `yaml:"minimatch" json:"minimatch"` // Minimatch/glob patterns (e.g., "/**/*.js", "/static/**")
-}
-
-// ProviderForwardingConfig contains provider-specific forwarding settings
-// Allows forwarding custom fields from OAuth2 user data to upstream application
-type ProviderForwardingConfig struct {
-	Custom []CustomFieldForwarding `yaml:"custom" json:"custom"` // Custom field forwarding rules
-}
-
-// CustomFieldForwarding defines how to forward a custom field
-// The field is retrieved from OAuth2 user data using a dot-separated path
-// and forwarded to upstream via HTTP header and/or query string
-type CustomFieldForwarding struct {
-	Path   string `yaml:"path" json:"path"`     // Dot-separated path to the field in user data (e.g., "secrets.access_token")
-	Header string `yaml:"header,omitempty" json:"header,omitempty"` // HTTP header name (e.g., "X-Access-Token"), omit to skip header forwarding
-	Query  string `yaml:"query,omitempty" json:"query,omitempty"`  // Query parameter name (e.g., "access_token"), omit to skip query forwarding
 }

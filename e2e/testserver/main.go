@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -73,33 +74,41 @@ func handleRoot(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Extract querystring data from individual parameters
-	chatbotgateUser := r.URL.Query().Get("chatbotgate.user")
-	chatbotgateEmail := r.URL.Query().Get("chatbotgate.email")
+	// Try both old names (chatbotgate.user/email) and new names (username/email)
+	usernameParam := r.URL.Query().Get("username")
+	if usernameParam == "" {
+		usernameParam = r.URL.Query().Get("chatbotgate.user")
+	}
 
-	if chatbotgateUser != "" || chatbotgateEmail != "" {
+	emailParam := r.URL.Query().Get("email")
+	if emailParam == "" {
+		emailParam = r.URL.Query().Get("chatbotgate.email")
+	}
+
+	if usernameParam != "" || emailParam != "" {
 		// Try to decrypt individual fields
 		userData := &UserData{}
 		encrypted := false
 
-		if chatbotgateUser != "" {
+		if usernameParam != "" {
 			// Try decryption first
-			if decrypted := decryptField(chatbotgateUser); decrypted != "" {
+			if decrypted := decryptField(usernameParam); decrypted != "" {
 				userData.Username = decrypted
 				encrypted = true
 			} else {
 				// Fall back to plain text
-				userData.Username = chatbotgateUser
+				userData.Username = usernameParam
 			}
 		}
 
-		if chatbotgateEmail != "" {
+		if emailParam != "" {
 			// Try decryption first
-			if decrypted := decryptField(chatbotgateEmail); decrypted != "" {
+			if decrypted := decryptField(emailParam); decrypted != "" {
 				userData.Email = decrypted
 				encrypted = true
 			} else {
 				// Fall back to plain text
-				userData.Email = chatbotgateEmail
+				userData.Email = emailParam
 			}
 		}
 
@@ -151,12 +160,33 @@ func handleRoot(w http.ResponseWriter, r *http.Request) {
 // Returns decrypted string on success, empty string on failure
 func decryptField(encrypted string) string {
 	encryptor := forwarding.NewEncryptor(encryptionKey)
-	decrypted, err := encryptor.Decrypt(encrypted)
+
+	// The filter chain auto-applies base64 encoding when encrypt filter outputs binary type
+	// So the data is double base64-encoded: we need to decode once first
+	outerDecoded, err := base64.StdEncoding.DecodeString(encrypted)
+	if err != nil {
+		// Not double-encoded, try decrypting directly
+		decrypted, err := encryptor.Decrypt(encrypted)
+		if err != nil {
+			return ""
+		}
+		return decrypted
+	}
+
+	// Now decrypt (which will decode the inner base64 internally)
+	decrypted, err := encryptor.Decrypt(string(outerDecoded))
 	if err != nil {
 		// Not encrypted or decryption failed
 		return ""
 	}
 	return decrypted
+}
+
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }
 
 // Passthrough test handlers
