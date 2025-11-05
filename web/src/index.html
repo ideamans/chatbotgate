@@ -128,6 +128,7 @@
         <li><a href="#alerts">Alerts</a></li>
         <li><a href="#pages">Pages</a></li>
         <li><a href="#accordion">Accordion</a></li>
+        <li><a href="#iframe-detection">Iframe Detection</a></li>
       </ul>
     </div>
   </nav>
@@ -951,6 +952,137 @@ Request ID: req_abc123xyz456</div>
   &lt;/div&gt;
 &lt;/div&gt;</div>
     </section>
+
+    <!-- Iframe Detection Section -->
+    <section id="iframe-detection" class="catalog-section">
+      <h2>Iframe Detection</h2>
+      <p style="color: var(--color-text-secondary); margin-bottom: var(--spacing-md);">
+        When authentication pages are loaded inside an iframe (e.g., for widget or embedded authentication),
+        the <code style="background-color: var(--color-bg-muted); padding: 2px 6px; border-radius: 3px;">in-iframe</code> class should be added to the <code style="background-color: var(--color-bg-muted); padding: 2px 6px; border-radius: 3px;">&lt;body&gt;</code> element.
+        This allows CSS to adjust the layout and hide unnecessary elements for iframe contexts.
+      </p>
+
+      <h3>Specification</h3>
+      <div style="background-color: var(--color-bg-muted); padding: var(--spacing-md); border-radius: var(--radius-md); margin-bottom: var(--spacing-md);">
+        <p style="margin-bottom: var(--spacing-sm);"><strong>Class Name:</strong> <code>in-iframe</code></p>
+        <p style="margin-bottom: var(--spacing-sm);"><strong>Target Element:</strong> <code>&lt;body&gt;</code></p>
+        <p style="margin-bottom: 0;"><strong>Behavior:</strong> Added when the page is loaded inside an iframe (including cross-origin iframes)</p>
+      </div>
+
+      <h3>Implementation Example</h3>
+      <p style="color: var(--color-text-secondary); margin-bottom: var(--spacing-md);">
+        The following JavaScript code detects iframe context reliably, even in cross-origin scenarios.
+        The comparison <code style="background-color: var(--color-bg-muted); padding: 2px 6px; border-radius: 3px;">window.self !== window.top</code> does not throw a SecurityError, making it safe for all iframe types.
+      </p>
+      <div class="code-block">&lt;script&gt;
+(function detectIframe() {
+  try {
+    if (window.self !== window.top) {
+      document.body.classList.add('in-iframe');
+    }
+  } catch (e) {
+    // In case of any unexpected error, assume we're in an iframe for safety
+    document.body.classList.add('in-iframe');
+  }
+})();
+&lt;/script&gt;</div>
+
+      <h3>CSS Usage Examples</h3>
+      <div class="code-block">/* Hide service credit in iframe */
+body.in-iframe .auth-credit {
+  display: none;
+}
+
+/* Remove padding in iframe for full-width layout */
+body.in-iframe .auth-container {
+  padding: 0;
+}
+
+/* Adjust card styling in iframe */
+body.in-iframe .auth-card {
+  border-radius: 0;
+  border: none;
+}</div>
+
+      <h3>Why This Works in Cross-Origin Iframes</h3>
+      <div style="background-color: var(--color-bg-muted); padding: var(--spacing-md); border-radius: var(--radius-md); margin-top: var(--spacing-md);">
+        <p style="margin-bottom: var(--spacing-sm); line-height: 1.6;">
+          The <code style="background-color: var(--color-bg-elevated); padding: 2px 6px; border-radius: 3px;">window.self !== window.top</code> comparison only compares window object references,
+          which does not require access to the parent frame's properties.
+        </p>
+        <p style="margin-bottom: 0; line-height: 1.6;">
+          Accessing parent properties like <code style="background-color: var(--color-bg-elevated); padding: 2px 6px; border-radius: 3px;">window.parent.location</code> would throw a SecurityError in cross-origin contexts,
+          but simply checking if the current window is the top-level window is always allowed.
+        </p>
+      </div>
+
+      <h3>Advanced Iframe Optimizations (dify.css)</h3>
+      <p style="color: var(--color-text-secondary); margin-bottom: var(--spacing-md);">
+        For chatbot widgets and other small iframe contexts (especially displayed in the bottom-right corner),
+        an additional stylesheet <code style="background-color: var(--color-bg-muted); padding: 2px 6px; border-radius: 3px;">dify.css</code> is available.
+        This file provides special optimizations that only take effect when <code style="background-color: var(--color-bg-muted); padding: 2px 6px; border-radius: 3px;">body.in-iframe</code> is present.
+      </p>
+
+      <div style="background-color: var(--color-bg-muted); padding: var(--spacing-md); border-radius: var(--radius-md); margin-bottom: var(--spacing-md);">
+        <p style="margin-bottom: var(--spacing-sm);"><strong>Usage:</strong></p>
+        <div class="code-block" style="margin-bottom: var(--spacing-sm);">&lt;link rel="stylesheet" href="./styles/main.css"&gt;
+&lt;link rel="stylesheet" href="./styles/dify.css"&gt;</div>
+        <p style="margin-bottom: 0; font-size: 0.875rem; line-height: 1.6;">
+          Note: <code style="background-color: var(--color-bg-elevated); padding: 2px 6px; border-radius: 3px;">dify.css</code> must be loaded in addition to <code style="background-color: var(--color-bg-elevated); padding: 2px 6px; border-radius: 3px;">main.css</code>.
+          It has no effect without the <code style="background-color: var(--color-bg-elevated); padding: 2px 6px; border-radius: 3px;">in-iframe</code> class on the body.
+        </p>
+      </div>
+
+      <h4 style="font-size: 1rem; font-weight: 600; margin-bottom: var(--spacing-sm);">Features:</h4>
+      <ul style="margin-left: var(--spacing-lg); margin-bottom: var(--spacing-md); color: var(--color-text-secondary); line-height: 1.75;">
+        <li><strong>Service credit positioning:</strong> Moves credit closer to the auth card (reduced margin)</li>
+        <li><strong>Narrow viewport optimizations (width &lt; 420px):</strong>
+          <ul style="margin-left: var(--spacing-lg); margin-top: var(--spacing-xs);">
+            <li>Fully transparent background for seamless integration</li>
+            <li>Removes container left/right padding (full-width layout)</li>
+            <li>Aligns content to the bottom of the viewport (chatbot-style)</li>
+            <li>Repositions settings toggle to the card's top-right corner (instead of viewport)</li>
+          </ul>
+        </li>
+      </ul>
+
+      <h4 style="font-size: 1rem; font-weight: 600; margin-bottom: var(--spacing-sm);">Key CSS from dify.css:</h4>
+      <div class="code-block">/* Service credit closer to card */
+body.in-iframe .auth-credit {
+  margin-top: var(--spacing-xs);
+}
+
+/* Narrow viewport optimizations (width &lt; 420px) */
+@media (max-width: 419px) {
+  body.in-iframe {
+    /* Fully transparent background */
+    background-color: transparent !important;
+  }
+
+  /* Remove container padding, align to bottom */
+  body.in-iframe .auth-container {
+    padding-left: 0;
+    padding-right: 0;
+    align-items: flex-end;
+    justify-content: flex-end;
+  }
+
+  /* Settings toggle positioned relative to card */
+  body.in-iframe .settings-toggle {
+    position: absolute;
+    top: var(--spacing-md);
+    right: var(--spacing-md);
+  }
+}</div>
+
+      <div style="background-color: rgb(59 130 246 / 0.1); border-left: 3px solid var(--color-primary); padding: var(--spacing-md); border-radius: var(--radius-md); margin-top: var(--spacing-md);">
+        <p style="margin-bottom: 0; font-size: 0.875rem; line-height: 1.6; color: var(--color-text-secondary);">
+          <strong style="color: var(--color-primary);">💡 Use Case:</strong>
+          These optimizations are specifically designed for chatbot widgets that appear in a small iframe (typically 350-400px wide)
+          in the bottom-right corner of a webpage. The bottom alignment and transparent background create a seamless, native-feeling experience.
+        </p>
+      </div>
+    </section>
   </div>
 
   <script>
@@ -1001,6 +1133,128 @@ Request ID: req_abc123xyz456</div>
     }
 
     initSettings();
+  </script>
+
+  <!-- Widget Demo Button & Iframe -->
+  <style>
+    .widget-button {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background-color: var(--color-primary);
+      color: white;
+      border: none;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      transition: all 0.3s ease;
+      z-index: 9999;
+    }
+
+    .widget-button:hover {
+      transform: scale(1.1);
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+    }
+
+    .widget-button:active {
+      transform: scale(0.95);
+    }
+
+    .widget-iframe-container {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      width: 400px;
+      height: 780px;
+      z-index: 9998;
+      opacity: 0;
+      transform: translateY(20px) scale(0.95);
+      transition: opacity 0.3s ease, transform 0.3s ease;
+      pointer-events: none;
+    }
+
+    .widget-iframe-container.visible {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+      pointer-events: auto;
+    }
+
+    .widget-iframe-container iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+
+    /* Mobile responsive */
+    @media (max-width: 480px) {
+      .widget-iframe-container {
+        bottom: 0;
+        right: 0;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+      }
+    }
+  </style>
+
+  <!-- Widget Button -->
+  <button id="widget-button" class="widget-button" onclick="toggleWidget()">
+    💬
+  </button>
+
+  <!-- Widget Iframe Container -->
+  <div id="widget-container" class="widget-iframe-container">
+    <iframe id="widget-iframe" src="about:blank" title="Login Widget"></iframe>
+  </div>
+
+  <script>
+    (function() {
+      const button = document.getElementById('widget-button');
+      const container = document.getElementById('widget-container');
+      const iframe = document.getElementById('widget-iframe');
+      let isOpen = false;
+      let isLoaded = false;
+
+      window.toggleWidget = function() {
+        isOpen = !isOpen;
+
+        if (isOpen) {
+          // Load iframe content only when opened for the first time
+          if (!isLoaded) {
+            iframe.src = './login-demo.html';
+            isLoaded = true;
+          }
+          container.classList.add('visible');
+          button.textContent = '✕';
+          button.style.backgroundColor = 'var(--color-error)';
+        } else {
+          container.classList.remove('visible');
+          button.textContent = '💬';
+          button.style.backgroundColor = 'var(--color-primary)';
+        }
+      };
+
+      // Close widget when clicking outside
+      document.addEventListener('click', function(e) {
+        if (isOpen &&
+            !container.contains(e.target) &&
+            !button.contains(e.target)) {
+          toggleWidget();
+        }
+      });
+
+      // Prevent closing when clicking inside the iframe container
+      container.addEventListener('click', function(e) {
+        e.stopPropagation();
+      });
+    })();
   </script>
 </body>
 </html>
