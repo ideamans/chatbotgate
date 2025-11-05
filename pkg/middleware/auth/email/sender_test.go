@@ -18,7 +18,7 @@ func TestNewSMTPSender(t *testing.T) {
 
 	sender := NewSMTPSender(cfg)
 	if sender == nil {
-		t.Error("NewSMTPSender() returned nil")
+		t.Fatal("NewSMTPSender() returned nil")
 	}
 
 	if sender.config.Host != "smtp.example.com" {
@@ -35,7 +35,7 @@ func TestNewSendGridSender(t *testing.T) {
 
 	sender := NewSendGridSender(cfg)
 	if sender == nil {
-		t.Error("NewSendGridSender() returned nil")
+		t.Fatal("NewSendGridSender() returned nil")
 	}
 
 	if sender.config.APIKey != "test-api-key" {

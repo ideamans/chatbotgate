@@ -310,18 +310,11 @@ func (c *Config) validateForwarding() error {
 		}
 
 		// Validate filters
+		// Note: base64 filter is auto-added by the system when needed, explicit specification is allowed but redundant
 		validFilters := map[string]bool{"encrypt": true, "zip": true, "base64": true}
 		for _, filter := range field.Filters {
 			if !validFilters[filter] {
 				verr.Add(fmt.Errorf("forwarding.fields[%d]: invalid filter '%s' (valid: encrypt, zip, base64)", i, filter))
-			}
-		}
-
-		// Warn if base64 is explicitly specified (it's auto-added)
-		for _, filter := range field.Filters {
-			if filter == "base64" {
-				// Note: This is just a warning, not an error
-				// In a production system, you might want to log this
 			}
 		}
 	}

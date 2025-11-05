@@ -85,7 +85,7 @@ func Run(ctx context.Context, cfg Config) error {
 		logger.Error("Failed to create file watcher", "error", err)
 		return fmt.Errorf("failed to create file watcher: %w", err)
 	}
-	defer watcher.Close()
+	defer func() { _ = watcher.Close() }()
 
 	// Register managers as listeners for config file changes
 	watcher.AddListener(middlewareManager)
@@ -240,19 +240,19 @@ func formatConfigError(component string, err error) error {
 		errors.Is(err, config.ErrEncryptionKeyRequired) ||
 		errors.Is(err, config.ErrEncryptionKeyTooShort) ||
 		errors.Is(err, config.ErrEncryptionConfigRequired) {
-		return fmt.Errorf("Configuration validation error in %s:\n  %v\n\nPlease check your configuration file and fix the issue above.", component, err)
+		return fmt.Errorf("configuration validation error in %s: %v - please check your configuration file and fix the issue above", component, err)
 	}
 
 	// Check if it's a config file not found error
 	if errors.Is(err, config.ErrConfigFileNotFound) {
-		return fmt.Errorf("Configuration file not found:\n  %v\n\nPlease create a configuration file or specify the correct path with --config flag.", err)
+		return fmt.Errorf("configuration file not found: %v - please create a configuration file or specify the correct path with --config flag", err)
 	}
 
 	// Check if it contains "validation failed" in the error message
 	if strings.Contains(err.Error(), "validation failed") {
-		return fmt.Errorf("Configuration validation error in %s:\n  %v\n\nPlease check your configuration file and fix the validation errors above.", component, err)
+		return fmt.Errorf("configuration validation error in %s: %v - please check your configuration file and fix the validation errors above", component, err)
 	}
 
 	// Generic error
-	return fmt.Errorf("Failed to initialize %s:\n  %v", component, err)
+	return fmt.Errorf("failed to initialize %s: %v", component, err)
 }

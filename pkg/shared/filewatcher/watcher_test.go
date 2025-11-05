@@ -27,12 +27,6 @@ func (m *mockListener) getEvents() []ChangeEvent {
 	return append([]ChangeEvent{}, m.events...)
 }
 
-func (m *mockListener) reset() {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	m.events = nil
-}
-
 func TestWatcher_BasicFileChange(t *testing.T) {
 	// Create a temporary file
 	tmpDir := t.TempDir()
@@ -47,7 +41,7 @@ func TestWatcher_BasicFileChange(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create watcher: %v", err)
 	}
-	defer watcher.Close()
+	defer func() { _ = watcher.Close() }()
 
 	// Add listener
 	listener := &mockListener{}
@@ -103,7 +97,7 @@ func TestWatcher_Debounce(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create watcher: %v", err)
 	}
-	defer watcher.Close()
+	defer func() { _ = watcher.Close() }()
 
 	// Add listener
 	listener := &mockListener{}
@@ -154,7 +148,7 @@ func TestWatcher_MultipleListeners(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create watcher: %v", err)
 	}
-	defer watcher.Close()
+	defer func() { _ = watcher.Close() }()
 
 	// Add multiple listeners
 	listener1 := &mockListener{}
@@ -209,7 +203,7 @@ func TestWatcher_ContextCancellation(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create watcher: %v", err)
 	}
-	defer watcher.Close()
+	defer func() { _ = watcher.Close() }()
 
 	// Start watcher with cancellable context
 	ctx, cancel := context.WithCancel(context.Background())

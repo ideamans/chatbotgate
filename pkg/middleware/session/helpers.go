@@ -31,7 +31,7 @@ func Get(store kvs.Store, id string) (*Session, error) {
 	// Check if session is valid
 	if !session.IsValid() {
 		// Delete expired session asynchronously
-		go Delete(store, id)
+		go func() { _ = Delete(store, id) }()
 		return nil, ErrSessionNotFound
 	}
 

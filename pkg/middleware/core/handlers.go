@@ -18,13 +18,13 @@ import (
 // handleHealth handles the health check endpoint
 func (m *Middleware) handleHealth(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("OK"))
+	_, _ = w.Write([]byte("OK"))
 }
 
 // handleReady handles the readiness check endpoint
 func (m *Middleware) handleReady(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("READY"))
+	_, _ = w.Write([]byte("READY"))
 }
 
 // handleMainCSS serves the embedded CSS
@@ -32,7 +32,7 @@ func (m *Middleware) handleMainCSS(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/css; charset=utf-8")
 	w.Header().Set("Cache-Control", "public, max-age=31536000") // Cache for 1 year
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(assets.GetEmbeddedCSS()))
+	_, _ = w.Write([]byte(assets.GetEmbeddedCSS()))
 }
 
 // handleDifyCSS serves the embedded Dify CSS for iframe optimizations
@@ -40,7 +40,7 @@ func (m *Middleware) handleDifyCSS(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/css; charset=utf-8")
 	w.Header().Set("Cache-Control", "public, max-age=31536000") // Cache for 1 year
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(assets.GetEmbeddedDifyCSS()))
+	_, _ = w.Write([]byte(assets.GetEmbeddedDifyCSS()))
 }
 
 // handleIcon serves the embedded SVG icons
@@ -61,7 +61,7 @@ func (m *Middleware) handleIcon(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "image/svg+xml")
 	w.Header().Set("Cache-Control", "public, max-age=31536000") // Cache for 1 year
 	w.WriteHeader(http.StatusOK)
-	w.Write(data)
+	_, _ = w.Write(data)
 }
 
 // buildAuthHeader generates the auth header HTML based on configuration
@@ -124,12 +124,14 @@ func (m *Middleware) handleLogin(w http.ResponseWriter, r *http.Request) {
 
 	// Use embedded CSS
 	themeClass := ""
-	if theme == i18n.ThemeDark {
+	switch theme {
+	case i18n.ThemeDark:
 		themeClass = "dark"
-	} else if theme == i18n.ThemeLight {
+	case i18n.ThemeLight:
 		themeClass = "light"
+	default:
+		// ThemeAuto: no class, let CSS media query handle it
 	}
-	// ThemeAuto: no class, let CSS media query handle it
 
 	html := `<!DOCTYPE html>
 <html lang="` + string(lang) + `" class="` + themeClass + `">
@@ -371,7 +373,7 @@ function getCookie(name) {
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(html))
+	_, _ = w.Write([]byte(html))
 }
 
 // handleLogout logs out the user
@@ -383,8 +385,8 @@ func (m *Middleware) handleLogout(w http.ResponseWriter, r *http.Request) {
 	// Get session cookie
 	cookie, err := r.Cookie(m.config.Session.CookieName)
 	if err == nil {
-		// Delete session
-		session.Delete(m.sessionStore, cookie.Value)
+		// Delete session (ignore error, proceed with logout anyway)
+		_ = session.Delete(m.sessionStore, cookie.Value)
 	}
 
 	// Clear cookie
@@ -401,10 +403,13 @@ func (m *Middleware) handleLogout(w http.ResponseWriter, r *http.Request) {
 	loginPath := joinAuthPath(prefix, "/login")
 
 	themeClass := ""
-	if theme == i18n.ThemeDark {
+	switch theme {
+	case i18n.ThemeDark:
 		themeClass = "dark"
-	} else if theme == i18n.ThemeLight {
+	case i18n.ThemeLight:
 		themeClass = "light"
+	default:
+		// ThemeAuto: no class
 	}
 
 	iconPath := joinAuthPath(prefix, "/assets/icons/chatbotgate.svg")
@@ -437,7 +442,7 @@ func (m *Middleware) handleLogout(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(html))
+	_, _ = w.Write([]byte(html))
 }
 
 // handleOAuth2Start initiates the OAuth2 flow
@@ -759,10 +764,13 @@ func (m *Middleware) handleEmailSent(w http.ResponseWriter, r *http.Request) {
 	loginPath := joinAuthPath(prefix, "/login")
 
 	themeClass := ""
-	if theme == i18n.ThemeDark {
+	switch theme {
+	case i18n.ThemeDark:
 		themeClass = "dark"
-	} else if theme == i18n.ThemeLight {
+	case i18n.ThemeLight:
 		themeClass = "light"
+	default:
+		// ThemeAuto: no class
 	}
 
 	iconPath := joinAuthPath(prefix, "/assets/icons/chatbotgate.svg")
@@ -853,7 +861,7 @@ func (m *Middleware) handleEmailSent(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(html))
+	_, _ = w.Write([]byte(html))
 }
 
 // handleEmailVerify verifies the email token and creates a session
@@ -879,10 +887,13 @@ func (m *Middleware) handleEmailVerify(w http.ResponseWriter, r *http.Request) {
 		loginPath := joinAuthPath(prefix, "/login")
 
 		themeClass := ""
-		if theme == i18n.ThemeDark {
+		switch theme {
+		case i18n.ThemeDark:
 			themeClass = "dark"
-		} else if theme == i18n.ThemeLight {
+		case i18n.ThemeLight:
 			themeClass = "light"
+		default:
+			// ThemeAuto: no class
 		}
 
 		iconPath := joinAuthPath(prefix, "/assets/icons/chatbotgate.svg")
@@ -914,7 +925,7 @@ func (m *Middleware) handleEmailVerify(w http.ResponseWriter, r *http.Request) {
 </html>`
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte(html))
+		_, _ = w.Write([]byte(html))
 		return
 	}
 
@@ -1116,12 +1127,14 @@ func (m *Middleware) handleForbidden(w http.ResponseWriter, r *http.Request) {
 	loginPath := joinAuthPath(prefix, "/login")
 
 	themeClass := ""
-	if theme == i18n.ThemeDark {
+	switch theme {
+	case i18n.ThemeDark:
 		themeClass = "dark"
-	} else if theme == i18n.ThemeLight {
+	case i18n.ThemeLight:
 		themeClass = "light"
+	default:
+		// ThemeAuto: no class, let CSS media query handle it
 	}
-	// ThemeAuto: no class, let CSS media query handle it
 
 	iconPath := joinAuthPath(prefix, "/assets/icons/chatbotgate.svg")
 
@@ -1153,7 +1166,7 @@ func (m *Middleware) handleForbidden(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(http.StatusForbidden)
-	w.Write([]byte(html))
+	_, _ = w.Write([]byte(html))
 }
 
 // handleEmailFetchError displays an error page when OAuth2 provider fails to provide email
@@ -1166,10 +1179,13 @@ func (m *Middleware) handleEmailFetchError(w http.ResponseWriter, r *http.Reques
 	loginPath := joinAuthPath(prefix, "/login")
 
 	themeClass := ""
-	if theme == i18n.ThemeDark {
+	switch theme {
+	case i18n.ThemeDark:
 		themeClass = "dark"
-	} else if theme == i18n.ThemeLight {
+	case i18n.ThemeLight:
 		themeClass = "light"
+	default:
+		// ThemeAuto: no class
 	}
 
 	iconPath := joinAuthPath(prefix, "/assets/icons/chatbotgate.svg")
@@ -1202,7 +1218,7 @@ func (m *Middleware) handleEmailFetchError(w http.ResponseWriter, r *http.Reques
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(http.StatusBadRequest)
-	w.Write([]byte(html))
+	_, _ = w.Write([]byte(html))
 }
 
 // handle404 displays the 404 Not Found page
@@ -1215,10 +1231,13 @@ func (m *Middleware) handle404(w http.ResponseWriter, r *http.Request) {
 	iconPath := joinAuthPath(prefix, "/assets/icons/chatbotgate.svg")
 
 	themeClass := ""
-	if theme == i18n.ThemeDark {
+	switch theme {
+	case i18n.ThemeDark:
 		themeClass = "dark"
-	} else if theme == i18n.ThemeLight {
+	case i18n.ThemeLight:
 		themeClass = "light"
+	default:
+		// ThemeAuto: no class
 	}
 
 	html := `<!DOCTYPE html>
@@ -1249,7 +1268,7 @@ func (m *Middleware) handle404(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(http.StatusNotFound)
-	w.Write([]byte(html))
+	_, _ = w.Write([]byte(html))
 }
 
 // handle500 displays the 500 Internal Server Error page with optional error details
@@ -1262,10 +1281,13 @@ func (m *Middleware) handle500(w http.ResponseWriter, r *http.Request, err error
 	iconPath := joinAuthPath(prefix, "/assets/icons/chatbotgate.svg")
 
 	themeClass := ""
-	if theme == i18n.ThemeDark {
+	switch theme {
+	case i18n.ThemeDark:
 		themeClass = "dark"
-	} else if theme == i18n.ThemeLight {
+	case i18n.ThemeLight:
 		themeClass = "light"
+	default:
+		// ThemeAuto: no class
 	}
 
 	// Build error details accordion if error is provided
@@ -1312,5 +1334,5 @@ func (m *Middleware) handle500(w http.ResponseWriter, r *http.Request, err error
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(http.StatusInternalServerError)
-	w.Write([]byte(html))
+	_, _ = w.Write([]byte(html))
 }

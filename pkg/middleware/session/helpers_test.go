@@ -14,7 +14,7 @@ func TestHelpers_SetAndGet(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create memory store: %v", err)
 	}
-	defer store.Close()
+	defer func() { _ = store.Close() }()
 
 	now := time.Now()
 	testSession := &Session{
@@ -72,7 +72,7 @@ func TestHelpers_SetExpired(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create memory store: %v", err)
 	}
-	defer store.Close()
+	defer func() { _ = store.Close() }()
 
 	now := time.Now()
 	expiredSession := &Session{
@@ -99,7 +99,7 @@ func TestHelpers_GetExpiredSession(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create memory store: %v", err)
 	}
-	defer store.Close()
+	defer func() { _ = store.Close() }()
 
 	now := time.Now()
 
@@ -137,7 +137,7 @@ func TestHelpers_Delete(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create memory store: %v", err)
 	}
-	defer store.Close()
+	defer func() { _ = store.Close() }()
 
 	now := time.Now()
 	session := &Session{
@@ -185,7 +185,7 @@ func TestHelpers_Count(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create memory store: %v", err)
 	}
-	defer store.Close()
+	defer func() { _ = store.Close() }()
 
 	now := time.Now()
 
@@ -244,7 +244,7 @@ func TestHelpers_List(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create memory store: %v", err)
 	}
-	defer store.Close()
+	defer func() { _ = store.Close() }()
 
 	now := time.Now()
 
@@ -302,7 +302,7 @@ func TestHelpers_ListWithExpiredSessions(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create memory store: %v", err)
 	}
-	defer store.Close()
+	defer func() { _ = store.Close() }()
 
 	now := time.Now()
 

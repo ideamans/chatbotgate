@@ -40,9 +40,9 @@ func TestTestingFactory_CreateKVSStores(t *testing.T) {
 	if err != nil {
 		t.Fatalf("CreateKVSStores failed: %v", err)
 	}
-	defer sessionKVS.Close()
-	defer tokenKVS.Close()
-	defer rateLimitKVS.Close()
+	defer func() { _ = sessionKVS.Close() }()
+	defer func() { _ = tokenKVS.Close() }()
+	defer func() { _ = rateLimitKVS.Close() }()
 
 	if sessionKVS == nil {
 		t.Error("Expected sessionKVS to be non-nil")
@@ -77,7 +77,7 @@ func TestTestingFactory_CreateTokenKVS(t *testing.T) {
 	if kvs == nil {
 		t.Fatal("CreateTokenKVS returned nil")
 	}
-	defer kvs.Close()
+	defer func() { _ = kvs.Close() }()
 
 	// Test that it's a functional memory store
 	ctx := context.Background()
@@ -102,7 +102,7 @@ func TestTestingFactory_CreateRateLimitKVS(t *testing.T) {
 	if kvs == nil {
 		t.Fatal("CreateRateLimitKVS returned nil")
 	}
-	defer kvs.Close()
+	defer func() { _ = kvs.Close() }()
 
 	// Test that it's a functional memory store
 	ctx := context.Background()
@@ -130,9 +130,9 @@ func TestTestingFactory_Integration(t *testing.T) {
 	if err != nil {
 		t.Fatalf("CreateKVSStores failed: %v", err)
 	}
-	defer sessionKVS.Close()
-	defer tokenKVS.Close()
-	defer rateLimitKVS.Close()
+	defer func() { _ = sessionKVS.Close() }()
+	defer func() { _ = tokenKVS.Close() }()
+	defer func() { _ = rateLimitKVS.Close() }()
 
 	// Create session store
 	sessionStore := factory.CreateSessionStore(sessionKVS)

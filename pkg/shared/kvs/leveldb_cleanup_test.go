@@ -15,7 +15,7 @@ import (
 func TestLevelDBCleanupLoop(t *testing.T) {
 	tmpDir, err := os.MkdirTemp("", "kvs-leveldb-cleanup-test-*")
 	require.NoError(t, err, "Should create temp dir")
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	// Create store with short cleanup interval
 	config := Config{
@@ -29,7 +29,7 @@ func TestLevelDBCleanupLoop(t *testing.T) {
 
 	store, err := New(config)
 	require.NoError(t, err, "Should create LevelDBStore")
-	defer store.Close()
+	defer func() { _ = store.Close() }()
 
 	ctx := context.Background()
 
@@ -58,7 +58,7 @@ func TestLevelDBCleanupLoop(t *testing.T) {
 func TestLevelDBCleanupInterval(t *testing.T) {
 	tmpDir, err := os.MkdirTemp("", "kvs-leveldb-cleanup-interval-test-*")
 	require.NoError(t, err, "Should create temp dir")
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	// Create store with 500ms cleanup interval
 	config := Config{
@@ -72,7 +72,7 @@ func TestLevelDBCleanupInterval(t *testing.T) {
 
 	store, err := New(config)
 	require.NoError(t, err, "Should create LevelDBStore")
-	defer store.Close()
+	defer func() { _ = store.Close() }()
 
 	ctx := context.Background()
 
@@ -104,7 +104,7 @@ func TestLevelDBCleanupInterval(t *testing.T) {
 func TestLevelDBCleanupStopsOnClose(t *testing.T) {
 	tmpDir, err := os.MkdirTemp("", "kvs-leveldb-cleanup-stop-test-*")
 	require.NoError(t, err, "Should create temp dir")
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	config := Config{
 		Type: "leveldb",
@@ -138,7 +138,7 @@ func TestLevelDBCleanupStopsOnClose(t *testing.T) {
 func TestLevelDBCleanupSelectiveDelete(t *testing.T) {
 	tmpDir, err := os.MkdirTemp("", "kvs-leveldb-cleanup-selective-test-*")
 	require.NoError(t, err, "Should create temp dir")
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	config := Config{
 		Type: "leveldb",
@@ -151,7 +151,7 @@ func TestLevelDBCleanupSelectiveDelete(t *testing.T) {
 
 	store, err := New(config)
 	require.NoError(t, err, "Should create LevelDBStore")
-	defer store.Close()
+	defer func() { _ = store.Close() }()
 
 	ctx := context.Background()
 
@@ -202,7 +202,7 @@ func TestLevelDBCleanupSelectiveDelete(t *testing.T) {
 func TestLevelDBCleanupBatchDeletion(t *testing.T) {
 	tmpDir, err := os.MkdirTemp("", "kvs-leveldb-cleanup-batch-test-*")
 	require.NoError(t, err, "Should create temp dir")
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	config := Config{
 		Type: "leveldb",
@@ -215,7 +215,7 @@ func TestLevelDBCleanupBatchDeletion(t *testing.T) {
 
 	store, err := New(config)
 	require.NoError(t, err, "Should create LevelDBStore")
-	defer store.Close()
+	defer func() { _ = store.Close() }()
 
 	ctx := context.Background()
 
@@ -245,7 +245,7 @@ func TestLevelDBCleanupBatchDeletion(t *testing.T) {
 func TestLevelDBCleanupWithNamespace(t *testing.T) {
 	tmpDir, err := os.MkdirTemp("", "kvs-leveldb-cleanup-namespace-test-*")
 	require.NoError(t, err, "Should create temp dir")
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	config := Config{
 		Type:      "leveldb",
@@ -259,7 +259,7 @@ func TestLevelDBCleanupWithNamespace(t *testing.T) {
 
 	store, err := New(config)
 	require.NoError(t, err, "Should create LevelDBStore")
-	defer store.Close()
+	defer func() { _ = store.Close() }()
 
 	ctx := context.Background()
 
@@ -288,7 +288,7 @@ func TestLevelDBCleanupWithNamespace(t *testing.T) {
 func TestLevelDBCleanupConcurrentOperations(t *testing.T) {
 	tmpDir, err := os.MkdirTemp("", "kvs-leveldb-cleanup-concurrent-test-*")
 	require.NoError(t, err, "Should create temp dir")
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	config := Config{
 		Type: "leveldb",
@@ -301,7 +301,7 @@ func TestLevelDBCleanupConcurrentOperations(t *testing.T) {
 
 	store, err := New(config)
 	require.NoError(t, err, "Should create LevelDBStore")
-	defer store.Close()
+	defer func() { _ = store.Close() }()
 
 	ctx := context.Background()
 

@@ -62,7 +62,7 @@ func main() {
 
 func handleHealth(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("OK"))
+	_, _ = w.Write([]byte("OK"))
 }
 
 func handleRoot(w http.ResponseWriter, r *http.Request) {
@@ -153,7 +153,9 @@ func handleRoot(w http.ResponseWriter, r *http.Request) {
 
 	// Return JSON response
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+	}
 }
 
 // decryptField attempts to decrypt a single field value
@@ -182,26 +184,19 @@ func decryptField(encrypted string) string {
 	return decrypted
 }
 
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
-}
-
 // Passthrough test handlers
 // These handlers should be accessible without authentication when passthrough is configured
 
 func handleEmbedJS(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/javascript")
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("// Embed widget script\nconsole.log('ChatbotGate embed widget loaded');"))
+	_, _ = w.Write([]byte("// Embed widget script\nconsole.log('ChatbotGate embed widget loaded');"))
 }
 
 func handlePublicData(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]string{
+	_ = json.NewEncoder(w).Encode(map[string]string{
 		"message": "public data",
 		"status":  "ok",
 	})
@@ -222,15 +217,15 @@ func handleStaticImage(w http.ResponseWriter, r *http.Request) {
 		0x00, 0x00, 0x00, 0x49, 0x45, 0x4E, 0x44, 0xAE,
 		0x42, 0x60, 0x82,
 	}
-	w.Write(png)
+	_, _ = w.Write(png)
 }
 
 func handlePublicAPI(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]interface{}{
-		"api":     "public",
-		"version": "1.0",
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		"api":           "public",
+		"version":       "1.0",
 		"authenticated": false,
 	})
 }

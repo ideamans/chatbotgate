@@ -1,6 +1,7 @@
 package ratelimit
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -130,7 +131,8 @@ func TestLimiter_Cleanup(t *testing.T) {
 	// key4 should still exist
 
 	// Check KVS count
-	count, _ := kvsStore.Count(nil, "")
+	ctx := context.Background()
+	count, _ := kvsStore.Count(ctx, "")
 
 	// Only key4 should remain
 	if count != 1 {
