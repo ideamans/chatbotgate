@@ -150,6 +150,8 @@ test.describe('QueryString merging with forwarding (:4182)', () => {
   });
 
   test('should merge original parameters with chatbotgate.* after email authentication', async ({ page }) => {
+    const expectedUsername = 'someone'; // Email local part (before @) from TEST_EMAIL
+
     // Access URL with query parameters
     const originalParams = 'foo=bar&baz=qux&test=abc';
     await page.goto(`${FORWARDING_BASE_URL}/dashboard?${originalParams}`);
@@ -189,16 +191,17 @@ test.describe('QueryString merging with forwarding (:4182)', () => {
     expect(finalUrl).toContain('test=abc');
 
     // chatbotgate.* parameters should be added (forwarding enabled with querystring)
-    // Note: For email auth, only chatbotgate.email should be present (no username)
+    // Note: For email auth, both chatbotgate.email and chatbotgate.user (userpart) should be present
     expect(finalUrl).toContain('chatbotgate.email=');
+    expect(finalUrl).toContain('chatbotgate.user=');
 
     // Verify the page can decode both original and forwarding parameters
     await expect(page.locator('[data-test="auth-status"]')).toContainText('true');
     await expect(page.locator('[data-test="forwarding-qs-email"]')).toContainText(TEST_EMAIL);
 
-    // Username should be empty for email auth
-    await expect(page.locator('[data-test="forwarding-qs-username"]')).toContainText('(empty)');
+    // Username should be userpart (email local part) for email auth
+    await expect(page.locator('[data-test="forwarding-qs-username"]')).toContainText(expectedUsername);
 
-    console.log('✓ Original parameters preserved and chatbotgate.email parameter added (no username for email auth)');
+    console.log('✓ Original parameters preserved and chatbotgate.* parameters added (username is userpart for email auth)');
   });
 });

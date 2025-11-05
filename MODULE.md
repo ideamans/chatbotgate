@@ -235,6 +235,15 @@ type TokenManager interface {
 - `SMTPSender`: Send via SMTP
 - `SendGridSender`: Send via SendGrid API
 
+**Standardized Fields:**
+
+Email authentication populates the same standardized fields as OAuth2 providers for consistent access in forwarding:
+
+- `_email`: User email address
+- `_username`: Email local part (before @)
+- `_avatar_url`: Empty string (no avatar for email auth)
+- `userpart`: Email local part (before @, same as `_username`)
+
 #### Authorization (`pkg/middleware/authz`)
 
 Email/domain-based authorization:
@@ -1003,13 +1012,13 @@ type UserInfo struct {
 }
 ```
 
-**Standardized Extra Fields** (common across all OAuth2 providers):
+**Standardized Extra Fields** (common across all OAuth2 providers and email auth):
 - `_email` (string): User email address (same as `Email`)
 - `_username` (string): User display name
   - Google: `name`
   - GitHub: `name` (fallback to `login` if not set)
   - Microsoft: `displayName`
-  - Email auth: empty
+  - Email auth: email local part (before @)
 - `_avatar_url` (string): User profile picture URL
   - Google: `picture` URL
   - GitHub: `avatar_url` URL
@@ -1020,6 +1029,7 @@ type UserInfo struct {
 - Google: `email`, `name`, `picture`, `verified_email`, `given_name`, `family_name`
 - GitHub: `email`, `name`, `login`, `avatar_url`, plus other public profile data
 - Microsoft: `email`, `displayName`, `userPrincipalName`, `preferredUsername`
+- Email auth: `userpart` (email local part before @, same as `_username`)
 
 **OAuth2 Tokens** (under `secrets`):
 - `secrets.access_token` (string): OAuth2 access token
