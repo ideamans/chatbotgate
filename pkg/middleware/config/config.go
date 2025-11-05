@@ -20,6 +20,7 @@ type Config struct {
 	KVS           KVSConfig           `yaml:"kvs" json:"kvs"`         // KVS storage configuration
 	Forwarding    ForwardingConfig    `yaml:"forwarding" json:"forwarding"` // User info forwarding configuration
 	Passthrough   PassthroughConfig   `yaml:"passthrough" json:"passthrough"` // Passthrough (no auth) configuration
+	Assets        AssetsConfig        `yaml:"assets" json:"assets"`       // Assets configuration
 }
 
 // ServiceConfig contains service-level settings
@@ -392,4 +393,14 @@ type PassthroughConfig struct {
 	Prefix    []string `yaml:"prefix" json:"prefix"`       // Exact prefix matches (e.g., "/embed.js", "/public/")
 	Regex     []string `yaml:"regex" json:"regex"`         // Regular expression patterns (e.g., "^/api/public/.*$")
 	Minimatch []string `yaml:"minimatch" json:"minimatch"` // Minimatch/glob patterns (e.g., "/**/*.js", "/static/**")
+}
+
+// AssetsConfig contains assets configuration
+type AssetsConfig struct {
+	Optimization OptimizationConfig `yaml:"optimization" json:"optimization"` // Optimization settings
+}
+
+// OptimizationConfig contains optimization settings for assets
+type OptimizationConfig struct {
+	Dify bool `yaml:"dify" json:"dify"` // If true, load dify.css for iframe optimizations
 }

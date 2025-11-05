@@ -15,6 +15,7 @@ var staticResourcePaths = []string{
 	"/robots.txt",
 	"/apple-touch-icon.png",
 	"/apple-touch-icon-precomposed.png",
+	"/_auth/assets/",  // Auth page assets (CSS, icons, etc.)
 }
 
 // isStaticResource checks if the request path is for a static resource

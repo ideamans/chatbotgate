@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login - Multi OAuth2 Proxy</title>
+  <link rel="stylesheet" href="./styles/main.css">
+  <link rel="stylesheet" href="./styles/dify.css">
+</head>
+<body>
+  <!-- Settings Toggle -->
+  <div class="settings-toggle">
+    <select id="theme-select" onchange="changeTheme(this.value)">
+      <option value="auto">🌗 Auto</option>
+      <option value="light">☀️ Light</option>
+      <option value="dark">🌙 Dark</option>
+    </select>
+    <select id="lang-select" onchange="changeLang(this.value)">
+      <option value="en">English</option>
+      <option value="ja">日本語</option>
+    </select>
+  </div>
+
+  <!-- Auth Container -->
+  <div class="auth-container">
+    <div style="width: 100%; max-width: 28rem;">
+      <!-- Auth Card -->
+      <div class="card auth-card">
+        <h1 class="auth-title">Welcome Back</h1>
+        <p class="auth-description">Sign in to your account to continue</p>
+
+        <!-- OAuth2 Provider Buttons -->
+        <button class="btn btn-secondary provider-btn">
+          <img src="/icons/google.svg" alt="Google">
+          Continue with Google
+        </button>
+        <button class="btn btn-secondary provider-btn">
+          <img src="/icons/github.svg" alt="GitHub">
+          Continue with GitHub
+        </button>
+        <button class="btn btn-secondary provider-btn">
+          <img src="/icons/microsoft.svg" alt="Microsoft">
+          Continue with Microsoft
+        </button>
+        <button class="btn btn-secondary provider-btn">
+          <img src="/icons/oidc.svg" alt="OIDC">
+          Continue with Custom OIDC
+        </button>
+
+        <!-- Divider -->
+        <div class="auth-divider">
+          <span>or</span>
+        </div>
+
+        <!-- Email Login Form -->
+        <form id="email-form">
+          <div class="form-group">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-xs);">
+              <label class="label" for="email" style="margin-bottom: 0;">Email Address</label>
+              <label style="display: flex; align-items: center; gap: 0.25rem; cursor: pointer; font-size: 0.875rem; color: var(--color-text-secondary);">
+                <input type="checkbox" id="save-email-checkbox" style="cursor: pointer;">
+                <span>Save</span>
+              </label>
+            </div>
+            <input type="email" id="email" name="email" class="input" placeholder="you@example.com" required>
+          </div>
+          <button type="submit" class="btn btn-primary provider-btn">
+            <img src="/icons/email.svg" alt="Email">
+            Send Login Link
+          </button>
+        </form>
+      </div>
+
+      <!-- Service Credit -->
+      <a href="#" class="auth-credit">
+        <img src="../icons/chatbotgate.svg" alt="ChatbotGate Logo">
+        Protected by ChatbotGate
+      </a>
+    </div>
+  </div>
+
+  <script>
+    // Theme Management
+    function changeTheme(theme) {
+      localStorage.setItem('theme', theme);
+      applyTheme(theme);
+    }
+
+    function applyTheme(theme) {
+      const html = document.documentElement;
+      html.classList.remove('dark', 'light');
+
+      if (theme === 'dark') {
+        html.classList.add('dark');
+      } else if (theme === 'light') {
+        html.classList.add('light');
+      }
+    }
+
+    // Language Management
+    function changeLang(lang) {
+      localStorage.setItem('lang', lang);
+      console.log('Language changed to:', lang);
+      // In a real implementation, this would reload the page with new language
+    }
+
+    // Initialize Settings
+    function initSettings() {
+      const savedTheme = localStorage.getItem('theme') || 'auto';
+      const savedLang = localStorage.getItem('lang') || 'en';
+
+      document.getElementById('theme-select').value = savedTheme;
+      document.getElementById('lang-select').value = savedLang;
+
+      applyTheme(savedTheme);
+
+      // Listen for system theme changes
+      if (window.matchMedia) {
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+          if (localStorage.getItem('theme') === 'auto' || !localStorage.getItem('theme')) {
+            applyTheme('auto');
+          }
+        });
+      }
+    }
+
+    // Email Save Functionality
+    (function initEmailSave() {
+      const emailInput = document.getElementById('email');
+      const saveCheckbox = document.getElementById('save-email-checkbox');
+      if (!emailInput || !saveCheckbox) return;
+
+      const STORAGE_KEY = 'saved_email';
+      const SAVE_KEY = 'save_enabled';
+
+      // Load saved email
+      const savedEmail = localStorage.getItem(STORAGE_KEY);
+      const saveEnabled = localStorage.getItem(SAVE_KEY) === 'true';
+
+      if (savedEmail && saveEnabled) {
+        emailInput.value = savedEmail;
+        saveCheckbox.checked = true;
+      } else if (saveEnabled) {
+        saveCheckbox.checked = true;
+      }
+
+      // Save on input
+      emailInput.addEventListener('input', function() {
+        if (saveCheckbox.checked) {
+          localStorage.setItem(STORAGE_KEY, emailInput.value);
+        }
+      });
+
+      // Handle checkbox
+      saveCheckbox.addEventListener('change', function() {
+        if (saveCheckbox.checked) {
+          localStorage.setItem(STORAGE_KEY, emailInput.value);
+          localStorage.setItem(SAVE_KEY, 'true');
+        } else {
+          localStorage.removeItem(STORAGE_KEY);
+          localStorage.removeItem(SAVE_KEY);
+        }
+      });
+    })();
+
+    // Form Submission Handler
+    document.getElementById('email-form').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const email = document.getElementById('email').value;
+      console.log('Email login requested for:', email);
+
+      // In a real implementation, this would:
+      // 1. Submit to the server
+      // 2. Redirect to email-sent page
+      alert('Demo: Login link would be sent to ' + email);
+    });
+
+    // Iframe Detection
+    (function detectIframe() {
+      try {
+        if (window.self !== window.top) {
+          document.body.classList.add('in-iframe');
+        }
+      } catch (e) {
+        document.body.classList.add('in-iframe');
+      }
+    })();
+
+    // Initialize
+    initSettings();
+  </script>
+</body>
+</html>

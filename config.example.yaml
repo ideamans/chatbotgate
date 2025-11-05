@@ -318,3 +318,12 @@ passthrough:
     # - "/**/*.css"      # All .css files at any depth
     # - "/static/**"     # Everything under /static/
     # - "/api/**/public" # /api/public, /api/v1/public, etc.
+
+# Assets configuration
+# Controls CSS and JavaScript assets loading for authentication pages
+assets:
+  optimization:
+    # Load dify.css for iframe optimizations (default: false)
+    # When true, adds dify.css for chatbot widget and embedded iframe optimizations
+    # Includes: transparent backgrounds, bottom-aligned layout, responsive settings toggle
+    dify: false
