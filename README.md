@@ -1,5 +1,11 @@
 # ChatbotGate
 
+[![CI](https://github.com/ideamans/chatbotgate/actions/workflows/ci.yml/badge.svg)](https://github.com/ideamans/chatbotgate/actions/workflows/ci.yml)
+[![Release](https://github.com/ideamans/chatbotgate/actions/workflows/release.yml/badge.svg)](https://github.com/ideamans/chatbotgate/actions/workflows/release.yml)
+[![Docker Hub](https://img.shields.io/docker/v/ideamans/chatbotgate?label=docker&logo=docker)](https://hub.docker.com/r/ideamans/chatbotgate)
+[![Go Report Card](https://goreportcard.com/badge/github.com/ideamans/chatbotgate)](https://goreportcard.com/report/github.com/ideamans/chatbotgate)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 **ChatbotGate** is a lightweight, flexible authentication reverse proxy that sits in front of your upstream applications and provides unified authentication through multiple OAuth2 providers and passwordless email authentication.
 
 ## Features
@@ -59,8 +65,14 @@ go build -o chatbotgate ./cmd/chatbotgate
 
 **Using Docker:**
 ```bash
+# Pull latest version (multi-arch: amd64/arm64)
 docker pull ideamans/chatbotgate:latest
+
+# Or pull specific version
+docker pull ideamans/chatbotgate:v1.0.0
 ```
+
+Docker images are automatically built and published to [Docker Hub](https://hub.docker.com/r/ideamans/chatbotgate) on every release.
 
 ### Basic Configuration
 
@@ -158,36 +170,56 @@ chatbotgate/
 ### Prerequisites
 
 - Go 1.21 or later
+- Node.js 20+ (for web assets and e2e tests)
+- Docker & Docker Compose (optional, for containerized development)
 - Redis (optional, for distributed sessions)
 
 ### Build
 
 ```bash
-# Build the binary
-go build -o chatbotgate ./cmd/chatbotgate
+# Build everything (web assets + go binary)
+make build
 
-# Run tests
-go test ./...
+# Build only Go binary
+make build-go
 
-# Run with coverage
-go test -cover ./...
+# Build only web assets
+make build-web
+```
+
+### Code Quality
+
+```bash
+# Format code
+make fmt
+
+# Check formatting (CI)
+make fmt-check
+
+# Run linters
+make lint
+
+# Run all CI checks (format + lint + test)
+make ci
 ```
 
 ### Running Tests
 
 ```bash
-# All tests
-go test ./...
+# Run all unit tests
+make test
 
-# Specific package
+# Run tests with coverage report
+make test-coverage
+
+# Run specific package tests
 go test ./pkg/middleware/auth/oauth2
 
-# With verbose output
+# Run with verbose output
 go test -v ./pkg/...
 
-# Coverage report
-go test -coverprofile=coverage.out ./...
-go tool cover -html=coverage.out
+# Run e2e tests (requires Docker)
+cd e2e && make test
 ```
 
 ### Docker Build
@@ -253,10 +285,19 @@ Contributions are welcome! Please:
 ### Development Guidelines
 
 - Follow Go best practices and idioms
-- Write tests for new features
+- Write tests for new features (aim for 80%+ coverage)
 - Update documentation for user-facing changes
-- Run `go fmt` and `go vet` before committing
-- Aim for 80%+ test coverage
+- Run `make ci` before committing to ensure all checks pass
+- Format code with `make fmt`
+- Keep commits atomic and write clear commit messages
+
+### CI/CD Pipeline
+
+ChatbotGate uses GitHub Actions for continuous integration and deployment:
+
+- **CI** (on push/PR): Runs linting, formatting checks, unit tests, and e2e tests
+- **Release** (on tag): Builds binaries with GoReleaser and publishes Docker images to Docker Hub
+- **Docker Images**: Multi-architecture (amd64/arm64) images published to `ideamans/chatbotgate`
 
 ## License
 
