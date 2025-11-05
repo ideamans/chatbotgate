@@ -1,4 +1,4 @@
-package proxyserver
+package proxy
 
 import (
 	"fmt"

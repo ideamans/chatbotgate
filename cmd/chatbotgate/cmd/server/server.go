@@ -1,28 +1,46 @@
-package proxyserver
+package server
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/ideamans/chatbotgate/pkg/config"
 	"github.com/ideamans/chatbotgate/pkg/factory"
 	"github.com/ideamans/chatbotgate/pkg/logging"
+	"github.com/ideamans/chatbotgate/pkg/proxy"
+	"gopkg.in/yaml.v3"
 )
 
-// Server represents the proxy server with middleware
+// ProxyConfig represents the proxy configuration section in the config file
+type ProxyConfig struct {
+	Proxy ProxyServerConfig `yaml:"proxy" json:"proxy"`
+}
+
+// ProxyServerConfig represents proxy server settings
+type ProxyServerConfig struct {
+	Upstream proxy.UpstreamConfig `yaml:"upstream" json:"upstream"`
+}
+
+// Server represents the HTTP server that integrates proxy and middleware
 type Server struct {
-	middlewareCfg *config.Config
-	proxyCfg      *ProxyConfig
-	handler       http.Handler
-	logger        logging.Logger
-	host          string
-	port          int
+	handler http.Handler
+	logger  logging.Logger
+	host    string
+	port    int
+	upstream string // for logging
 }
 
 // New creates a new Server from configuration file
-// The config file should contain both middleware and proxy configurations
 func New(configPath string, host string, port int, logger logging.Logger) (*Server, error) {
+	if logger == nil {
+		logger = logging.NewSimpleLogger("server", logging.LevelInfo, true)
+	}
+
 	// Load middleware configuration
 	middlewareCfg, err := config.NewFileLoader(configPath).Load()
 	if err != nil {
@@ -30,18 +48,9 @@ func New(configPath string, host string, port int, logger logging.Logger) (*Serv
 	}
 
 	// Load proxy configuration
-	proxyCfg, err := LoadProxyConfig(configPath)
+	upstreamCfg, err := loadProxyConfig(configPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load proxy config: %w", err)
-	}
-
-	return NewFromConfigs(middlewareCfg, proxyCfg, host, port, logger)
-}
-
-// NewFromConfigs creates a new Server from both middleware and proxy Config objects
-func NewFromConfigs(middlewareCfg *config.Config, proxyCfg *ProxyConfig, host string, port int, logger logging.Logger) (*Server, error) {
-	if logger == nil {
-		logger = logging.NewSimpleLogger("proxyserver", logging.LevelInfo, true)
 	}
 
 	// Create factory for building middleware components
@@ -56,12 +65,12 @@ func NewFromConfigs(middlewareCfg *config.Config, proxyCfg *ProxyConfig, host st
 	// Create session store
 	sessionStore := f.CreateSessionStore(sessionKVS)
 
-	// Create proxy handler directly (not via factory)
-	proxyHandler, err := NewHandlerWithConfig(proxyCfg.Proxy.Upstream)
+	// Create proxy handler
+	proxyHandler, err := proxy.NewHandlerWithConfig(upstreamCfg)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create proxy handler: %w", err)
 	}
-	logger.Debug("Proxy handler initialized", "upstream", proxyCfg.Proxy.Upstream.URL)
+	logger.Debug("Proxy handler initialized", "upstream", upstreamCfg.URL)
 
 	// Build middleware using factory
 	middleware, err := f.CreateMiddleware(middlewareCfg, sessionStore, proxyHandler, logger)
@@ -75,19 +84,18 @@ func NewFromConfigs(middlewareCfg *config.Config, proxyCfg *ProxyConfig, host st
 	_ = rateLimitKVS
 
 	return &Server{
-		middlewareCfg: middlewareCfg,
-		proxyCfg:      proxyCfg,
-		handler:       middleware,
-		logger:        logger,
-		host:          host,
-		port:          port,
+		handler:  middleware,
+		logger:   logger,
+		host:     host,
+		port:     port,
+		upstream: upstreamCfg.URL,
 	}, nil
 }
 
 // Start starts the HTTP server
 func (s *Server) Start(ctx context.Context) error {
 	addr := fmt.Sprintf("%s:%d", s.host, s.port)
-	s.logger.Info("Starting server", "addr", addr, "upstream", s.proxyCfg.Proxy.Upstream.URL)
+	s.logger.Info("Starting server", "addr", addr, "upstream", s.upstream)
 
 	server := &http.Server{
 		Addr:    addr,
@@ -113,4 +121,35 @@ func (s *Server) Start(ctx context.Context) error {
 // Handler returns the HTTP handler (useful for testing)
 func (s *Server) Handler() http.Handler {
 	return s.handler
+}
+
+// loadProxyConfig loads proxy configuration from a YAML or JSON file
+func loadProxyConfig(path string) (proxy.UpstreamConfig, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return proxy.UpstreamConfig{}, fmt.Errorf("failed to read config file: %w", err)
+	}
+
+	var cfg ProxyConfig
+	ext := strings.ToLower(filepath.Ext(path))
+
+	switch ext {
+	case ".json":
+		if err := json.Unmarshal(data, &cfg); err != nil {
+			return proxy.UpstreamConfig{}, fmt.Errorf("failed to parse JSON config file: %w", err)
+		}
+	case ".yaml", ".yml":
+		if err := yaml.Unmarshal(data, &cfg); err != nil {
+			return proxy.UpstreamConfig{}, fmt.Errorf("failed to parse YAML config file: %w", err)
+		}
+	default:
+		return proxy.UpstreamConfig{}, fmt.Errorf("unsupported config file format: %s (supported: .yaml, .yml, .json)", ext)
+	}
+
+	// Validate required fields
+	if cfg.Proxy.Upstream.URL == "" {
+		return proxy.UpstreamConfig{}, fmt.Errorf("proxy.upstream.url is required")
+	}
+
+	return cfg.Proxy.Upstream, nil
 }

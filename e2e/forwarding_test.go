@@ -19,7 +19,7 @@ import (
 	"github.com/ideamans/chatbotgate/pkg/forwarding"
 	"github.com/ideamans/chatbotgate/pkg/kvs"
 	"github.com/ideamans/chatbotgate/pkg/logging"
-	"github.com/ideamans/chatbotgate/pkg/proxyserver"
+	"github.com/ideamans/chatbotgate/pkg/proxy"
 	"github.com/ideamans/chatbotgate/pkg/session"
 )
 
@@ -91,7 +91,7 @@ func TestForwarding_E2E(t *testing.T) {
 	sessionStore := sessionKVS
 
 	// Create proxy handler
-	proxyHandler, err := proxyserver.NewHandler(backendURL)
+	proxyHandler, err := proxy.NewHandler(backendURL)
 	if err != nil {
 		t.Fatalf("Failed to create proxy handler: %v", err)
 	}
@@ -387,7 +387,7 @@ func TestCustomFieldsForwarding_E2E_Encrypted(t *testing.T) {
 	sessionStore := sessionKVS
 
 	// Create proxy handler
-	proxyHandler, err := proxyserver.NewHandler(backendURL)
+	proxyHandler, err := proxy.NewHandler(backendURL)
 	if err != nil {
 		t.Fatalf("Failed to create proxy handler: %v", err)
 	}

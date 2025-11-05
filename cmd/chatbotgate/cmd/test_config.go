@@ -1,11 +1,16 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/ideamans/chatbotgate/pkg/config"
-	"github.com/ideamans/chatbotgate/pkg/proxyserver"
+	"github.com/ideamans/chatbotgate/pkg/proxy"
 	"github.com/spf13/cobra"
+	"gopkg.in/yaml.v3"
 )
 
 // testConfigCmd represents the test-config command
@@ -30,6 +35,16 @@ func init() {
 	rootCmd.AddCommand(testConfigCmd)
 }
 
+// ProxyConfig represents the proxy configuration section in the config file
+type ProxyConfig struct {
+	Proxy ProxyServerConfig `yaml:"proxy" json:"proxy"`
+}
+
+// ProxyServerConfig represents proxy server settings
+type ProxyServerConfig struct {
+	Upstream proxy.UpstreamConfig `yaml:"upstream" json:"upstream"`
+}
+
 func runTestConfig(cmd *cobra.Command, args []string) error {
 	fmt.Printf("Testing configuration file: %s\n", cfgFile)
 
@@ -40,7 +55,7 @@ func runTestConfig(cmd *cobra.Command, args []string) error {
 	}
 
 	// Load proxy configuration
-	proxyCfg, err := proxyserver.LoadProxyConfig(cfgFile)
+	upstreamCfg, err := loadProxyConfig(cfgFile)
 	if err != nil {
 		return fmt.Errorf("failed to load proxy configuration: %w", err)
 	}
@@ -51,7 +66,7 @@ func runTestConfig(cmd *cobra.Command, args []string) error {
 	// Print summary
 	fmt.Println("\nConfiguration Summary:")
 	fmt.Printf("  Service Name: %s\n", middlewareCfg.Service.Name)
-	fmt.Printf("  Upstream: %s\n", proxyCfg.Proxy.Upstream.URL)
+	fmt.Printf("  Upstream: %s\n", upstreamCfg.URL)
 
 	// Count available OAuth2 providers (not disabled)
 	availableProviders := 0
@@ -86,4 +101,35 @@ func runTestConfig(cmd *cobra.Command, args []string) error {
 
 	fmt.Println("\n✓ Configuration is valid and ready to use")
 	return nil
+}
+
+// loadProxyConfig loads proxy configuration from a YAML or JSON file
+func loadProxyConfig(path string) (proxy.UpstreamConfig, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return proxy.UpstreamConfig{}, fmt.Errorf("failed to read config file: %w", err)
+	}
+
+	var cfg ProxyConfig
+	ext := strings.ToLower(filepath.Ext(path))
+
+	switch ext {
+	case ".json":
+		if err := json.Unmarshal(data, &cfg); err != nil {
+			return proxy.UpstreamConfig{}, fmt.Errorf("failed to parse JSON config file: %w", err)
+		}
+	case ".yaml", ".yml":
+		if err := yaml.Unmarshal(data, &cfg); err != nil {
+			return proxy.UpstreamConfig{}, fmt.Errorf("failed to parse YAML config file: %w", err)
+		}
+	default:
+		return proxy.UpstreamConfig{}, fmt.Errorf("unsupported config file format: %s (supported: .yaml, .yml, .json)", ext)
+	}
+
+	// Validate required fields
+	if cfg.Proxy.Upstream.URL == "" {
+		return proxy.UpstreamConfig{}, fmt.Errorf("proxy.upstream.url is required")
+	}
+
+	return cfg.Proxy.Upstream, nil
 }

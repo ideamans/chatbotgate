@@ -1,4 +1,4 @@
-package proxyserver
+package server
 
 import (
 	"context"
@@ -9,105 +9,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ideamans/chatbotgate/pkg/config"
 	"github.com/ideamans/chatbotgate/pkg/logging"
 )
-
-func TestLoadProxyConfig(t *testing.T) {
-	tests := []struct {
-		name    string
-		setup   func() (string, func())
-		wantErr bool
-	}{
-		{
-			name: "valid config file",
-			setup: func() (string, func()) {
-				tmpDir := t.TempDir()
-				configPath := filepath.Join(tmpDir, "config.yaml")
-				configContent := `
-service:
-  name: "Test Service"
-  description: "Test"
-
-server:
-  auth_path_prefix: "/_auth"
-
-proxy:
-  upstream:
-    url: "http://localhost:8080"
-
-session:
-  cookie_name: "_test"
-  cookie_secret: "test-secret-key-with-32-characters"
-  cookie_expire: "1h"
-
-kvs:
-  default:
-    type: "memory"
-
-oauth2:
-  providers:
-    - name: "google"
-      type: "google"
-      client_id: "test-id"
-      client_secret: "test-secret"
-
-email_auth:
-  enabled: false
-  sender_type: "smtp"
-
-authorization:
-  allowed:
-    - "test@example.com"
-
-logging:
-  level: "info"
-`
-				if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
-					t.Fatal(err)
-				}
-				return configPath, func() {}
-			},
-			wantErr: false,
-		},
-		{
-			name: "file not found",
-			setup: func() (string, func()) {
-				return "/nonexistent/config.yaml", func() {}
-			},
-			wantErr: true,
-		},
-		{
-			name: "invalid yaml",
-			setup: func() (string, func()) {
-				tmpDir := t.TempDir()
-				configPath := filepath.Join(tmpDir, "config.yaml")
-				invalidContent := "invalid: yaml: content: [unclosed"
-				if err := os.WriteFile(configPath, []byte(invalidContent), 0644); err != nil {
-					t.Fatal(err)
-				}
-				return configPath, func() {}
-			},
-			wantErr: true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			path, cleanup := tt.setup()
-			defer cleanup()
-
-			cfg, err := LoadProxyConfig(path)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("LoadProxyConfig() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if !tt.wantErr && cfg == nil {
-				t.Error("LoadProxyConfig() returned nil config without error")
-			}
-		})
-	}
-}
 
 func TestNew(t *testing.T) {
 	// Create a temporary config file
@@ -179,91 +82,6 @@ logging:
 		_, err := New("/nonexistent/config.yaml", "localhost", 4180, logger)
 		if err == nil {
 			t.Error("New() expected error for nonexistent config, got nil")
-		}
-	})
-}
-
-func TestNewFromConfigs(t *testing.T) {
-	logger := logging.NewSimpleLogger("test", logging.LevelInfo, false)
-
-	// Create a temporary config file and load it
-	tmpDir := t.TempDir()
-	configPath := filepath.Join(tmpDir, "config.yaml")
-	configContent := `
-service:
-  name: "Test Service"
-  description: "Test"
-
-server:
-  auth_path_prefix: "/_auth"
-
-proxy:
-  upstream:
-    url: "http://localhost:8080"
-
-session:
-  cookie_name: "_test"
-  cookie_secret: "test-secret-key-with-32-characters-long"
-  cookie_expire: "1h"
-
-kvs:
-  default:
-    type: "memory"
-
-oauth2:
-  providers:
-    - name: "google"
-      type: "google"
-      client_id: "test-client-id"
-      client_secret: "test-client-secret"
-      enabled: true
-
-email_auth:
-  enabled: false
-  sender_type: "smtp"
-
-authorization:
-  allowed:
-    - "test@example.com"
-
-logging:
-  level: "info"
-`
-	if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
-		t.Fatal(err)
-	}
-
-	// Load both configs
-	middlewareCfg, err := config.NewFileLoader(configPath).Load()
-	if err != nil {
-		t.Fatalf("Failed to load middleware config: %v", err)
-	}
-
-	proxyCfg, err := LoadProxyConfig(configPath)
-	if err != nil {
-		t.Fatalf("LoadProxyConfig() error = %v", err)
-	}
-
-	t.Run("valid config", func(t *testing.T) {
-		server, err := NewFromConfigs(middlewareCfg, proxyCfg, "localhost", 4180, logger)
-		if err != nil {
-			t.Fatalf("NewFromConfigs() error = %v", err)
-		}
-		if server == nil {
-			t.Fatal("NewFromConfigs() returned nil server")
-		}
-	})
-
-	t.Run("nil logger creates default", func(t *testing.T) {
-		server, err := NewFromConfigs(middlewareCfg, proxyCfg, "localhost", 4180, nil)
-		if err != nil {
-			t.Fatalf("NewFromConfigs() error = %v", err)
-		}
-		if server == nil {
-			t.Fatal("NewFromConfigs() returned nil server")
-		}
-		if server.logger == nil {
-			t.Error("NewFromConfigs() did not create default logger")
 		}
 	})
 }
@@ -418,5 +236,84 @@ logging:
 		}
 	case <-time.After(1 * time.Second):
 		t.Error("Server did not shut down within timeout")
+	}
+}
+
+func TestLoadProxyConfig(t *testing.T) {
+	tests := []struct {
+		name    string
+		setup   func() (string, func())
+		wantErr bool
+	}{
+		{
+			name: "valid config file",
+			setup: func() (string, func()) {
+				tmpDir := t.TempDir()
+				configPath := filepath.Join(tmpDir, "config.yaml")
+				configContent := `
+proxy:
+  upstream:
+    url: "http://localhost:8080"
+`
+				if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
+					t.Fatal(err)
+				}
+				return configPath, func() {}
+			},
+			wantErr: false,
+		},
+		{
+			name: "file not found",
+			setup: func() (string, func()) {
+				return "/nonexistent/config.yaml", func() {}
+			},
+			wantErr: true,
+		},
+		{
+			name: "invalid yaml",
+			setup: func() (string, func()) {
+				tmpDir := t.TempDir()
+				configPath := filepath.Join(tmpDir, "config.yaml")
+				invalidContent := "invalid: yaml: content: [unclosed"
+				if err := os.WriteFile(configPath, []byte(invalidContent), 0644); err != nil {
+					t.Fatal(err)
+				}
+				return configPath, func() {}
+			},
+			wantErr: true,
+		},
+		{
+			name: "missing upstream url",
+			setup: func() (string, func()) {
+				tmpDir := t.TempDir()
+				configPath := filepath.Join(tmpDir, "config.yaml")
+				configContent := `
+proxy:
+  upstream:
+    url: ""
+`
+				if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
+					t.Fatal(err)
+				}
+				return configPath, func() {}
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			path, cleanup := tt.setup()
+			defer cleanup()
+
+			cfg, err := loadProxyConfig(path)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("loadProxyConfig() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !tt.wantErr && cfg.URL == "" {
+				t.Error("loadProxyConfig() returned empty upstream URL without error")
+			}
+		})
 	}
 }

@@ -7,8 +7,8 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/ideamans/chatbotgate/cmd/chatbotgate/cmd/server"
 	"github.com/ideamans/chatbotgate/pkg/logging"
-	"github.com/ideamans/chatbotgate/pkg/proxyserver"
 	"github.com/spf13/cobra"
 )
 
@@ -38,7 +38,7 @@ func runServe(cmd *cobra.Command, args []string) error {
 	logger.Info("Starting chatbotgate", "version", version)
 
 	// Create server from config file
-	server, err := proxyserver.New(cfgFile, host, port, logger)
+	srv, err := server.New(cfgFile, host, port, logger)
 	if err != nil {
 		logger.Error("Failed to create server", "error", err)
 		return fmt.Errorf("failed to create server: %w", err)
@@ -57,7 +57,7 @@ func runServe(cmd *cobra.Command, args []string) error {
 	// Run server in goroutine
 	errChan := make(chan error, 1)
 	go func() {
-		errChan <- server.Start(ctx)
+		errChan <- srv.Start(ctx)
 	}()
 
 	// Wait for shutdown signal or error
