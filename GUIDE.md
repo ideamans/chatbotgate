@@ -209,11 +209,25 @@ oauth2:
       # Optional: Custom icon
       icon_url: "https://example.com/google-icon.svg"
 
-      # Optional: Additional scopes
+      # Optional: Custom scopes
+      # If not specified, uses default scopes (recommended for user info)
+      # If specified, ONLY uses these scopes (defaults not added)
       scopes:
-        - "https://www.googleapis.com/auth/calendar.readonly"
-      reset_scopes: false  # false = add to defaults, true = replace
+        - "openid"  # Must include defaults if customizing
+        - "https://www.googleapis.com/auth/userinfo.email"
+        - "https://www.googleapis.com/auth/userinfo.profile"
+        - "https://www.googleapis.com/auth/calendar.readonly"  # Additional scope
 ```
+
+**Default Scopes** (when `scopes` not specified):
+- `openid` - OIDC authentication
+- `https://www.googleapis.com/auth/userinfo.email` - User email address
+- `https://www.googleapis.com/auth/userinfo.profile` - User profile (name, picture)
+
+**Standardized Fields** (available in forwarding):
+- `_email`: User's email address
+- `_username`: User's display name
+- `_avatar_url`: User's profile picture URL
 
 **Setup Instructions:**
 
@@ -234,11 +248,24 @@ oauth2:
       client_id: "YOUR-GITHUB-CLIENT-ID"
       client_secret: "YOUR-GITHUB-CLIENT-SECRET"
 
-      # Optional: Request additional scopes
+      # Optional: Custom scopes
+      # If not specified, uses default scopes (recommended for user info)
+      # If specified, ONLY uses these scopes (defaults not added)
       scopes:
-        - "repo"  # Repository access
-        - "read:org"  # Organization membership
+        - "user:email"  # Must include defaults if customizing
+        - "read:user"   # User profile access
+        - "repo"        # Additional: Repository access
+        - "read:org"    # Additional: Organization membership
 ```
+
+**Default Scopes** (when `scopes` not specified):
+- `user:email` - User email addresses (verified)
+- `read:user` - User profile data (name, login, avatar)
+
+**Standardized Fields** (available in forwarding):
+- `_email`: User's verified email address
+- `_username`: User's display name (fallback to login name if not set)
+- `_avatar_url`: User's profile picture URL
 
 **Setup Instructions:**
 
@@ -257,11 +284,28 @@ oauth2:
       client_id: "YOUR-AZURE-APP-ID"
       client_secret: "YOUR-AZURE-CLIENT-SECRET"
 
-      # Optional: Additional Microsoft Graph scopes
+      # Optional: Custom scopes
+      # If not specified, uses default scopes (recommended for user info)
+      # If specified, ONLY uses these scopes (defaults not added)
       scopes:
-        - "Calendars.Read"
-        - "Mail.Read"
+        - "openid"          # Must include defaults if customizing
+        - "profile"         # User profile data
+        - "email"           # User email address
+        - "User.Read"       # Microsoft Graph user info
+        - "Calendars.Read"  # Additional: Calendar access
+        - "Mail.Read"       # Additional: Email access
 ```
+
+**Default Scopes** (when `scopes` not specified):
+- `openid` - OIDC authentication
+- `profile` - User profile (displayName)
+- `email` - User email address
+- `User.Read` - Microsoft Graph user information
+
+**Standardized Fields** (available in forwarding):
+- `_email`: User's email address
+- `_username`: User's display name
+- `_avatar_url`: Empty (Microsoft requires separate photo endpoint)
 
 **Setup Instructions:**
 
@@ -528,8 +572,8 @@ forwarding:
         - encrypt
         - zip
 
-    # Example 4: OAuth2 avatar URL
-    - path: extra.avatar_url
+    # Example 4: Standardized avatar URL (common across all OAuth2 providers)
+    - path: _avatar_url
       header: X-Avatar-URL
 
     # Example 5: Entire user object as JSON
@@ -547,15 +591,36 @@ forwarding:
     # Example 7: Provider name
     - path: provider
       header: X-Auth-Provider
+
+    # Example 8: Standardized user fields (common across all OAuth2 providers)
+    - path: _email
+      header: X-User-Email
+    - path: _username
+      header: X-User-Name
+    - path: _avatar_url
+      header: X-User-Avatar
 ```
 
 **Available User Fields:**
 - `email`: User email address
-- `username`: Username (provider-dependent)
-- `provider`: Provider name (google, github, etc.)
-- `extra.avatar_url`: Avatar URL (if available)
+- `username`: Username (provider-dependent, empty for email auth)
+- `provider`: Provider name (google, github, microsoft, email)
+
+**Standardized OAuth2 Fields** (common across all providers):
+- `_email`: User email address (same as `email`)
+- `_username`: User display name (GitHub: name → login fallback, Microsoft: displayName, Google: name)
+- `_avatar_url`: User profile picture URL (Google, GitHub supported; empty for Microsoft and email auth)
+
+**Provider-Specific Fields** (under `extra`):
+- Google: `email`, `name`, `picture`, `verified_email`, `given_name`, `family_name`
+- GitHub: `email`, `name`, `login`, `avatar_url`, plus other public profile data
+- Microsoft: `email`, `displayName`, `userPrincipalName`, `preferredUsername`
+
+**OAuth2 Tokens** (under `extra.secrets`):
 - `extra.secrets.access_token`: OAuth2 access token
 - `extra.secrets.refresh_token`: OAuth2 refresh token
+
+**Special Paths:**
 - `.`: Entire user object as JSON
 
 **Available Filters:**

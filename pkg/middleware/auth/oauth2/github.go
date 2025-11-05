@@ -16,24 +16,18 @@ type GitHubProvider struct {
 
 // NewGitHubProvider creates a new GitHub OAuth2 provider
 func NewGitHubProvider(clientID, clientSecret, redirectURL string, scopes []string, resetScopes bool) *GitHubProvider {
-	// Default scopes
+	// Default scopes (used only when scopes is empty)
 	defaultScopes := []string{
 		"user:email",
 		"read:user", // For accessing user profile (name)
 	}
 
-	// Determine final scopes based on resetScopes flag
+	// Use default scopes only when no scopes are provided
 	var finalScopes []string
-	if resetScopes {
-		// Replace default scopes with provided scopes
-		if len(scopes) == 0 {
-			finalScopes = defaultScopes // Fallback to default if no scopes provided
-		} else {
-			finalScopes = scopes
-		}
+	if len(scopes) == 0 {
+		finalScopes = defaultScopes
 	} else {
-		// Add provided scopes to default scopes
-		finalScopes = append(defaultScopes, scopes...)
+		finalScopes = scopes
 	}
 
 	return &GitHubProvider{
@@ -61,20 +55,23 @@ func (p *GitHubProvider) Config() *oauth2.Config {
 func (p *GitHubProvider) GetUserInfo(ctx context.Context, token *oauth2.Token) (*UserInfo, error) {
 	client := p.config.Client(ctx, token)
 
-	// Get user profile (name)
+	// Get user profile (name, login, avatar_url)
 	var userName string
+	var avatarURL string
 	userResp, err := client.Get("https://api.github.com/user")
 	if err == nil && userResp.StatusCode == 200 {
 		defer userResp.Body.Close()
 		var user struct {
-			Name  string `json:"name"`
-			Login string `json:"login"`
+			Name      string `json:"name"`
+			Login     string `json:"login"`
+			AvatarURL string `json:"avatar_url"`
 		}
 		if json.NewDecoder(userResp.Body).Decode(&user) == nil {
 			userName = user.Name
 			if userName == "" {
 				userName = user.Login // Fallback to login if name is not set
 			}
+			avatarURL = user.AvatarURL
 		}
 	}
 
@@ -123,9 +120,20 @@ func (p *GitHubProvider) GetUserInfo(ctx context.Context, token *oauth2.Token) (
 		return nil, ErrEmailNotFound
 	}
 
+	// Set common fields for forwarding
+	extra := make(map[string]any)
+	extra["_email"] = email
+	extra["_username"] = userName
+	if avatarURL != "" {
+		extra["_avatar_url"] = avatarURL
+	} else {
+		extra["_avatar_url"] = ""
+	}
+
 	return &UserInfo{
 		Email: email,
 		Name:  userName,
+		Extra: extra,
 	}, nil
 }
 
