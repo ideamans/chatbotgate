@@ -1,9 +1,9 @@
 import { test, expect } from '@playwright/test'
 
-test.describe('Passthrough Configuration', () => {
+test.describe('Rules Configuration', () => {
   test('should allow access to /embed.js without authentication (prefix match)', async ({ page }) => {
     // Try to access /embed.js without authentication
-    // This should work because /embed.js is in the passthrough prefix list
+    // This should work because /embed.js matches a rule with allow action
     const response = await page.goto('http://localhost:4183/embed.js')
 
     // Should not redirect to login
@@ -65,9 +65,9 @@ test.describe('Passthrough Configuration', () => {
     expect(data).toHaveProperty('authenticated', false)
   })
 
-  test('should still require authentication for non-passthrough paths', async ({ page }) => {
+  test('should still require authentication for paths that do not match any allow rule', async ({ page }) => {
     // Try to access / without authentication
-    // This should redirect to login since it's not in the passthrough list
+    // This should redirect to login since it doesn't match any allow rule
     await page.goto('http://localhost:4183/')
 
     // Should redirect to login
@@ -77,7 +77,7 @@ test.describe('Passthrough Configuration', () => {
 
   test('should still require authentication for /api/private/*', async ({ page }) => {
     // Try to access /api/private/data without authentication
-    // This should redirect to login because only /api/public/* is in passthrough
+    // This should redirect to login because only /api/public/* has an allow rule
     await page.goto('http://localhost:4183/api/private/data')
 
     // Should redirect to login

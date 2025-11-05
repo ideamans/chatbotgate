@@ -8,26 +8,26 @@ import (
 	"github.com/ideamans/chatbotgate/pkg/middleware/authz"
 	"github.com/ideamans/chatbotgate/pkg/middleware/config"
 	"github.com/ideamans/chatbotgate/pkg/middleware/forwarding"
+	"github.com/ideamans/chatbotgate/pkg/middleware/rules"
+	"github.com/ideamans/chatbotgate/pkg/middleware/session"
 	"github.com/ideamans/chatbotgate/pkg/shared/i18n"
 	"github.com/ideamans/chatbotgate/pkg/shared/kvs"
 	"github.com/ideamans/chatbotgate/pkg/shared/logging"
-	"github.com/ideamans/chatbotgate/pkg/middleware/passthrough"
-	"github.com/ideamans/chatbotgate/pkg/middleware/session"
 )
 
 // Middleware is the core authentication middleware
 // It implements http.Handler and can wrap any http.Handler
 type Middleware struct {
-	config             *config.Config
-	sessionStore       kvs.Store
-	oauthManager       *oauth2.Manager
-	emailHandler       *email.Handler
-	authzChecker       authz.Checker
-	forwarder          forwarding.Forwarder  // Interface type
-	passthroughMatcher passthrough.Matcher   // Interface type
-	translator         *i18n.Translator
-	logger             logging.Logger
-	next               http.Handler // The next handler to call after auth succeeds
+	config         *config.Config
+	sessionStore   kvs.Store
+	oauthManager   *oauth2.Manager
+	emailHandler   *email.Handler
+	authzChecker   authz.Checker
+	forwarder      forwarding.Forwarder // Interface type
+	rulesEvaluator *rules.Evaluator     // Rules-based access control
+	translator     *i18n.Translator
+	logger         logging.Logger
+	next           http.Handler // The next handler to call after auth succeeds
 }
 
 // New creates a new authentication middleware
@@ -37,21 +37,21 @@ func New(
 	oauthManager *oauth2.Manager,
 	emailHandler *email.Handler,
 	authzChecker authz.Checker,
-	forwarder forwarding.Forwarder,         // Interface type
-	passthroughMatcher passthrough.Matcher, // Interface type (injected)
+	forwarder forwarding.Forwarder,   // Interface type
+	rulesEvaluator *rules.Evaluator,  // Rules evaluator
 	translator *i18n.Translator,
 	logger logging.Logger,
 ) *Middleware {
 	return &Middleware{
-		config:             cfg,
-		sessionStore:       sessionStore,
-		oauthManager:       oauthManager,
-		emailHandler:       emailHandler,
-		authzChecker:       authzChecker,
-		forwarder:          forwarder,
-		passthroughMatcher: passthroughMatcher,
-		translator:         translator,
-		logger:             logger,
+		config:         cfg,
+		sessionStore:   sessionStore,
+		oauthManager:   oauthManager,
+		emailHandler:   emailHandler,
+		authzChecker:   authzChecker,
+		forwarder:      forwarder,
+		rulesEvaluator: rulesEvaluator,
+		translator:     translator,
+		logger:         logger,
 	}
 }
 
@@ -116,20 +116,36 @@ func (m *Middleware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Check passthrough patterns - skip authentication if matched
-	if m.passthroughMatcher != nil && m.passthroughMatcher.Match(r.URL.Path) {
-		m.logger.Debug("Passthrough matched, skipping authentication", "path", r.URL.Path)
-		// Skip authentication and call next handler directly
-		if m.next != nil {
-			m.next.ServeHTTP(w, r)
-		} else {
-			w.WriteHeader(http.StatusOK)
-			w.Write([]byte("Passthrough"))
+	// Evaluate access rules for the path
+	if m.rulesEvaluator != nil {
+		action := m.rulesEvaluator.Evaluate(r.URL.Path)
+		switch action {
+		case rules.ActionAllow:
+			// Allow access without authentication
+			m.logger.Debug("Rules: allowing without authentication", "path", r.URL.Path, "action", action)
+			if m.next != nil {
+				m.next.ServeHTTP(w, r)
+			} else {
+				w.WriteHeader(http.StatusOK)
+				w.Write([]byte("Allowed"))
+			}
+			return
+
+		case rules.ActionDeny:
+			// Deny access (403)
+			m.logger.Debug("Rules: denying access", "path", r.URL.Path, "action", action)
+			http.Error(w, "Access Denied", http.StatusForbidden)
+			return
+
+		case rules.ActionAuth:
+			// Require authentication (default behavior)
+			m.logger.Debug("Rules: requiring authentication", "path", r.URL.Path, "action", action)
+			m.requireAuth(w, r)
+			return
 		}
-		return
 	}
 
-	// Check authentication for all other paths
+	// If no rules evaluator, default to requiring authentication
 	m.requireAuth(w, r)
 }
 

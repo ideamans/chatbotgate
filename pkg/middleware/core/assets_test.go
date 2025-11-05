@@ -9,7 +9,6 @@ import (
 	"github.com/ideamans/chatbotgate/pkg/middleware/auth/oauth2"
 	"github.com/ideamans/chatbotgate/pkg/middleware/authz"
 	"github.com/ideamans/chatbotgate/pkg/middleware/config"
-	"github.com/ideamans/chatbotgate/pkg/middleware/passthrough"
 	"github.com/ideamans/chatbotgate/pkg/shared/i18n"
 	"github.com/ideamans/chatbotgate/pkg/shared/kvs"
 	"github.com/ideamans/chatbotgate/pkg/shared/logging"
@@ -37,7 +36,6 @@ func TestBuildStyleLinks_DifyDisabled(t *testing.T) {
 	sessionStore := func() kvs.Store { store, _ := kvs.NewMemoryStore("test", kvs.MemoryConfig{}); return store }()
 	oauthManager := oauth2.NewManager()
 	authzChecker := authz.NewEmailChecker(cfg.Authorization)
-	passthroughMatcher := passthrough.NewMatcher(&cfg.Passthrough)
 	translator := i18n.NewTranslator()
 	logger := logging.NewTestLogger()
 
@@ -48,7 +46,7 @@ func TestBuildStyleLinks_DifyDisabled(t *testing.T) {
 		nil,
 		authzChecker,
 		nil,
-		passthroughMatcher,
+		nil, // rules evaluator not needed for this test
 		translator,
 		logger,
 	)
@@ -88,7 +86,6 @@ func TestBuildStyleLinks_DifyEnabled(t *testing.T) {
 	sessionStore := func() kvs.Store { store, _ := kvs.NewMemoryStore("test", kvs.MemoryConfig{}); return store }()
 	oauthManager := oauth2.NewManager()
 	authzChecker := authz.NewEmailChecker(cfg.Authorization)
-	passthroughMatcher := passthrough.NewMatcher(&cfg.Passthrough)
 	translator := i18n.NewTranslator()
 	logger := logging.NewTestLogger()
 
@@ -99,7 +96,7 @@ func TestBuildStyleLinks_DifyEnabled(t *testing.T) {
 		nil,
 		authzChecker,
 		nil,
-		passthroughMatcher,
+		nil, // rules evaluator not needed for this test
 		translator,
 		logger,
 	)
@@ -138,7 +135,6 @@ func TestBuildStyleLinks_CustomPrefix(t *testing.T) {
 	sessionStore := func() kvs.Store { store, _ := kvs.NewMemoryStore("test", kvs.MemoryConfig{}); return store }()
 	oauthManager := oauth2.NewManager()
 	authzChecker := authz.NewEmailChecker(cfg.Authorization)
-	passthroughMatcher := passthrough.NewMatcher(&cfg.Passthrough)
 	translator := i18n.NewTranslator()
 	logger := logging.NewTestLogger()
 
@@ -149,7 +145,7 @@ func TestBuildStyleLinks_CustomPrefix(t *testing.T) {
 		nil,
 		authzChecker,
 		nil,
-		passthroughMatcher,
+		nil, // rules evaluator not needed for this test
 		translator,
 		logger,
 	)
@@ -183,7 +179,6 @@ func TestHandleDifyCSS(t *testing.T) {
 	sessionStore := func() kvs.Store { store, _ := kvs.NewMemoryStore("test", kvs.MemoryConfig{}); return store }()
 	oauthManager := oauth2.NewManager()
 	authzChecker := authz.NewEmailChecker(cfg.Authorization)
-	passthroughMatcher := passthrough.NewMatcher(&cfg.Passthrough)
 	translator := i18n.NewTranslator()
 	logger := logging.NewTestLogger()
 
@@ -194,7 +189,7 @@ func TestHandleDifyCSS(t *testing.T) {
 		nil,
 		authzChecker,
 		nil,
-		passthroughMatcher,
+		nil, // rules evaluator not needed for this test
 		translator,
 		logger,
 	)
@@ -245,7 +240,6 @@ func TestMiddleware_DifyCSSRoute(t *testing.T) {
 	sessionStore := func() kvs.Store { store, _ := kvs.NewMemoryStore("test", kvs.MemoryConfig{}); return store }()
 	oauthManager := oauth2.NewManager()
 	authzChecker := authz.NewEmailChecker(cfg.Authorization)
-	passthroughMatcher := passthrough.NewMatcher(&cfg.Passthrough)
 	translator := i18n.NewTranslator()
 	logger := logging.NewTestLogger()
 
@@ -256,7 +250,7 @@ func TestMiddleware_DifyCSSRoute(t *testing.T) {
 		nil,
 		authzChecker,
 		nil,
-		passthroughMatcher,
+		nil, // rules evaluator not needed for this test
 		translator,
 		logger,
 	)
@@ -295,7 +289,6 @@ func TestMiddleware_DifyCSSRoute_CustomPrefix(t *testing.T) {
 	sessionStore := func() kvs.Store { store, _ := kvs.NewMemoryStore("test", kvs.MemoryConfig{}); return store }()
 	oauthManager := oauth2.NewManager()
 	authzChecker := authz.NewEmailChecker(cfg.Authorization)
-	passthroughMatcher := passthrough.NewMatcher(&cfg.Passthrough)
 	translator := i18n.NewTranslator()
 	logger := logging.NewTestLogger()
 
@@ -306,7 +299,7 @@ func TestMiddleware_DifyCSSRoute_CustomPrefix(t *testing.T) {
 		nil,
 		authzChecker,
 		nil,
-		passthroughMatcher,
+		nil, // rules evaluator not needed for this test
 		translator,
 		logger,
 	)

@@ -2,6 +2,7 @@ package factory
 
 import (
 	"github.com/ideamans/chatbotgate/pkg/middleware/config"
+	"github.com/ideamans/chatbotgate/pkg/middleware/rules"
 	"github.com/ideamans/chatbotgate/pkg/shared/kvs"
 )
 
@@ -47,8 +48,8 @@ func CreateTestConfig() *config.Config {
 			Level: "info",
 			Color: false,
 		},
-		Forwarding:  config.ForwardingConfig{},
-		Passthrough: config.PassthroughConfig{},
+		Forwarding: config.ForwardingConfig{},
+		Rules:      rules.Config{}, // Empty rules = default behavior (require auth for all)
 	}
 }
 

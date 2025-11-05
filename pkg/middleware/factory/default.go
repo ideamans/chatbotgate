@@ -9,13 +9,13 @@ import (
 	"github.com/ideamans/chatbotgate/pkg/middleware/auth/oauth2"
 	"github.com/ideamans/chatbotgate/pkg/middleware/authz"
 	"github.com/ideamans/chatbotgate/pkg/middleware/config"
+	"github.com/ideamans/chatbotgate/pkg/middleware/core"
 	"github.com/ideamans/chatbotgate/pkg/middleware/forwarding"
+	"github.com/ideamans/chatbotgate/pkg/middleware/rules"
+	"github.com/ideamans/chatbotgate/pkg/middleware/session"
 	"github.com/ideamans/chatbotgate/pkg/shared/i18n"
 	"github.com/ideamans/chatbotgate/pkg/shared/kvs"
 	"github.com/ideamans/chatbotgate/pkg/shared/logging"
-	"github.com/ideamans/chatbotgate/pkg/middleware/core"
-	"github.com/ideamans/chatbotgate/pkg/middleware/passthrough"
-	"github.com/ideamans/chatbotgate/pkg/middleware/session"
 )
 
 // DefaultFactory is the default implementation of Factory.
@@ -46,7 +46,10 @@ func (f *DefaultFactory) CreateMiddleware(
 	translator := f.CreateTranslator()
 	authzChecker := f.CreateAuthzChecker(cfg.Authorization)
 	forwarder := f.CreateForwarder(cfg.Forwarding, cfg.OAuth2.Providers)
-	passthroughMatcher := f.CreatePassthroughMatcher(cfg.Passthrough)
+	rulesEvaluator, err := f.CreateRulesEvaluator(&cfg.Rules)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create rules evaluator: %w", err)
+	}
 
 	// Create KVS stores for email auth (if needed)
 	var tokenKVS, rateLimitKVS kvs.Store
@@ -87,7 +90,7 @@ func (f *DefaultFactory) CreateMiddleware(
 		emailHandler,
 		authzChecker,
 		forwarder,
-		passthroughMatcher,
+		rulesEvaluator,
 		translator,
 		logger,
 	)
@@ -247,13 +250,14 @@ func (f *DefaultFactory) CreateForwarder(forwardingCfg config.ForwardingConfig, 
 	return forwarder
 }
 
-// CreatePassthroughMatcher creates a matcher for authentication bypass (may return nil)
-func (f *DefaultFactory) CreatePassthroughMatcher(passthroughCfg config.PassthroughConfig) passthrough.Matcher {
-	matcher := passthrough.NewMatcher(&passthroughCfg)
-	if matcher.HasErrors() {
-		f.logger.Warn("Passthrough configuration has errors", "errors", matcher.Errors())
+// CreateRulesEvaluator creates a rules evaluator from configuration
+func (f *DefaultFactory) CreateRulesEvaluator(rulesCfg *rules.Config) (*rules.Evaluator, error) {
+	evaluator, err := rules.NewEvaluator(rulesCfg)
+	if err != nil {
+		return nil, fmt.Errorf("invalid rules configuration: %w", err)
 	}
-	return matcher
+	f.logger.Debug("Rules evaluator initialized", "rule_count", len(rulesCfg.Rules))
+	return evaluator, nil
 }
 
 // CreateTranslator creates an i18n translator

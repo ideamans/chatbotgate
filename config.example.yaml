@@ -292,32 +292,41 @@ forwarding:
     # - path: provider
     #   header: X-Auth-Provider
 
-# Passthrough configuration
-# Paths matching these patterns will bypass authentication
-# Useful for public assets, API endpoints, or embedding widgets
-passthrough:
-  # Exact prefix matches
-  # Any path starting with these prefixes will skip authentication
-  prefix:
-    # - "/embed.js"
-    # - "/public/"
-    # - "/static/"
+# Rules configuration
+# Access control rules for paths (evaluated in order, first match wins)
+# Actions: allow (no auth), auth (require auth), deny (403)
+rules:
+  # Example rules (uncomment to use):
 
-  # Regular expression patterns
-  # Paths matching these regex patterns will skip authentication
-  regex:
-    # - "^/api/public/.*$"
-    # - "\.js$"
-    # - "^/v\\d+/.*$"
+  # Allow public static files without authentication
+  # - prefix: "/static/"
+  #   action: allow
+  #   description: "Public static files"
 
-  # Minimatch/glob patterns
-  # Supports *, **, ?, and brace expansion
-  # ** matches across path separators, * matches within a segment
-  minimatch:
-    # - "/**/*.js"       # All .js files at any depth
-    # - "/**/*.css"      # All .css files at any depth
-    # - "/static/**"     # Everything under /static/
-    # - "/api/**/public" # /api/public, /api/v1/public, etc.
+  # Allow specific file (exact match)
+  # - exact: "/health"
+  #   action: allow
+  #   description: "Health check endpoint"
+
+  # Regex pattern matching
+  # - regex: "^/api/public/"
+  #   action: allow
+  #   description: "Public API endpoints"
+
+  # Glob/minimatch patterns (supports *, **, ?, {a,b})
+  # - minimatch: "**/*.{js,css}"
+  #   action: allow
+  #   description: "All JavaScript and CSS files"
+
+  # Deny access to admin paths
+  # - prefix: "/admin/"
+  #   action: deny
+  #   description: "Admin access denied"
+
+  # Default: require authentication for all other paths
+  # - all: true
+  #   action: auth
+  #   description: "Require authentication for everything else"
 
 # Assets configuration
 # Controls CSS and JavaScript assets loading for authentication pages
