@@ -13,9 +13,15 @@ service:
   # logo_width: "200px"
 
 # HTTP server configuration
-# Note: host and port are now set via command-line flags (-host, -port)
-# Default values: host=0.0.0.0, port=4180
 server:
+  # Server host address (default: "0.0.0.0")
+  # Can be overridden with --host flag
+  host: "0.0.0.0"
+
+  # Server port number (default: 4180)
+  # Can be overridden with --port or -p flag
+  port: 4180
+
   # Authentication path prefix (default: "/_auth")
   # All authentication endpoints will use this prefix
   # auth_path_prefix: "/_auth"
