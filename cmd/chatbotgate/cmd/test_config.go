@@ -7,8 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/ideamans/chatbotgate/pkg/config"
-	"github.com/ideamans/chatbotgate/pkg/proxy"
+	"github.com/ideamans/chatbotgate/pkg/middleware/config"
+	"github.com/ideamans/chatbotgate/pkg/proxy/core"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 )

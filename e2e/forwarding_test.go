@@ -14,13 +14,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ideamans/chatbotgate/pkg/config"
-	"github.com/ideamans/chatbotgate/pkg/factory"
-	"github.com/ideamans/chatbotgate/pkg/forwarding"
-	"github.com/ideamans/chatbotgate/pkg/kvs"
-	"github.com/ideamans/chatbotgate/pkg/logging"
-	"github.com/ideamans/chatbotgate/pkg/proxy"
-	"github.com/ideamans/chatbotgate/pkg/session"
+	"github.com/ideamans/chatbotgate/pkg/middleware/config"
+	"github.com/ideamans/chatbotgate/pkg/middleware/factory"
+	"github.com/ideamans/chatbotgate/pkg/middleware/forwarding"
+	"github.com/ideamans/chatbotgate/pkg/shared/kvs"
+	"github.com/ideamans/chatbotgate/pkg/shared/logging"
+	"github.com/ideamans/chatbotgate/pkg/proxy/core"
+	"github.com/ideamans/chatbotgate/pkg/middleware/session"
 )
 
 const (

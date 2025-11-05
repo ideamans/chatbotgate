@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/ideamans/chatbotgate/pkg/config"
-	"github.com/ideamans/chatbotgate/pkg/factory"
-	"github.com/ideamans/chatbotgate/pkg/logging"
-	"github.com/ideamans/chatbotgate/pkg/middleware"
+	"github.com/ideamans/chatbotgate/pkg/middleware/config"
+	"github.com/ideamans/chatbotgate/pkg/middleware/factory"
+	"github.com/ideamans/chatbotgate/pkg/shared/logging"
+	"github.com/ideamans/chatbotgate/pkg/middleware/core"
 )
 
 // MiddlewareManager is an interface for managing middleware lifecycle

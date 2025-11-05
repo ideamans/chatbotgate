@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ideamans/chatbotgate/pkg/logging"
+	"github.com/ideamans/chatbotgate/pkg/shared/logging"
 )
 
 func TestNew(t *testing.T) {

@@ -9,9 +9,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/ideamans/chatbotgate/pkg/config"
-	"github.com/ideamans/chatbotgate/pkg/logging"
-	"github.com/ideamans/chatbotgate/pkg/proxy"
+	"github.com/ideamans/chatbotgate/pkg/middleware/config"
+	"github.com/ideamans/chatbotgate/pkg/shared/logging"
+	"github.com/ideamans/chatbotgate/pkg/proxy/core"
 	"gopkg.in/yaml.v3"
 )
 

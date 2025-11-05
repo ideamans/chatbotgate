@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/ideamans/chatbotgate/pkg/logging"
+	"github.com/ideamans/chatbotgate/pkg/shared/logging"
 )
 
 // Server represents the HTTP server that integrates proxy and middleware managers

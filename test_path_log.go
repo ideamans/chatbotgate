@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/ideamans/chatbotgate/pkg/logging"
+	"github.com/ideamans/chatbotgate/pkg/shared/logging"
 )
 
 func main() {
