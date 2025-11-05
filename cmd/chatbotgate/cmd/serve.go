@@ -37,8 +37,26 @@ func runServe(cmd *cobra.Command, args []string) error {
 
 	logger.Info("Starting chatbotgate", "version", version)
 
-	// Create server from config file
-	srv, err := server.New(cfgFile, host, port, logger)
+	// Create proxy manager from config file
+	proxyManager, err := server.NewProxyManager(cfgFile, logger)
+	if err != nil {
+		logger.Error("Failed to create proxy manager", "error", err)
+		return fmt.Errorf("failed to create proxy manager: %w", err)
+	}
+
+	logger.Info("Proxy manager initialized successfully")
+
+	// Create middleware manager from config file (with proxy as next handler)
+	middlewareManager, err := server.NewMiddlewareManager(cfgFile, host, port, proxyManager.Handler(), logger)
+	if err != nil {
+		logger.Error("Failed to create middleware manager", "error", err)
+		return fmt.Errorf("failed to create middleware manager: %w", err)
+	}
+
+	logger.Info("Middleware manager initialized successfully")
+
+	// Create server with middleware manager
+	srv, err := server.New(middlewareManager, host, port, logger)
 	if err != nil {
 		logger.Error("Failed to create server", "error", err)
 		return fmt.Errorf("failed to create server: %w", err)

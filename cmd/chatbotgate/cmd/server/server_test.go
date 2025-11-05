@@ -63,7 +63,18 @@ logging:
 	logger := logging.NewSimpleLogger("test", logging.LevelInfo, false)
 
 	t.Run("valid config", func(t *testing.T) {
-		server, err := New(configPath, "localhost", 4180, logger)
+		// Create managers
+		proxyManager, err := NewProxyManager(configPath, logger)
+		if err != nil {
+			t.Fatalf("NewProxyManager() error = %v", err)
+		}
+
+		middlewareManager, err := NewMiddlewareManager(configPath, "localhost", 4180, proxyManager.Handler(), logger)
+		if err != nil {
+			t.Fatalf("NewMiddlewareManager() error = %v", err)
+		}
+
+		server, err := New(middlewareManager, "localhost", 4180, logger)
 		if err != nil {
 			t.Fatalf("New() error = %v", err)
 		}
@@ -79,9 +90,9 @@ logging:
 	})
 
 	t.Run("invalid config path", func(t *testing.T) {
-		_, err := New("/nonexistent/config.yaml", "localhost", 4180, logger)
+		_, err := NewProxyManager("/nonexistent/config.yaml", logger)
 		if err == nil {
-			t.Error("New() expected error for nonexistent config, got nil")
+			t.Error("NewProxyManager() expected error for nonexistent config, got nil")
 		}
 	})
 }
@@ -143,7 +154,18 @@ logging:
 		t.Fatal(err)
 	}
 
-	server, err := New(configPath, "localhost", 4180, logger)
+	// Create managers
+	proxyManager, err := NewProxyManager(configPath, logger)
+	if err != nil {
+		t.Fatalf("NewProxyManager() error = %v", err)
+	}
+
+	middlewareManager, err := NewMiddlewareManager(configPath, "localhost", 4180, proxyManager.Handler(), logger)
+	if err != nil {
+		t.Fatalf("NewMiddlewareManager() error = %v", err)
+	}
+
+	server, err := New(middlewareManager, "localhost", 4180, logger)
 	if err != nil {
 		t.Fatalf("New() error = %v", err)
 	}
@@ -210,8 +232,19 @@ logging:
 		t.Fatal(err)
 	}
 
+	// Create managers
+	proxyManager, err := NewProxyManager(configPath, logger)
+	if err != nil {
+		t.Fatalf("NewProxyManager() error = %v", err)
+	}
+
+	middlewareManager, err := NewMiddlewareManager(configPath, "localhost", 0, proxyManager.Handler(), logger)
+	if err != nil {
+		t.Fatalf("NewMiddlewareManager() error = %v", err)
+	}
+
 	// Use a random available port
-	server, err := New(configPath, "localhost", 0, logger)
+	server, err := New(middlewareManager, "localhost", 0, logger)
 	if err != nil {
 		t.Fatalf("New() error = %v", err)
 	}
