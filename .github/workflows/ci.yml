@@ -31,7 +31,7 @@ jobs:
           args: --timeout=5m
 
       - name: Check code formatting
-        run: make fmt
+        run: make fmt-check
 
   test:
     name: Unit Tests
