@@ -11,8 +11,8 @@ import (
 	"github.com/ideamans/chatbotgate/pkg/middleware/assets"
 	"github.com/ideamans/chatbotgate/pkg/middleware/auth/oauth2"
 	"github.com/ideamans/chatbotgate/pkg/middleware/forwarding"
-	"github.com/ideamans/chatbotgate/pkg/shared/i18n"
 	"github.com/ideamans/chatbotgate/pkg/middleware/session"
+	"github.com/ideamans/chatbotgate/pkg/shared/i18n"
 )
 
 // handleHealth handles the health check endpoint

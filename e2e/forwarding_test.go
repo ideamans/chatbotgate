@@ -17,10 +17,10 @@ import (
 	"github.com/ideamans/chatbotgate/pkg/middleware/config"
 	"github.com/ideamans/chatbotgate/pkg/middleware/factory"
 	"github.com/ideamans/chatbotgate/pkg/middleware/forwarding"
+	"github.com/ideamans/chatbotgate/pkg/middleware/session"
+	"github.com/ideamans/chatbotgate/pkg/proxy/core"
 	"github.com/ideamans/chatbotgate/pkg/shared/kvs"
 	"github.com/ideamans/chatbotgate/pkg/shared/logging"
-	"github.com/ideamans/chatbotgate/pkg/proxy/core"
-	"github.com/ideamans/chatbotgate/pkg/middleware/session"
 )
 
 const (
@@ -31,8 +31,8 @@ const (
 
 // TestUserInfoResponse matches the backend server's response structure
 type TestUserInfoResponse struct {
-	QueryString *TestUserData `json:"querystring,omitempty"`
-	Header      *TestUserData `json:"header,omitempty"`
+	QueryString *TestUserData  `json:"querystring,omitempty"`
+	Header      *TestUserData  `json:"header,omitempty"`
 	RawHeaders  TestRawHeaders `json:"raw_headers,omitempty"`
 }
 

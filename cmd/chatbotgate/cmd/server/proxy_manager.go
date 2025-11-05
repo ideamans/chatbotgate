@@ -11,9 +11,9 @@ import (
 	"sync/atomic"
 
 	"github.com/ideamans/chatbotgate/pkg/middleware/config"
-	"github.com/ideamans/chatbotgate/pkg/shared/logging"
 	"github.com/ideamans/chatbotgate/pkg/proxy/core"
 	"github.com/ideamans/chatbotgate/pkg/shared/filewatcher"
+	"github.com/ideamans/chatbotgate/pkg/shared/logging"
 	"gopkg.in/yaml.v3"
 )
 

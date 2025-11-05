@@ -37,8 +37,8 @@ func New(
 	oauthManager *oauth2.Manager,
 	emailHandler *email.Handler,
 	authzChecker authz.Checker,
-	forwarder forwarding.Forwarder,   // Interface type
-	rulesEvaluator *rules.Evaluator,  // Rules evaluator
+	forwarder forwarding.Forwarder, // Interface type
+	rulesEvaluator *rules.Evaluator, // Rules evaluator
 	translator *i18n.Translator,
 	logger logging.Logger,
 ) *Middleware {

@@ -13,15 +13,15 @@ import (
 
 // UserInfoResponse represents the response with user information
 type UserInfoResponse struct {
-	QueryString *UserData `json:"querystring,omitempty"`
-	Header      *UserData `json:"header,omitempty"`
+	QueryString *UserData  `json:"querystring,omitempty"`
+	Header      *UserData  `json:"header,omitempty"`
 	RawHeaders  RawHeaders `json:"raw_headers,omitempty"`
 }
 
 // UserData contains user information
 type UserData struct {
-	Username string `json:"username,omitempty"`
-	Email    string `json:"email,omitempty"`
+	Username  string `json:"username,omitempty"`
+	Email     string `json:"email,omitempty"`
 	Encrypted bool   `json:"encrypted"`
 }
 

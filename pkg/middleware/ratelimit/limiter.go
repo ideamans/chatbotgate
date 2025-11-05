@@ -11,7 +11,7 @@ import (
 // Limiter implements a simple token bucket rate limiter backed by KVS
 type Limiter struct {
 	kvs      kvs.Store
-	rate     int           // tokens per interval
+	rate     int // tokens per interval
 	interval time.Duration
 }
 

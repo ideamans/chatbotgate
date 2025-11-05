@@ -12,10 +12,10 @@ import (
 	"github.com/ideamans/chatbotgate/pkg/middleware/auth/oauth2"
 	"github.com/ideamans/chatbotgate/pkg/middleware/authz"
 	"github.com/ideamans/chatbotgate/pkg/middleware/config"
+	"github.com/ideamans/chatbotgate/pkg/middleware/session"
 	"github.com/ideamans/chatbotgate/pkg/shared/i18n"
 	"github.com/ideamans/chatbotgate/pkg/shared/kvs"
 	"github.com/ideamans/chatbotgate/pkg/shared/logging"
-	"github.com/ideamans/chatbotgate/pkg/middleware/session"
 )
 
 // mockProvider is a mock implementation of oauth2.Provider
@@ -113,7 +113,7 @@ func TestMiddleware_RequiresEmail(t *testing.T) {
 			})
 
 			authzChecker := authz.NewEmailChecker(tt.authzConfig)
-				translator := i18n.NewTranslator()
+			translator := i18n.NewTranslator()
 			logger := logging.NewTestLogger()
 
 			middleware := New(
@@ -122,7 +122,7 @@ func TestMiddleware_RequiresEmail(t *testing.T) {
 				oauthManager,
 				nil, // email handler
 				authzChecker,
-				nil,                // forwarder
+				nil, // forwarder
 				nil, // rules evaluator
 				translator,
 				logger,

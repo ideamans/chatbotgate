@@ -129,9 +129,9 @@ func TestMicrosoftProvider_GetUserEmail(t *testing.T) {
 		{
 			name: "mail field present",
 			response: map[string]interface{}{
-				"mail":               "user@example.com",
-				"userPrincipalName":  "user@tenant.onmicrosoft.com",
-				"preferredUsername":  "user@example.com",
+				"mail":              "user@example.com",
+				"userPrincipalName": "user@tenant.onmicrosoft.com",
+				"preferredUsername": "user@example.com",
 			},
 			statusCode: http.StatusOK,
 			wantEmail:  "user@example.com",
@@ -140,9 +140,9 @@ func TestMicrosoftProvider_GetUserEmail(t *testing.T) {
 		{
 			name: "mail empty - use userPrincipalName",
 			response: map[string]interface{}{
-				"mail":               "",
-				"userPrincipalName":  "user@tenant.onmicrosoft.com",
-				"preferredUsername":  "user@example.com",
+				"mail":              "",
+				"userPrincipalName": "user@tenant.onmicrosoft.com",
+				"preferredUsername": "user@example.com",
 			},
 			statusCode: http.StatusOK,
 			wantEmail:  "user@tenant.onmicrosoft.com",
@@ -151,9 +151,9 @@ func TestMicrosoftProvider_GetUserEmail(t *testing.T) {
 		{
 			name: "mail and userPrincipalName empty - use preferredUsername",
 			response: map[string]interface{}{
-				"mail":               "",
-				"userPrincipalName":  "",
-				"preferredUsername":  "user@example.com",
+				"mail":              "",
+				"userPrincipalName": "",
+				"preferredUsername": "user@example.com",
 			},
 			statusCode: http.StatusOK,
 			wantEmail:  "user@example.com",

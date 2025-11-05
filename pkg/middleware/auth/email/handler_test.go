@@ -13,8 +13,8 @@ import (
 
 // MockAuthzChecker is a mock authorization checker
 type MockAuthzChecker struct {
-	allowed        bool
-	requiresEmail  bool
+	allowed       bool
+	requiresEmail bool
 }
 
 func (m *MockAuthzChecker) RequiresEmail() bool {
