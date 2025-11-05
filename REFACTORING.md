@@ -392,7 +392,6 @@ func (m *MultiDomainManager) ReloadDomain(domain string, cfg *config.Config) err
 
 **タスク:**
 - [ ] `pkg/manager/multi_domain.go`作成（スケルトン）
-- [ ] Hostベースルーティング実装
 - [ ] 設定ファイルフォーマット検討
 - [ ] テスト追加
 

@@ -1,6 +1,6 @@
 service:
   name: "chatbotgate e2e (with whitelist)"
-  description: "E2E verification environment with whitelist"
+  description: "E2E verification environment with whitelist - MODIFIED"
 
 server:
   auth_path_prefix: "/_auth"

@@ -2,18 +2,18 @@ package cmd
 
 import (
 	"context"
+	"errors"
 	"fmt"
-	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
-	"github.com/ideamans/chatbotgate/pkg/config"
-	"github.com/ideamans/chatbotgate/pkg/factory"
-	"github.com/ideamans/chatbotgate/pkg/logging"
-	"github.com/ideamans/chatbotgate/pkg/manager"
-	"github.com/ideamans/chatbotgate/pkg/watcher"
+	"github.com/ideamans/chatbotgate/cmd/chatbotgate/cmd/server"
+	"github.com/ideamans/chatbotgate/pkg/middleware/config"
+	"github.com/ideamans/chatbotgate/pkg/shared/filewatcher"
+	"github.com/ideamans/chatbotgate/pkg/shared/logging"
 	"github.com/spf13/cobra"
 )
 
@@ -28,7 +28,6 @@ The server will:
 - Initialize session storage (memory or Redis)
 - Set up OAuth2 and email authentication
 - Start the reverse proxy server
-- Watch for configuration changes
 - Handle graceful shutdown on SIGTERM/SIGINT`,
 	RunE: runServe,
 }
@@ -38,116 +37,128 @@ func init() {
 }
 
 func runServe(cmd *cobra.Command, args []string) error {
-	// Load configuration
-	loader := config.NewFileLoader(cfgFile)
-	cfg, err := loader.Load()
+	// Setup logger for initialization
+	logger := logging.NewSimpleLogger("main", logging.LevelInfo, true)
+
+	logger.Info("Starting chatbotgate", "version", version)
+
+	// Create proxy manager from config file
+	proxyManager, err := server.NewProxyManager(cfgFile, logger)
 	if err != nil {
-		return fmt.Errorf("failed to load configuration: %w", err)
+		return formatConfigError("proxy", err)
 	}
 
-	// Setup logger
-	logLevel := logging.ParseLevel(cfg.Logging.Level)
-	logger := logging.NewSimpleLogger("main", logLevel, cfg.Logging.Color)
+	logger.Info("Proxy manager initialized successfully")
 
-	logger.Info("Starting chatbotgate", "version", version, "service", cfg.Service.Name)
-
-	// Create factory for all components
-	mwFactory := factory.NewDefaultFactory(host, port, logger)
-
-	// Create KVS stores
-	sessionKVS, tokenKVS, rateLimitKVS, err := mwFactory.CreateKVSStores(cfg)
+	// Create middleware manager from config file (with proxy as next handler)
+	middlewareManager, err := server.NewMiddlewareManager(cfgFile, host, port, proxyManager.Handler(), logger)
 	if err != nil {
-		logger.Error("Startup failed: could not create KVS stores", "error", err)
-		logger.Fatal("Server initialization failed")
-	}
-	defer sessionKVS.Close()
-	defer tokenKVS.Close()
-	defer rateLimitKVS.Close()
-
-	// Create session store
-	sessionStore := mwFactory.CreateSessionStore(sessionKVS)
-
-	// Create proxy handler
-	proxyHandler, err := mwFactory.CreateProxyHandler(cfg)
-	if err != nil {
-		logger.Error("Startup failed: could not create proxy handler", "error", err)
-		logger.Fatal("Server initialization failed")
+		return formatConfigError("middleware", err)
 	}
 
-	// Create middleware manager
-	middlewareManager, err := manager.New(manager.ManagerConfig{
-		Config:       cfg,
-		Factory:      mwFactory,
-		SessionStore: sessionStore,
-		ProxyHandler: proxyHandler,
-		Logger:       logger,
-	})
+	logger.Info("Middleware manager initialized successfully")
+
+	// Create file watcher for hot reload (100ms debounce)
+	watcher, err := filewatcher.NewWatcher(cfgFile, 100*time.Millisecond)
 	if err != nil {
-		logger.Error("Startup failed: could not create middleware manager", "error", err)
-		logger.Fatal("Server initialization failed")
+		logger.Error("Failed to create file watcher", "error", err)
+		return fmt.Errorf("failed to create file watcher: %w", err)
+	}
+	defer watcher.Close()
+
+	// Register managers as listeners for config file changes
+	watcher.AddListener(middlewareManager)
+	watcher.AddListener(proxyManager)
+
+	logger.Info("File watcher initialized for hot reload", "config_file", cfgFile)
+
+	// Create server with middleware manager
+	srv, err := server.New(middlewareManager, host, port, logger)
+	if err != nil {
+		logger.Error("Failed to create server", "error", err)
+		return fmt.Errorf("failed to create server: %w", err)
 	}
 
-	// Create config watcher
-	configWatcher, err := watcher.New(watcher.WatcherConfig{
-		Loader:     loader,
-		Manager:    middlewareManager,
-		ConfigPath: cfgFile,
-		Logger:     logger,
-	})
-	if err != nil {
-		logger.Error("Startup failed: could not create config watcher", "error", err)
-		logger.Fatal("Server initialization failed")
-	}
+	logger.Info("Server initialized successfully")
 
 	// Setup context for graceful shutdown
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	// Start config watcher in background
-	go configWatcher.Watch(ctx)
-	logger.Debug("Configuration watcher started")
-
-	// Create HTTP server
-	addr := fmt.Sprintf("%s:%d", host, port)
-	httpServer := &http.Server{
-		Addr:         addr,
-		Handler:      middlewareManager,
-		ReadTimeout:  15 * time.Second,
-		WriteTimeout: 15 * time.Second,
-		IdleTimeout:  60 * time.Second,
-	}
-
-	// Setup graceful shutdown
-	stop := make(chan os.Signal, 1)
-	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
-
-	// Start HTTP server in goroutine
+	// Start file watcher in background
 	go func() {
-		logger.Debug("Starting HTTP server", "addr", addr)
-		if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			logger.Error("HTTP server stopped with error", "error", err)
-			os.Exit(1)
+		if err := watcher.Start(ctx); err != nil && err != context.Canceled {
+			logger.Error("File watcher error", "error", err)
 		}
 	}()
 
-	logger.Info("Server started successfully", "addr", addr)
+	// Setup signal handling
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
 
-	// Wait for shutdown signal
-	<-stop
-	logger.Info("Shutdown signal received, starting graceful shutdown")
+	// Run server in goroutine
+	errChan := make(chan error, 1)
+	go func() {
+		errChan <- srv.Start(ctx)
+	}()
 
-	// Cancel config watcher
-	cancel()
-
-	// Graceful shutdown of HTTP server
-	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer shutdownCancel()
-
-	if err := httpServer.Shutdown(shutdownCtx); err != nil {
-		logger.Error("Server shutdown failed", "error", err)
-		return fmt.Errorf("server shutdown failed: %w", err)
+	// Wait for shutdown signal or error
+	select {
+	case <-stop:
+		logger.Info("Shutdown signal received, stopping server...")
+		cancel()
+		// Wait for server to finish
+		if err := <-errChan; err != nil {
+			logger.Error("Server stopped with error", "error", err)
+			return err
+		}
+	case err := <-errChan:
+		if err != nil {
+			logger.Error("Server stopped with error", "error", err)
+			return err
+		}
 	}
 
 	logger.Info("Server stopped successfully")
 	return nil
+}
+
+// formatConfigError formats configuration errors with helpful messages
+func formatConfigError(component string, err error) error {
+	// Check if it's a ValidationError (multiple errors)
+	var validationErr *config.ValidationError
+	if errors.As(err, &validationErr) {
+		var sb strings.Builder
+		sb.WriteString(fmt.Sprintf("Configuration validation failed for %s with %d error(s):\n\n", component, len(validationErr.Errors)))
+		for i, e := range validationErr.Errors {
+			sb.WriteString(fmt.Sprintf("  %d. %v\n", i+1, e))
+		}
+		sb.WriteString("\nPlease fix the errors above in your configuration file.")
+		return errors.New(sb.String())
+	}
+
+	// Check if it's a validation error (wrapped)
+	if errors.Is(err, config.ErrServiceNameRequired) ||
+		errors.Is(err, config.ErrCookieSecretRequired) ||
+		errors.Is(err, config.ErrCookieSecretTooShort) ||
+		errors.Is(err, config.ErrNoEnabledProviders) ||
+		errors.Is(err, config.ErrEncryptionKeyRequired) ||
+		errors.Is(err, config.ErrEncryptionKeyTooShort) ||
+		errors.Is(err, config.ErrForwardingFieldsRequired) ||
+		errors.Is(err, config.ErrInvalidForwardingField) {
+		return fmt.Errorf("Configuration validation error in %s:\n  %v\n\nPlease check your configuration file and fix the issue above.", component, err)
+	}
+
+	// Check if it's a config file not found error
+	if errors.Is(err, config.ErrConfigFileNotFound) {
+		return fmt.Errorf("Configuration file not found:\n  %v\n\nPlease create a configuration file or specify the correct path with --config flag.", err)
+	}
+
+	// Check if it contains "validation failed" in the error message
+	if strings.Contains(err.Error(), "validation failed") {
+		return fmt.Errorf("Configuration validation error in %s:\n  %v\n\nPlease check your configuration file and fix the validation errors above.", component, err)
+	}
+
+	// Generic error
+	return fmt.Errorf("Failed to initialize %s:\n  %v", component, err)
 }

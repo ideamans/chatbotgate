@@ -44,21 +44,6 @@ proxy:
       header: "X-Chatbotgate-Secret"
       value: "YOUR-SECRET-TOKEN-HERE"
 
-  # Host-based routing (optional)
-  # Route different hosts to different upstreams
-  # Each host can have its own secret header
-  # hosts:
-  #   "app1.example.com":
-  #     url: "http://backend1:8080"
-  #     secret:
-  #       header: "X-App1-Secret"
-  #       value: "APP1-SECRET-TOKEN"
-  #   "app2.example.com":
-  #     url: "http://backend2:8080"
-  #     secret:
-  #       header: "X-App2-Secret"
-  #       value: "APP2-SECRET-TOKEN"
-
 # Session configuration
 session:
   cookie_name: "_oauth2_proxy"

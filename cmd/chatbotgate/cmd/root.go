@@ -41,7 +41,7 @@ func Execute() {
 
 func init() {
 	// Persistent flags available to all commands
-	rootCmd.PersistentFlags().StringVarP(&cfgFile, "config", "c", "config.yaml", "Path to configuration file")
+	rootCmd.PersistentFlags().StringVarP(&cfgFile, "config", "c", "proxyserver.yaml", "Path to configuration file")
 	rootCmd.PersistentFlags().StringVar(&host, "host", "0.0.0.0", "Server host address")
 	rootCmd.PersistentFlags().IntVarP(&port, "port", "p", 4180, "Server port number")
 }

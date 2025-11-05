@@ -1,12 +1,23 @@
 import { defineConfig } from 'vite'
 import tailwindcss from '@tailwindcss/vite'
+import { viteStaticCopy } from 'vite-plugin-static-copy'
 
 export default defineConfig({
-  plugins: [tailwindcss()],
+  plugins: [
+    tailwindcss(),
+    viteStaticCopy({
+      targets: [
+        {
+          src: '../public/icons/*.svg',
+          dest: 'icons'
+        }
+      ]
+    })
+  ],
   root: 'src',
   publicDir: '../public',
   build: {
-    outDir: '../../pkg/assets/static',
+    outDir: '../../pkg/middleware/assets/static',
     emptyOutDir: false, // Don't delete existing files (like embedded Go files)
     assetsDir: 'assets',
     rollupOptions: {

@@ -7,7 +7,7 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/ideamans/chatbotgate/pkg/forwarding"
+	"github.com/ideamans/chatbotgate/pkg/middleware/forwarding"
 )
 
 // UserInfoResponse represents the response with user information
