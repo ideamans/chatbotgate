@@ -25,16 +25,6 @@ jobs:
           go-version-file: go.mod
           cache: true
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'yarn'
-          cache-dependency-path: web/yarn.lock
-
-      - name: Install web dependencies
-        run: make install-web
-
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v6
         with:
@@ -44,9 +34,94 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  docker:
-    name: Docker Hub
+  docker-amd64:
+    name: Docker Hub (amd64)
     runs-on: ubuntu-latest
+    outputs:
+      tags: ${{ steps.meta.outputs.tags }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ideamans
+          password: ${{ secrets.DOCKER_HUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ideamans/chatbotgate
+          flavor: |
+            suffix=-amd64
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=sha
+
+      - name: Build and push Docker image (amd64)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          provenance: false
+
+  docker-arm64:
+    name: Docker Hub (arm64)
+    runs-on: ubuntu-24.04-arm64
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ideamans
+          password: ${{ secrets.DOCKER_HUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ideamans/chatbotgate
+          flavor: |
+            suffix=-arm64
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=sha
+
+      - name: Build and push Docker image (arm64)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          provenance: false
+
+  docker-manifest:
+    name: Docker Hub (manifest)
+    runs-on: ubuntu-latest
+    needs: [docker-amd64, docker-arm64]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -71,26 +146,16 @@ jobs:
             type=semver,pattern={{major}}
             type=sha
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'yarn'
-          cache-dependency-path: web/yarn.lock
-
-      - name: Install web dependencies
-        run: make install-web
-
-      - name: Build web assets
-        run: make build-web
-
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          platforms: linux/amd64,linux/arm64
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+      - name: Create and push multi-arch manifest
+        env:
+          TAGS: ${{ steps.meta.outputs.tags }}
+        run: |
+          # Create manifest for each tag
+          echo "$TAGS" | while IFS= read -r TAG; do
+            if [ -n "$TAG" ]; then
+              echo "Creating manifest for: $TAG"
+              docker buildx imagetools create -t "$TAG" \
+                "${TAG}-amd64" \
+                "${TAG}-arm64"
+            fi
+          done
