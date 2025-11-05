@@ -1,9 +1,9 @@
-# multi-oauth2-proxy configuration example
+# chatbotgate configuration example
 # Copy this file to config.yaml and customize for your environment
 
 # Service information
 service:
-  name: "Multi OAuth2 Proxy"
+  name: "ChatbotGate"
   description: "Authentication proxy for multiple OAuth2 providers"
   # Optional: Icon URL for auth header (48px icon, appears to the left of title)
   # icon_url: "https://example.com/icon.svg"
@@ -14,19 +14,41 @@ service:
 
 # HTTP server configuration
 server:
+  # Server host address (default: "0.0.0.0")
+  # Can be overridden with --host flag
   host: "0.0.0.0"
+
+  # Server port number (default: 4180)
+  # Can be overridden with --port or -p flag
   port: 4180
+
+  # Authentication path prefix (default: "/_auth")
+  # All authentication endpoints will use this prefix
+  # auth_path_prefix: "/_auth"
+
+  # Base URL for email links and redirects (optional)
+  # Used for email authentication login links
+  # If not set, defaults to http://host:port (e.g., http://localhost:4180)
+  # Set this when running behind a reverse proxy or using a different external URL
+  # base_url: "https://auth.example.com"
+
+  # OAuth2 callback URL override (optional)
+  # Used for OAuth2 provider callback redirects
+  # If not set, defaults to http://host:port/_auth/oauth2/callback
+  # Set this when the external callback URL differs from the internal URL
+  # callback_url: "https://auth.example.com/_auth/oauth2/callback"
 
 # Proxy configuration
 proxy:
   # Main upstream backend (required)
-  upstream: "http://localhost:8080"
-
-  # Host-based routing (optional)
-  # Route different hosts to different upstreams
-  # hosts:
-  #   "app1.example.com": "http://backend1:8080"
-  #   "app2.example.com": "http://backend2:8080"
+  upstream:
+    url: "http://localhost:8080"
+    # Optional: Secret header for upstream authentication
+    # This header will be added to all requests to the upstream
+    # Use this to protect your upstream from direct access
+    secret:
+      header: "X-Chatbotgate-Secret"
+      value: "YOUR-SECRET-TOKEN-HERE"
 
 # Session configuration
 session:
@@ -46,21 +68,72 @@ oauth2:
       display_name: "Google"
       client_id: "YOUR-GOOGLE-CLIENT-ID"
       client_secret: "YOUR-GOOGLE-CLIENT-SECRET"
-      enabled: true
+      # Optional: Set disabled: true to hide from login page (default: false)
+      # disabled: false
+      # Optional: Custom icon URL (if not set, uses default Google icon)
+      # icon_url: "https://example.com/custom-google-icon.svg"
+      # Optional: Custom scopes
+      # If not specified (empty), uses default scopes: openid, userinfo.email, userinfo.profile
+      # If specified, ONLY uses the specified scopes (default scopes are NOT added)
+      # To get user email, name, and avatar, ensure you include the default scopes if you customize
+      # scopes:
+      #   - "openid"
+      #   - "https://www.googleapis.com/auth/userinfo.email"
+      #   - "https://www.googleapis.com/auth/userinfo.profile"
+      #   - "https://www.googleapis.com/auth/analytics.readonly"
 
     # GitHub OAuth2
     - name: "github"
       display_name: "GitHub"
       client_id: "YOUR-GITHUB-CLIENT-ID"
       client_secret: "YOUR-GITHUB-CLIENT-SECRET"
-      enabled: false
+      disabled: true  # Set to false to enable
+      # Optional: Custom icon URL (if not set, uses default GitHub icon)
+      # icon_url: "https://example.com/custom-github-icon.svg"
+      # Optional: Custom scopes
+      # If not specified (empty), uses default scopes: user:email, read:user
+      # If specified, ONLY uses the specified scopes (default scopes are NOT added)
+      # To get user email, name, and avatar, ensure you include the default scopes if you customize
+      # scopes:
+      #   - "user:email"
+      #   - "read:user"
+      #   - "repo"
 
     # Microsoft OAuth2 (Azure AD)
     - name: "microsoft"
       display_name: "Microsoft"
       client_id: "YOUR-MICROSOFT-CLIENT-ID"
       client_secret: "YOUR-MICROSOFT-CLIENT-SECRET"
-      enabled: false
+      disabled: true  # Set to false to enable
+      # Optional: Custom icon URL (if not set, uses default Microsoft icon)
+      # icon_url: "https://example.com/custom-microsoft-icon.svg"
+      # Optional: Custom scopes
+      # If not specified (empty), uses default scopes: openid, profile, email, User.Read
+      # If specified, ONLY uses the specified scopes (default scopes are NOT added)
+      # To get user email and name, ensure you include the default scopes if you customize
+      # scopes:
+      #   - "openid"
+      #   - "profile"
+      #   - "email"
+      #   - "User.Read"
+      #   - "Calendars.Read"
+
+    # Custom OIDC Provider Example
+    # - name: "custom-oidc"
+    #   type: "custom"
+    #   display_name: "My OIDC Provider"
+    #   client_id: "YOUR-CLIENT-ID"
+    #   client_secret: "YOUR-CLIENT-SECRET"
+    #   disabled: true  # Set to false to enable
+    #   # Custom icon URL is especially useful for custom OIDC providers
+    #   icon_url: "https://your-provider.com/logo.svg"
+    #   auth_url: "https://your-provider.com/oauth/authorize"
+    #   token_url: "https://your-provider.com/oauth/token"
+    #   userinfo_url: "https://your-provider.com/oauth/userinfo"
+    #   # Optional: JWKS URL for token validation
+    #   # jwks_url: "https://your-provider.com/.well-known/jwks.json"
+    #   # Allow HTTP for local testing (default: false, use only for development)
+    #   # insecure_skip_verify: true
 
 # Email authentication configuration (Phase 2)
 email_auth:
@@ -76,7 +149,7 @@ email_auth:
     username: "your-email@gmail.com"
     password: "your-app-password"
     from: "noreply@example.com"
-    from_name: "Multi OAuth2 Proxy"
+    from_name: "ChatbotGate"
     tls: false
     starttls: true
 
@@ -84,7 +157,10 @@ email_auth:
   # sendgrid:
   #   api_key: "SG.xxxxxxxxxxxxxxxxxxxx"
   #   from: "noreply@example.com"
-  #   from_name: "Multi OAuth2 Proxy"
+  #   from_name: "ChatbotGate"
+  #   # Optional: Custom endpoint URL (default: https://api.sendgrid.com)
+  #   # Useful for proxies, testing, or internal infrastructure routing
+  #   # endpoint_url: "https://custom-sendgrid-proxy.example.com"
 
   # Token expiration
   token:
@@ -92,13 +168,12 @@ email_auth:
 
 # Authorization configuration
 authorization:
-  # Individual email addresses
-  allowed_emails:
+  # Allowed email addresses and domains
+  # Entries starting with @ are domains, others are email addresses
+  # Leave empty [] to allow all authenticated users (no whitelist)
+  allowed:
     - "user@example.com"
     - "admin@company.com"
-
-  # Allow all users from these domains
-  allowed_domains:
     - "@example.org"
     - "@company.com"
 
@@ -107,3 +182,195 @@ logging:
   level: "info"         # debug, info, warn, error
   module_level: "debug" # Log level for sub-modules
   color: true           # Enable colored output (auto-detects TTY)
+
+# KVS (Key-Value Store) configuration
+# Used for session storage, OTP tokens, and rate limiting
+#
+# Design: Single shared KVS backend with namespace isolation (recommended),
+# or dedicated backends for each use case (optional overrides).
+kvs:
+  # Default KVS configuration (shared by all use cases)
+  # Sessions, tokens, and rate limits will use this backend with different namespace prefixes
+  default:
+    type: "memory"  # "memory", "leveldb", or "redis"
+
+    # Memory-specific config (used when type: "memory")
+    memory:
+      cleanup_interval: "5m"  # How often to clean up expired keys
+
+    # LevelDB-specific config (used when type: "leveldb")
+    # leveldb:
+    #   path: "/var/lib/chatbotgate/kvs"  # Storage path (empty = OS cache/temp dir)
+    #   sync_writes: false  # Enable for safer writes (slower performance)
+    #   cleanup_interval: "5m"  # Background cleanup for expired keys
+
+    # Redis-specific config (used when type: "redis")
+    # redis:
+    #   addr: "localhost:6379"
+    #   password: ""
+    #   db: 0
+    #   pool_size: 0  # 0 = default (10 * CPU cores)
+
+  # Namespace names for logical isolation (optional, defaults shown below)
+  # Each namespace gets isolated storage:
+  # - Memory: separate instance per namespace
+  # - LevelDB: separate directory per namespace
+  # - Redis: key prefix (namespace:key format)
+  namespaces:
+    session: "session"        # Namespace name for sessions
+    token: "token"            # Namespace name for OTP tokens
+    ratelimit: "ratelimit"    # Namespace name for rate limits
+
+  # Optional: Override session storage with dedicated backend
+  # If not specified, uses default KVS with "session" namespace
+  # session:
+  #   type: "redis"
+  #   redis:
+  #     addr: "localhost:6379"
+  #     db: 1
+  #     pool_size: 20
+
+  # Optional: Override token storage with dedicated backend
+  # If not specified, uses default KVS with "token:" prefix
+  # token:
+  #   type: "memory"
+  #   memory:
+  #     cleanup_interval: "1m"
+
+  # Optional: Override rate limit storage with dedicated backend
+  # If not specified, uses default KVS with "ratelimit:" prefix
+  # ratelimit:
+  #   type: "leveldb"
+  #   leveldb:
+  #     path: "/var/lib/chatbotgate/ratelimit"
+
+# User information forwarding configuration
+# Forward authenticated user information to upstream applications
+forwarding:
+  # Optional: Encryption settings (required if any field uses 'encrypt' filter)
+  # encryption:
+  #   key: "CHANGE-THIS-TO-A-RANDOM-KEY-AT-LEAST-32-CHARACTERS"  # Must be at least 32 characters
+  #   algorithm: "aes-256-gcm"  # Default: "aes-256-gcm"
+
+  # Field forwarding definitions
+  # Each field specifies:
+  # - path: Dot-separated path to the field (e.g., "email", "extra._avatar_url", "." for entire object)
+  # - query: Query parameter name for login redirect (optional)
+  # - header: HTTP header name for all requests (optional)
+  # - filters: Processing filters (optional, e.g., "encrypt,zip" or ["encrypt", "zip"])
+  #
+  # At least one of 'query' or 'header' must be specified for each field.
+  #
+  # Available standard fields:
+  # - email: User's email address
+  # - username: User's display name (empty for email auth)
+  # - provider: Authentication provider name (e.g., "google", "github", "microsoft", "email")
+  #
+  # Common OAuth2 fields (standardized across all providers):
+  # - _email: User's email address (same as "email")
+  # - _username: User's name (GitHub fallback: name → login, Microsoft: displayName, Google: name)
+  # - _avatar_url: User's profile picture URL (empty for Microsoft and email auth)
+  #
+  # Additional OAuth2 provider data is available under "extra" (provider-specific):
+  # - Google: email, name, picture, verified_email, given_name, family_name
+  # - GitHub: email, name (or login), avatar_url, and other public profile data
+  # - Microsoft: email, displayName, userPrincipalName, preferredUsername
+  #
+  # Available filters:
+  # - encrypt: AES-256-GCM encryption (requires encryption config)
+  # - zip: gzip compression
+  # - base64: base64 encoding (auto-added if final output is binary)
+  #
+  # Filter processing order: left to right (e.g., "encrypt,zip" → encrypt first, then zip)
+  # Final output is automatically base64-encoded if binary.
+  fields:
+    # Example 1: Forward email as query parameter and header (plain text)
+    # - path: email
+    #   query: email
+    #   header: X-Auth-Email
+
+    # Example 2: Forward username with encryption
+    # - path: username
+    #   header: X-Auth-User
+    #   filters: encrypt
+
+    # Example 3: Forward email with encryption and compression
+    # - path: email
+    #   query: user_email
+    #   header: X-Auth-Email
+    #   filters: encrypt,zip
+
+    # Example 4: Forward avatar URL (standardized across OAuth2 providers)
+    # Available for Google and GitHub; empty for Microsoft and email auth
+    # - path: _avatar_url
+    #   header: X-Avatar-URL
+
+    # Example 5: Forward entire user object as JSON (encrypted and compressed)
+    # - path: .
+    #   query: userinfo
+    #   filters:
+    #     - encrypt
+    #     - zip
+
+    # Example 6: Forward access token from OAuth2 provider
+    # - path: extra.secrets.access_token
+    #   header: X-Access-Token
+    #   filters: encrypt,zip
+
+    # Example 7: Forward provider name
+    # - path: provider
+    #   header: X-Auth-Provider
+
+    # Example 8: Forward standardized user fields (common across all OAuth2 providers)
+    # These fields are automatically populated from OAuth2 provider data
+    # - path: _email
+    #   header: X-User-Email
+    # - path: _username
+    #   header: X-User-Name
+    # - path: _avatar_url
+    #   header: X-User-Avatar
+
+# Rules configuration
+# Access control rules for paths (evaluated in order, first match wins)
+# Actions: allow (no auth), auth (require auth), deny (403)
+rules:
+  # Example rules (uncomment to use):
+
+  # Allow public static files without authentication
+  # - prefix: "/static/"
+  #   action: allow
+  #   description: "Public static files"
+
+  # Allow specific file (exact match)
+  # - exact: "/health"
+  #   action: allow
+  #   description: "Health check endpoint"
+
+  # Regex pattern matching
+  # - regex: "^/api/public/"
+  #   action: allow
+  #   description: "Public API endpoints"
+
+  # Glob/minimatch patterns (supports *, **, ?, {a,b})
+  # - minimatch: "**/*.{js,css}"
+  #   action: allow
+  #   description: "All JavaScript and CSS files"
+
+  # Deny access to admin paths
+  # - prefix: "/admin/"
+  #   action: deny
+  #   description: "Admin access denied"
+
+  # Default: require authentication for all other paths
+  # - all: true
+  #   action: auth
+  #   description: "Require authentication for everything else"
+
+# Assets configuration
+# Controls CSS and JavaScript assets loading for authentication pages
+assets:
+  optimization:
+    # Load dify.css for iframe optimizations (default: false)
+    # When true, adds dify.css for chatbot widget and embedded iframe optimizations
+    # Includes: transparent backgrounds, bottom-aligned layout, responsive settings toggle
+    dify: false

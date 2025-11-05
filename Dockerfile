@@ -19,8 +19,8 @@ COPY . .
 # Build the application
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
     -ldflags="-w -s -X main.version=$(git describe --tags --always --dirty 2>/dev/null || echo 'dev')" \
-    -o multi-oauth2-proxy \
-    ./cmd/multi-oauth2-proxy
+    -o chatbotgate \
+    ./cmd/chatbotgate
 
 # Runtime stage
 FROM alpine:3.19
@@ -36,10 +36,10 @@ RUN addgroup -g 1000 app && \
 WORKDIR /app
 
 # Copy binary from builder
-COPY --from=builder /build/multi-oauth2-proxy /app/multi-oauth2-proxy
+COPY --from=builder /build/chatbotgate /app/chatbotgate
 
-# Copy water.css (if exists)
-COPY --from=builder /build/web /app/web
+# Note: Web assets are embedded in the binary via Go embed
+# No need to copy /build/web directory
 
 # Create config directory
 RUN mkdir -p /app/config && \
@@ -56,7 +56,7 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
     CMD wget --no-verbose --tries=1 --spider http://localhost:4180/health || exit 1
 
 # Set entrypoint
-ENTRYPOINT ["/app/multi-oauth2-proxy"]
+ENTRYPOINT ["/app/chatbotgate"]
 
 # Default command (can be overridden)
 CMD ["-config", "/app/config/config.yaml"]

@@ -127,6 +127,8 @@
         <li><a href="#cards">Cards</a></li>
         <li><a href="#alerts">Alerts</a></li>
         <li><a href="#pages">Pages</a></li>
+        <li><a href="#accordion">Accordion</a></li>
+        <li><a href="#iframe-detection">Iframe Detection</a></li>
       </ul>
     </div>
   </nav>
@@ -307,6 +309,98 @@
   &lt;label class="label"&gt;Email Address&lt;/label&gt;
   &lt;input type="email" class="input" placeholder="you@example.com"&gt;
 &lt;/div&gt;</div>
+
+      <h3>Input Field with Checkbox (Email Save)</h3>
+      <p style="color: var(--color-text-secondary); margin-bottom: var(--spacing-md);">
+        Label with a checkbox on the right side for optional features like "Save email".
+      </p>
+      <div class="component-demo">
+        <div class="form-group">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-xs);">
+            <label class="label" for="email-save-demo" style="margin-bottom: 0;">Email Address</label>
+            <label style="display: flex; align-items: center; gap: 0.25rem; cursor: pointer; font-size: 0.875rem; color: var(--color-text-secondary);">
+              <input type="checkbox" name="save_email" value="1" style="cursor: pointer;">
+              <span>Save</span>
+            </label>
+          </div>
+          <input type="email" id="email-save-demo" class="input" placeholder="you@example.com">
+        </div>
+      </div>
+      <div class="code-block">&lt;div class="form-group"&gt;
+  &lt;div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-xs);"&gt;
+    &lt;label class="label" for="email" style="margin-bottom: 0;"&gt;Email Address&lt;/label&gt;
+    &lt;label style="display: flex; align-items: center; gap: 0.25rem; cursor: pointer; font-size: 0.875rem; color: var(--color-text-secondary);"&gt;
+      &lt;input type="checkbox" name="save_email" value="1" style="cursor: pointer;"&gt;
+      &lt;span&gt;Save&lt;/span&gt;
+    &lt;/label&gt;
+  &lt;/div&gt;
+  &lt;input type="email" id="email" class="input" placeholder="you@example.com"&gt;
+&lt;/div&gt;</div>
+
+      <h3>OTP Input with Validation</h3>
+      <p style="color: var(--color-text-secondary); margin-bottom: var(--spacing-md);">
+        One-Time Password input field that validates the format (12 uppercase letters/digits).
+        The border and background turn green when a valid code is entered. Try entering: ABCD EFGH 1234
+      </p>
+      <div class="component-demo">
+        <div style="text-align: center; max-width: 20rem; margin: 0 auto;">
+          <div style="margin-bottom: var(--spacing-sm);">
+            <label class="label" style="font-size: 0.875rem;">Enter OTP Code</label>
+          </div>
+          <input
+            type="text"
+            id="catalog-otp-input"
+            class="input"
+            placeholder="XXXX XXXX XXXX"
+            maxlength="14"
+            style="text-align: center; font-family: 'Courier New', monospace; font-size: 1.125rem; font-weight: 600; letter-spacing: 0.05em; background-color: var(--color-bg-muted); border: 2px solid var(--color-border-default); transition: border-color 0.2s ease, background-color 0.2s ease;">
+        </div>
+      </div>
+      <div class="code-block">&lt;input
+  type="text"
+  class="input"
+  placeholder="XXXX XXXX XXXX"
+  maxlength="14"
+  style="text-align: center; font-family: 'Courier New', monospace; font-size: 1.125rem; font-weight: 600; letter-spacing: 0.05em; background-color: var(--color-bg-muted); border: 2px solid var(--color-border-default); transition: border-color 0.2s ease, background-color 0.2s ease;"&gt;
+
+&lt;script&gt;
+const otpInput = document.getElementById('your-otp-input');
+function validateOTP(value) {
+  const cleaned = value.replace(/[^A-Z0-9]/gi, '').toUpperCase();
+  return cleaned.length === 12 && /^[A-Z0-9]{12}$/.test(cleaned);
+}
+otpInput.addEventListener('input', function() {
+  if (validateOTP(this.value)) {
+    this.style.borderColor = 'var(--color-success)';
+    this.style.backgroundColor = 'color-mix(in srgb, var(--color-success) 10%, var(--color-bg-muted))';
+  } else {
+    this.style.borderColor = 'var(--color-border-default)';
+    this.style.backgroundColor = 'var(--color-bg-muted)';
+  }
+});
+&lt;/script&gt;</div>
+      <script>
+      // OTP validation for catalog demo
+      (function() {
+        const otpInput = document.getElementById('catalog-otp-input');
+        if (!otpInput) return;
+
+        function validateOTP(value) {
+          const cleaned = value.replace(/[^A-Z0-9]/gi, '').toUpperCase();
+          return cleaned.length === 12 && /^[A-Z0-9]{12}$/.test(cleaned);
+        }
+
+        otpInput.addEventListener('input', function() {
+          if (validateOTP(this.value)) {
+            this.style.borderColor = 'var(--color-success)';
+            this.style.backgroundColor = 'color-mix(in srgb, var(--color-success) 10%, var(--color-bg-muted))';
+          } else {
+            this.style.borderColor = 'var(--color-border-default)';
+            this.style.backgroundColor = 'var(--color-bg-muted)';
+          }
+        });
+      })();
+      </script>
     </section>
 
     <!-- Cards Section -->
@@ -377,7 +471,7 @@
         <div class="auth-container" style="min-height: auto;">
           <div class="card auth-card">
             <div class="auth-header">
-              <img src="/icons/oidc.svg" alt="Icon" class="auth-icon">
+              <img src="/icons/chatbotgate.svg" alt="Icon" class="auth-icon">
               <h1 class="auth-title">Multi OAuth2 Proxy</h1>
             </div>
             <p class="auth-description">Select a sign-in method to continue</p>
@@ -402,22 +496,22 @@
       <h4 style="font-size: 1rem; font-weight: 600; margin-top: var(--spacing-lg); margin-bottom: var(--spacing-sm);">Size Classes</h4>
       <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--spacing-md); margin-bottom: var(--spacing-lg);">
         <div style="text-align: center;">
-          <img src="/icons/oidc.svg" alt="Logo" class="auth-logo auth-logo-sm">
+          <img src="/icons/chatbotgate.svg" alt="Logo" class="auth-logo auth-logo-sm">
           <p style="font-size: 0.75rem; color: var(--color-text-muted);">Small (100px)</p>
           <code style="font-size: 0.75rem;">auth-logo-sm</code>
         </div>
         <div style="text-align: center;">
-          <img src="/icons/oidc.svg" alt="Logo" class="auth-logo auth-logo-md">
+          <img src="/icons/chatbotgate.svg" alt="Logo" class="auth-logo auth-logo-md">
           <p style="font-size: 0.75rem; color: var(--color-text-muted);">Medium (150px)</p>
           <code style="font-size: 0.75rem;">auth-logo-md</code>
         </div>
         <div style="text-align: center;">
-          <img src="/icons/oidc.svg" alt="Logo" class="auth-logo auth-logo-lg">
+          <img src="/icons/chatbotgate.svg" alt="Logo" class="auth-logo auth-logo-lg">
           <p style="font-size: 0.75rem; color: var(--color-text-muted);">Large (200px - default)</p>
           <code style="font-size: 0.75rem;">auth-logo-lg</code>
         </div>
         <div style="text-align: center;">
-          <img src="/icons/oidc.svg" alt="Logo" class="auth-logo auth-logo-xl">
+          <img src="/icons/chatbotgate.svg" alt="Logo" class="auth-logo auth-logo-xl">
           <p style="font-size: 0.75rem; color: var(--color-text-muted);">Extra Large (300px)</p>
           <code style="font-size: 0.75rem;">auth-logo-xl</code>
         </div>
@@ -427,7 +521,7 @@
       <div class="component-demo">
         <div class="auth-container" style="min-height: auto;">
           <div class="card auth-card">
-            <img src="/icons/oidc.svg" alt="Logo" class="auth-logo">
+            <img src="/icons/chatbotgate.svg" alt="Logo" class="auth-logo">
             <h1 class="auth-title">Multi OAuth2 Proxy</h1>
             <p class="auth-description">Select a sign-in method to continue</p>
             <button class="btn btn-secondary provider-btn">
@@ -478,7 +572,8 @@
       <h3>Login Page</h3>
       <div class="component-demo">
         <div class="auth-container" style="min-height: auto;">
-          <div class="card auth-card">
+          <div style="width: 100%; max-width: 28rem;">
+            <div class="card auth-card">
             <h1 class="auth-title">Welcome Back</h1>
             <p class="auth-description">Sign in to your account to continue</p>
 
@@ -503,16 +598,67 @@
               <span>or</span>
             </div>
 
-            <form>
+            <form id="demo-email-form">
               <div class="form-group">
-                <label class="label" for="email">Email Address</label>
-                <input type="email" id="email" class="input" placeholder="you@example.com">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-xs);">
+                  <label class="label" for="demo-email" style="margin-bottom: 0;">Email Address</label>
+                  <label style="display: flex; align-items: center; gap: 0.25rem; cursor: pointer; font-size: 0.875rem; color: var(--color-text-secondary);">
+                    <input type="checkbox" id="demo-save-email-checkbox" style="cursor: pointer;">
+                    <span>Save</span>
+                  </label>
+                </div>
+                <input type="email" id="demo-email" name="email" class="input" placeholder="you@example.com">
               </div>
-              <button type="submit" class="btn btn-primary provider-btn">
+              <button type="button" class="btn btn-primary provider-btn">
                 <img src="/icons/email.svg" alt="Email">
                 Send Login Link
               </button>
             </form>
+            <script>
+            // Demo: Email save functionality
+            (function() {
+              const emailInput = document.getElementById('demo-email');
+              const saveCheckbox = document.getElementById('demo-save-email-checkbox');
+              if (!emailInput || !saveCheckbox) return;
+
+              const STORAGE_KEY = 'demo_saved_email';
+              const SAVE_KEY = 'demo_save_enabled';
+
+              // Load
+              const savedEmail = localStorage.getItem(STORAGE_KEY);
+              const saveEnabled = localStorage.getItem(SAVE_KEY) === 'true';
+
+              if (savedEmail && saveEnabled) {
+                emailInput.value = savedEmail;
+                saveCheckbox.checked = true;
+              } else if (saveEnabled) {
+                saveCheckbox.checked = true;
+              }
+
+              // Save on input
+              emailInput.addEventListener('input', function() {
+                if (saveCheckbox.checked) {
+                  localStorage.setItem(STORAGE_KEY, emailInput.value);
+                }
+              });
+
+              // Handle checkbox
+              saveCheckbox.addEventListener('change', function() {
+                if (saveCheckbox.checked) {
+                  localStorage.setItem(STORAGE_KEY, emailInput.value);
+                  localStorage.setItem(SAVE_KEY, 'true');
+                } else {
+                  localStorage.removeItem(STORAGE_KEY);
+                  localStorage.removeItem(SAVE_KEY);
+                }
+              });
+            })();
+            </script>
+            </div>
+            <a href="#" class="auth-credit">
+              <img src="../icons/chatbotgate.svg" alt="ChatbotGate Logo">
+              Protected by ChatbotGate
+            </a>
           </div>
         </div>
       </div>
@@ -520,14 +666,66 @@
       <h3>Email Sent Page</h3>
       <div class="component-demo">
         <div class="auth-container" style="min-height: auto;">
-          <div class="card auth-card">
-            <h1 class="auth-title">Multi OAuth2 Proxy</h1>
-            <h2 class="auth-subtitle">Check Your Email</h2>
-            <div class="alert alert-success" style="text-align: left; margin-bottom: var(--spacing-md);">
-              If your email address is authorized, you will receive a login link shortly. Please check your inbox and click the link to log in.
+          <div style="width: 100%; max-width: 28rem;">
+            <div class="card auth-card">
+              <h1 class="auth-title">Multi OAuth2 Proxy</h1>
+              <h2 class="auth-subtitle">Check Your Email</h2>
+              <div class="alert alert-success" style="text-align: left; margin-bottom: var(--spacing-md);">
+                If your email address is authorized, you will receive a login link shortly. Please check your inbox and click the link to log in.
+              </div>
+
+              <!-- OTP Input Section -->
+              <div style="text-align: center; margin-top: var(--spacing-lg); margin-bottom: var(--spacing-lg);">
+                <div style="margin-bottom: var(--spacing-sm);">
+                  <span style="color: var(--color-text-secondary); font-size: 0.875rem;">Or enter the code from your email:</span>
+                </div>
+                <form id="demo-otp-form" style="display: flex; flex-direction: column; align-items: center; gap: var(--spacing-sm);">
+                  <input
+                    type="text"
+                    id="demo-otp-input"
+                    class="input"
+                    placeholder="XXXX XXXX XXXX"
+                    maxlength="14"
+                    style="text-align: center; font-family: 'Courier New', monospace; font-size: 1.125rem; font-weight: 600; letter-spacing: 0.05em; background-color: var(--color-bg-muted); border: 2px solid var(--color-border-default); max-width: 16rem; transition: border-color 0.2s ease, background-color 0.2s ease;">
+                  <button type="submit" class="btn btn-primary" style="max-width: 16rem; width: 100%;">
+                    Verify Code
+                  </button>
+                </form>
+              </div>
+              <script>
+              // OTP validation
+              (function() {
+                const otpInput = document.getElementById('demo-otp-input');
+                if (!otpInput) return;
+
+                function validateOTP(value) {
+                  // Remove all non-alphanumeric characters
+                  const cleaned = value.replace(/[^A-Z0-9]/gi, '').toUpperCase();
+                  // Check if exactly 12 characters of uppercase letters and digits
+                  return cleaned.length === 12 && /^[A-Z0-9]{12}$/.test(cleaned);
+                }
+
+                otpInput.addEventListener('input', function() {
+                  if (validateOTP(this.value)) {
+                    // Valid: green border and light green background
+                    this.style.borderColor = 'var(--color-success)';
+                    this.style.backgroundColor = 'color-mix(in srgb, var(--color-success) 10%, var(--color-bg-muted))';
+                  } else {
+                    // Reset to default
+                    this.style.borderColor = 'var(--color-border-default)';
+                    this.style.backgroundColor = 'var(--color-bg-muted)';
+                  }
+                });
+              })();
+              </script>
+
+              <a href="#" class="btn btn-ghost" style="width: 100%; margin-top: var(--spacing-md);">
+                Back to login
+              </a>
             </div>
-            <a href="#" class="btn btn-ghost" style="width: 100%; margin-top: var(--spacing-md);">
-              Back to login
+            <a href="#" class="auth-credit">
+              <img src="../icons/chatbotgate.svg" alt="ChatbotGate Logo">
+              Protected by ChatbotGate
             </a>
           </div>
         </div>
@@ -536,14 +734,20 @@
       <h3>Email Verification Error Page</h3>
       <div class="component-demo">
         <div class="auth-container" style="min-height: auto;">
-          <div class="card auth-card">
-            <h1 class="auth-title">Multi OAuth2 Proxy</h1>
-            <h2 class="auth-subtitle">Invalid or Expired Token</h2>
-            <div class="alert alert-error" style="text-align: left; margin-bottom: var(--spacing-md);">
-              <strong>Error:</strong> The login link is invalid or has already been used. This link cannot be used to authenticate.
+          <div style="width: 100%; max-width: 28rem;">
+            <div class="card auth-card">
+              <h1 class="auth-title">Multi OAuth2 Proxy</h1>
+              <h2 class="auth-subtitle">Invalid or Expired Token</h2>
+              <div class="alert alert-error" style="text-align: left; margin-bottom: var(--spacing-md);">
+                <strong>Error:</strong> The login link is invalid or has already been used. This link cannot be used to authenticate.
+              </div>
+              <a href="#" class="btn btn-primary" style="width: 100%; margin-top: var(--spacing-md);">
+                Request a new login link
+              </a>
             </div>
-            <a href="#" class="btn btn-primary" style="width: 100%; margin-top: var(--spacing-md);">
-              Request a new login link
+            <a href="#" class="auth-credit">
+              <img src="../icons/chatbotgate.svg" alt="ChatbotGate Logo">
+              Protected by ChatbotGate
             </a>
           </div>
         </div>
@@ -552,14 +756,20 @@
       <h3>Logout Page</h3>
       <div class="component-demo">
         <div class="auth-container" style="min-height: auto;">
-          <div class="card auth-card">
-            <h1 class="auth-title">Multi OAuth2 Proxy</h1>
-            <h2 class="auth-subtitle">Logged Out</h2>
-            <div class="alert alert-success" style="text-align: left; margin-bottom: var(--spacing-md);">
-              Your session has been terminated securely.
+          <div style="width: 100%; max-width: 28rem;">
+            <div class="card auth-card">
+              <h1 class="auth-title">Multi OAuth2 Proxy</h1>
+              <h2 class="auth-subtitle">Logged Out</h2>
+              <div class="alert alert-success" style="text-align: left; margin-bottom: var(--spacing-md);">
+                Your session has been terminated securely.
+              </div>
+              <a href="#" class="btn btn-primary" style="width: 100%; margin-top: var(--spacing-md);">
+                Login again
+              </a>
             </div>
-            <a href="#" class="btn btn-primary" style="width: 100%; margin-top: var(--spacing-md);">
-              Login again
+            <a href="#" class="auth-credit">
+              <img src="../icons/chatbotgate.svg" alt="ChatbotGate Logo">
+              Protected by ChatbotGate
             </a>
           </div>
         </div>
@@ -568,19 +778,309 @@
       <h3>Access Denied Page (Unauthorized Email)</h3>
       <div class="component-demo">
         <div class="auth-container" style="min-height: auto;">
-          <div class="card auth-card">
-            <h1 class="auth-title">Access Denied</h1>
-            <p class="auth-description" style="margin-bottom: var(--spacing-md);">
-              This service is only available to pre-authorized email addresses.
-            </p>
-            <div class="alert alert-error" style="text-align: left;">
-              <strong>Access Denied:</strong> Your email address is not authorized to use this service. Please contact the administrator.
+          <div style="width: 100%; max-width: 28rem;">
+            <div class="card auth-card">
+              <h1 class="auth-title">Access Denied</h1>
+              <p class="auth-description" style="margin-bottom: var(--spacing-md);">
+                This service is only available to pre-authorized email addresses.
+              </p>
+              <div class="alert alert-error" style="text-align: left;">
+                <strong>Access Denied:</strong> Your email address is not authorized to use this service. Please contact the administrator.
+              </div>
+              <a href="#" class="btn btn-ghost" style="width: 100%; margin-top: var(--spacing-md);">
+                Back to login
+              </a>
             </div>
-            <a href="#" class="btn btn-ghost" style="width: 100%; margin-top: var(--spacing-md);">
-              Back to login
+            <a href="#" class="auth-credit">
+              <img src="../icons/chatbotgate.svg" alt="ChatbotGate Logo">
+              Protected by ChatbotGate
             </a>
           </div>
         </div>
+      </div>
+
+      <h3>404 - Not Found Page</h3>
+      <div class="component-demo">
+        <div class="auth-container" style="min-height: auto;">
+          <div style="width: 100%; max-width: 28rem;">
+            <div class="card auth-card">
+              <h1 class="auth-title">ChatbotGate</h1>
+              <h2 class="auth-subtitle">Not Found</h2>
+              <div class="alert alert-error" style="text-align: left; margin-bottom: var(--spacing-md);">
+                The page you are looking for could not be found.
+              </div>
+              <a href="#" class="btn btn-primary" style="width: 100%; margin-top: var(--spacing-md);">
+                Go to Home
+              </a>
+            </div>
+            <a href="#" class="auth-credit">
+              <img src="../icons/chatbotgate.svg" alt="ChatbotGate Logo">
+              Protected by ChatbotGate
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <h3>500 - Internal Server Error Page (with Accordion)</h3>
+      <p style="color: var(--color-text-secondary); margin-bottom: var(--spacing-md);">
+        The 500 error page includes an accordion component to show error details like stack traces.
+        Click the "Error Details" header to toggle the accordion.
+      </p>
+      <div class="component-demo">
+        <div class="auth-container" style="min-height: auto;">
+          <div style="width: 100%; max-width: 28rem;">
+            <div class="card auth-card">
+              <h1 class="auth-title">ChatbotGate</h1>
+              <h2 class="auth-subtitle">Internal Server Error</h2>
+
+              <div class="alert alert-error" style="text-align: left; margin-bottom: var(--spacing-md);">
+                An unexpected error occurred. Please try again later.
+              </div>
+
+              <!-- Accordion for error details -->
+              <div class="accordion" id="demo-accordion">
+                <div class="accordion-header" onclick="document.getElementById('demo-accordion').classList.toggle('open')">
+                  <span class="accordion-header-title">Error Details</span>
+                  <span class="accordion-header-icon"></span>
+                </div>
+                <div class="accordion-content">
+                  <div class="accordion-body">Error: failed to connect to database
+  at Database.connect (/app/database.go:123)
+  at Server.initialize (/app/server.go:45)
+  at main (/app/main.go:12)
+
+Connection details:
+  Host: localhost:5432
+  Database: chatbotgate
+  User: app_user
+
+Timestamp: 2025-11-03T14:00:00.000Z
+Request ID: req_abc123xyz456</div>
+                </div>
+              </div>
+
+              <a href="#" class="btn btn-ghost" style="width: 100%; margin-top: var(--spacing-md);">
+                Go to Home
+              </a>
+            </div>
+            <a href="#" class="auth-credit">
+              <img src="../icons/chatbotgate.svg" alt="ChatbotGate Logo">
+              Protected by ChatbotGate
+            </a>
+          </div>
+        </div>
+      </div>
+      <div class="code-block">&lt;!-- 500 Error Page with Accordion --&gt;
+&lt;div class="alert alert-error"&gt;...&lt;/div&gt;
+
+&lt;div class="accordion"&gt;
+  &lt;div class="accordion-header" onclick="this.parentElement.classList.toggle('open')"&gt;
+    &lt;span class="accordion-header-title"&gt;エラーの詳細&lt;/span&gt;
+    &lt;span class="accordion-header-icon"&gt;&lt;/span&gt;
+  &lt;/div&gt;
+  &lt;div class="accordion-content"&gt;
+    &lt;div class="accordion-body"&gt;Stack trace here...&lt;/div&gt;
+  &lt;/div&gt;
+&lt;/div&gt;</div>
+    </section>
+
+    <!-- Accordion Section -->
+    <section id="accordion" class="catalog-section">
+      <h2>Accordion</h2>
+      <p style="color: var(--color-text-secondary); margin-bottom: var(--spacing-md);">
+        The accordion component is useful for hiding additional information that can be expanded on demand.
+        Perfect for error details, stack traces, or debug information on error pages.
+      </p>
+
+      <h3>Accordion (Closed)</h3>
+      <div class="component-demo">
+        <div class="accordion" id="demo-accordion-1">
+          <div class="accordion-header" onclick="document.getElementById('demo-accordion-1').classList.toggle('open')">
+            <span class="accordion-header-title">Click to expand</span>
+            <span class="accordion-header-icon"></span>
+          </div>
+          <div class="accordion-content">
+            <div class="accordion-body">This is the accordion content. It can contain any text, including code blocks, stack traces, or debug information.</div>
+          </div>
+        </div>
+      </div>
+
+      <h3>Accordion (Open)</h3>
+      <div class="component-demo">
+        <div class="accordion open" id="demo-accordion-2">
+          <div class="accordion-header" onclick="document.getElementById('demo-accordion-2').classList.toggle('open')">
+            <span class="accordion-header-title">Click to collapse</span>
+            <span class="accordion-header-icon"></span>
+          </div>
+          <div class="accordion-content">
+            <div class="accordion-body">This accordion is initially open. The content is visible by default and can be collapsed by clicking the header.</div>
+          </div>
+        </div>
+      </div>
+
+      <h3>Accordion with Stack Trace</h3>
+      <div class="component-demo">
+        <div class="accordion" id="demo-accordion-3">
+          <div class="accordion-header" onclick="document.getElementById('demo-accordion-3').classList.toggle('open')">
+            <span class="accordion-header-title">Error Details</span>
+            <span class="accordion-header-icon"></span>
+          </div>
+          <div class="accordion-content">
+            <div class="accordion-body">Error: failed to connect to database
+  at Database.connect (/app/database.go:123)
+  at Server.initialize (/app/server.go:45)
+  at main (/app/main.go:12)
+
+Connection details:
+  Host: localhost:5432
+  Database: chatbotgate
+  User: app_user
+
+Timestamp: 2025-11-03T14:00:00.000Z
+Request ID: req_abc123xyz456</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="code-block">&lt;div class="accordion"&gt;
+  &lt;div class="accordion-header" onclick="this.parentElement.classList.toggle('open')"&gt;
+    &lt;span class="accordion-header-title"&gt;Click to expand&lt;/span&gt;
+    &lt;span class="accordion-header-icon"&gt;&lt;/span&gt;
+  &lt;/div&gt;
+  &lt;div class="accordion-content"&gt;
+    &lt;div class="accordion-body"&gt;Content here...&lt;/div&gt;
+  &lt;/div&gt;
+&lt;/div&gt;</div>
+    </section>
+
+    <!-- Iframe Detection Section -->
+    <section id="iframe-detection" class="catalog-section">
+      <h2>Iframe Detection</h2>
+      <p style="color: var(--color-text-secondary); margin-bottom: var(--spacing-md);">
+        When authentication pages are loaded inside an iframe (e.g., for widget or embedded authentication),
+        the <code style="background-color: var(--color-bg-muted); padding: 2px 6px; border-radius: 3px;">in-iframe</code> class should be added to the <code style="background-color: var(--color-bg-muted); padding: 2px 6px; border-radius: 3px;">&lt;body&gt;</code> element.
+        This allows CSS to adjust the layout and hide unnecessary elements for iframe contexts.
+      </p>
+
+      <h3>Specification</h3>
+      <div style="background-color: var(--color-bg-muted); padding: var(--spacing-md); border-radius: var(--radius-md); margin-bottom: var(--spacing-md);">
+        <p style="margin-bottom: var(--spacing-sm);"><strong>Class Name:</strong> <code>in-iframe</code></p>
+        <p style="margin-bottom: var(--spacing-sm);"><strong>Target Element:</strong> <code>&lt;body&gt;</code></p>
+        <p style="margin-bottom: 0;"><strong>Behavior:</strong> Added when the page is loaded inside an iframe (including cross-origin iframes)</p>
+      </div>
+
+      <h3>Implementation Example</h3>
+      <p style="color: var(--color-text-secondary); margin-bottom: var(--spacing-md);">
+        The following JavaScript code detects iframe context reliably, even in cross-origin scenarios.
+        The comparison <code style="background-color: var(--color-bg-muted); padding: 2px 6px; border-radius: 3px;">window.self !== window.top</code> does not throw a SecurityError, making it safe for all iframe types.
+      </p>
+      <div class="code-block">&lt;script&gt;
+(function detectIframe() {
+  try {
+    if (window.self !== window.top) {
+      document.body.classList.add('in-iframe');
+    }
+  } catch (e) {
+    // In case of any unexpected error, assume we're in an iframe for safety
+    document.body.classList.add('in-iframe');
+  }
+})();
+&lt;/script&gt;</div>
+
+      <h3>CSS Usage Examples</h3>
+      <div class="code-block">/* Hide service credit in iframe */
+body.in-iframe .auth-credit {
+  display: none;
+}
+
+/* Remove padding in iframe for full-width layout */
+body.in-iframe .auth-container {
+  padding: 0;
+}
+
+/* Adjust card styling in iframe */
+body.in-iframe .auth-card {
+  border-radius: 0;
+  border: none;
+}</div>
+
+      <h3>Why This Works in Cross-Origin Iframes</h3>
+      <div style="background-color: var(--color-bg-muted); padding: var(--spacing-md); border-radius: var(--radius-md); margin-top: var(--spacing-md);">
+        <p style="margin-bottom: var(--spacing-sm); line-height: 1.6;">
+          The <code style="background-color: var(--color-bg-elevated); padding: 2px 6px; border-radius: 3px;">window.self !== window.top</code> comparison only compares window object references,
+          which does not require access to the parent frame's properties.
+        </p>
+        <p style="margin-bottom: 0; line-height: 1.6;">
+          Accessing parent properties like <code style="background-color: var(--color-bg-elevated); padding: 2px 6px; border-radius: 3px;">window.parent.location</code> would throw a SecurityError in cross-origin contexts,
+          but simply checking if the current window is the top-level window is always allowed.
+        </p>
+      </div>
+
+      <h3>Advanced Iframe Optimizations (dify.css)</h3>
+      <p style="color: var(--color-text-secondary); margin-bottom: var(--spacing-md);">
+        For chatbot widgets and other small iframe contexts (especially displayed in the bottom-right corner),
+        an additional stylesheet <code style="background-color: var(--color-bg-muted); padding: 2px 6px; border-radius: 3px;">dify.css</code> is available.
+        This file provides special optimizations that only take effect when <code style="background-color: var(--color-bg-muted); padding: 2px 6px; border-radius: 3px;">body.in-iframe</code> is present.
+      </p>
+
+      <div style="background-color: var(--color-bg-muted); padding: var(--spacing-md); border-radius: var(--radius-md); margin-bottom: var(--spacing-md);">
+        <p style="margin-bottom: var(--spacing-sm);"><strong>Usage:</strong></p>
+        <div class="code-block" style="margin-bottom: var(--spacing-sm);">&lt;link rel="stylesheet" href="./styles/main.css"&gt;
+&lt;link rel="stylesheet" href="./styles/dify.css"&gt;</div>
+        <p style="margin-bottom: 0; font-size: 0.875rem; line-height: 1.6;">
+          Note: <code style="background-color: var(--color-bg-elevated); padding: 2px 6px; border-radius: 3px;">dify.css</code> must be loaded in addition to <code style="background-color: var(--color-bg-elevated); padding: 2px 6px; border-radius: 3px;">main.css</code>.
+          It has no effect without the <code style="background-color: var(--color-bg-elevated); padding: 2px 6px; border-radius: 3px;">in-iframe</code> class on the body.
+        </p>
+      </div>
+
+      <h4 style="font-size: 1rem; font-weight: 600; margin-bottom: var(--spacing-sm);">Features:</h4>
+      <ul style="margin-left: var(--spacing-lg); margin-bottom: var(--spacing-md); color: var(--color-text-secondary); line-height: 1.75;">
+        <li><strong>Service credit positioning:</strong> Moves credit closer to the auth card (reduced margin)</li>
+        <li><strong>Narrow viewport optimizations (width &lt; 420px):</strong>
+          <ul style="margin-left: var(--spacing-lg); margin-top: var(--spacing-xs);">
+            <li>Fully transparent background for seamless integration</li>
+            <li>Removes container left/right padding (full-width layout)</li>
+            <li>Aligns content to the bottom of the viewport (chatbot-style)</li>
+            <li>Repositions settings toggle to the card's top-right corner (instead of viewport)</li>
+          </ul>
+        </li>
+      </ul>
+
+      <h4 style="font-size: 1rem; font-weight: 600; margin-bottom: var(--spacing-sm);">Key CSS from dify.css:</h4>
+      <div class="code-block">/* Service credit closer to card */
+body.in-iframe .auth-credit {
+  margin-top: var(--spacing-xs);
+}
+
+/* Narrow viewport optimizations (width &lt; 420px) */
+@media (max-width: 419px) {
+  body.in-iframe {
+    /* Fully transparent background */
+    background-color: transparent !important;
+  }
+
+  /* Remove container padding, align to bottom */
+  body.in-iframe .auth-container {
+    padding-left: 0;
+    padding-right: 0;
+    align-items: flex-end;
+    justify-content: flex-end;
+  }
+
+  /* Settings toggle positioned relative to card */
+  body.in-iframe .settings-toggle {
+    position: absolute;
+    top: var(--spacing-md);
+    right: var(--spacing-md);
+  }
+}</div>
+
+      <div style="background-color: rgb(59 130 246 / 0.1); border-left: 3px solid var(--color-primary); padding: var(--spacing-md); border-radius: var(--radius-md); margin-top: var(--spacing-md);">
+        <p style="margin-bottom: 0; font-size: 0.875rem; line-height: 1.6; color: var(--color-text-secondary);">
+          <strong style="color: var(--color-primary);">💡 Use Case:</strong>
+          These optimizations are specifically designed for chatbot widgets that appear in a small iframe (typically 350-400px wide)
+          in the bottom-right corner of a webpage. The bottom alignment and transparent background create a seamless, native-feeling experience.
+        </p>
       </div>
     </section>
   </div>
@@ -633,6 +1133,128 @@
     }
 
     initSettings();
+  </script>
+
+  <!-- Widget Demo Button & Iframe -->
+  <style>
+    .widget-button {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background-color: var(--color-primary);
+      color: white;
+      border: none;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      transition: all 0.3s ease;
+      z-index: 9999;
+    }
+
+    .widget-button:hover {
+      transform: scale(1.1);
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+    }
+
+    .widget-button:active {
+      transform: scale(0.95);
+    }
+
+    .widget-iframe-container {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      width: 400px;
+      height: 780px;
+      z-index: 9998;
+      opacity: 0;
+      transform: translateY(20px) scale(0.95);
+      transition: opacity 0.3s ease, transform 0.3s ease;
+      pointer-events: none;
+    }
+
+    .widget-iframe-container.visible {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+      pointer-events: auto;
+    }
+
+    .widget-iframe-container iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+
+    /* Mobile responsive */
+    @media (max-width: 480px) {
+      .widget-iframe-container {
+        bottom: 0;
+        right: 0;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+      }
+    }
+  </style>
+
+  <!-- Widget Button -->
+  <button id="widget-button" class="widget-button" onclick="toggleWidget()">
+    💬
+  </button>
+
+  <!-- Widget Iframe Container -->
+  <div id="widget-container" class="widget-iframe-container">
+    <iframe id="widget-iframe" src="about:blank" title="Login Widget"></iframe>
+  </div>
+
+  <script>
+    (function() {
+      const button = document.getElementById('widget-button');
+      const container = document.getElementById('widget-container');
+      const iframe = document.getElementById('widget-iframe');
+      let isOpen = false;
+      let isLoaded = false;
+
+      window.toggleWidget = function() {
+        isOpen = !isOpen;
+
+        if (isOpen) {
+          // Load iframe content only when opened for the first time
+          if (!isLoaded) {
+            iframe.src = './login-demo.html';
+            isLoaded = true;
+          }
+          container.classList.add('visible');
+          button.textContent = '✕';
+          button.style.backgroundColor = 'var(--color-error)';
+        } else {
+          container.classList.remove('visible');
+          button.textContent = '💬';
+          button.style.backgroundColor = 'var(--color-primary)';
+        }
+      };
+
+      // Close widget when clicking outside
+      document.addEventListener('click', function(e) {
+        if (isOpen &&
+            !container.contains(e.target) &&
+            !button.contains(e.target)) {
+          toggleWidget();
+        }
+      });
+
+      // Prevent closing when clicking inside the iframe container
+      container.addEventListener('click', function(e) {
+        e.stopPropagation();
+      });
+    })();
   </script>
 </body>
 </html>

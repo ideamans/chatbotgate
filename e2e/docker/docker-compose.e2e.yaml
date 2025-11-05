@@ -4,12 +4,13 @@ services:
       context: ../..
       dockerfile: Dockerfile
     container_name: e2e-proxy-app
-    command: ["-config", "/config/proxy.e2e.yaml"]
+    command: ["serve", "--config", "/config/proxy.e2e.yaml", "--host", "0.0.0.0", "--port", "4180"]
     ports:
       - "4180:4180"
     depends_on:
       - target-app
       - stub-auth
+      - mailpit
     volumes:
       - ../config/proxy.e2e.yaml:/config/proxy.e2e.yaml:ro
       - otp-files:/otp
@@ -17,6 +18,76 @@ services:
       - LANGUAGE=en
     networks:
       - e2e-net
+
+  proxy-app-with-whitelist:
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+    container_name: e2e-proxy-app-with-whitelist
+    command: ["serve", "--config", "/config/proxy.e2e.with-whitelist.yaml", "--host", "0.0.0.0", "--port", "4180"]
+    ports:
+      - "4181:4180"  # Map external 4181 to internal 4180
+    depends_on:
+      - target-app
+      - stub-auth
+      - mailpit
+    volumes:
+      - ../config/proxy.e2e.with-whitelist.yaml:/config/proxy.e2e.with-whitelist.yaml
+      - otp-files:/otp
+    environment:
+      - LANGUAGE=en
+    networks:
+      - e2e-net
+
+  proxy-app-with-forwarding:
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+    container_name: e2e-proxy-app-with-forwarding
+    command: ["serve", "--config", "/config/proxy.e2e.with-forwarding.yaml", "--host", "0.0.0.0", "--port", "4180"]
+    ports:
+      - "4182:4180"  # Map external 4182 to internal 4180
+    depends_on:
+      - target-app
+      - stub-auth
+      - mailpit
+    volumes:
+      - ../config/proxy.e2e.with-forwarding.yaml:/config/proxy.e2e.with-forwarding.yaml:ro
+      - otp-files:/otp
+    environment:
+      - LANGUAGE=en
+    networks:
+      - e2e-net
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:4180/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  proxy-app-with-rules:
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+    container_name: e2e-proxy-app-with-rules
+    command: ["serve", "--config", "/config/proxy.e2e.with-rules.yaml", "--host", "0.0.0.0", "--port", "4180"]
+    ports:
+      - "4183:4180"  # Map external 4183 to internal 4180
+    depends_on:
+      - target-app
+      - stub-auth
+      - mailpit
+    volumes:
+      - ../config/proxy.e2e.with-rules.yaml:/config/proxy.e2e.with-rules.yaml:ro
+      - otp-files:/otp
+    environment:
+      - LANGUAGE=en
+    networks:
+      - e2e-net
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:4180/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
 
   target-app:
     build:
@@ -41,6 +112,19 @@ services:
       - "3001:3001"
     networks:
       - e2e-net
+
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: e2e-mailpit
+    ports:
+      - "1025:1025"  # SMTP server
+      - "8025:8025"  # Web UI
+    environment:
+      - MP_SMTP_AUTH_ACCEPT_ANY=1
+      - MP_SMTP_AUTH_ALLOW_INSECURE=1
+    networks:
+      - e2e-net
+    restart: unless-stopped
 
 networks:
   e2e-net:

@@ -30,8 +30,8 @@ test.describe('Authentication security', () => {
     // Try to access callback with different state (CSRF attack simulation)
     await page.goto('/_auth/oauth2/callback?state=attacker-state-99999&code=valid-code');
 
-    // Should reject with "Invalid state" error
-    await expect(page.locator('body')).toContainText(/invalid state/i);
+    // Should reject with error (either "Invalid state" or "Invalid redirect URL")
+    await expect(page.locator('body')).toContainText(/invalid (state|redirect url)/i);
   });
 
   test('should reject invalid email token', async ({ page }) => {

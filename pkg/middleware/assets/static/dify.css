@@ -1,0 +1,61 @@
+/**
+ * In-Iframe Optimizations
+ *
+ * This stylesheet provides special optimizations for iframe contexts,
+ * particularly for chatbot widgets displayed in the bottom-right corner.
+ *
+ * Usage:
+ *   Include this CSS file in addition to main.css when the page is loaded in an iframe.
+ *   This file only takes effect when body.in-iframe class is present.
+ *
+ * Features:
+ *   - Moves service credit closer to the auth card
+ *   - Removes container padding on narrow viewports (< 420px)
+ *   - Makes background fully transparent on narrow viewports
+ *   - Positions content at the bottom of the viewport
+ *   - Positions settings toggle at the top-right corner outside the card
+ */
+
+/* Service credit positioning - closer to card */
+body.in-iframe .auth-credit {
+  margin-top: var(--spacing-sm);
+  padding: 0;
+  width: auto;
+  display: inline-flex;
+}
+
+/* Narrow viewport optimizations (< 420px) - typical chatbot widget size */
+@media (max-width: 419px) {
+  body.in-iframe {
+    /* Fully transparent background for seamless integration */
+    background-color: transparent !important;
+  }
+
+  /* Remove container padding and min-height for compact layout */
+  body.in-iframe .auth-container {
+    padding-left: 0;
+    padding-right: 0;
+    padding-top: calc(4rem + 4px);
+    padding-bottom: var(--spacing-lg);
+    min-height: 100vh;
+    /* Bottom alignment for card */
+    align-items: center;
+    justify-content: flex-end;
+  }
+
+  /* Position settings toggle at top-right, outside card */
+  body.in-iframe .settings-toggle {
+    position: absolute;
+    top: 0;
+    right: 0;
+    /* Card background for settings toggle */
+    background-color: var(--color-bg-elevated) !important;
+    border: 1px solid var(--color-border-default) !important;
+    border-radius: 1.125rem; /* 3x of --radius-md */
+  }
+
+  /* Larger border radius for card in iframe */
+  body.in-iframe .auth-card {
+    border-radius: 1.5rem; /* 3x of --radius-lg */
+  }
+}

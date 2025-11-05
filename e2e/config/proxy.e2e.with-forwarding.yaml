@@ -1,0 +1,87 @@
+service:
+  name: "chatbotgate e2e with forwarding"
+  description: "E2E verification environment with user info forwarding"
+
+server:
+  auth_path_prefix: "/_auth"
+  base_url: "http://localhost:4182"  # External base URL for email links and OAuth2 callback
+
+proxy:
+  upstream:
+    url: "http://target-app:3000/"
+
+session:
+  cookie_name: "mop-e2e"
+  cookie_secret: "0123456789abcdef0123456789abcdef"
+  cookie_expire: "24h"
+  cookie_secure: false
+  cookie_httponly: true
+  cookie_samesite: "lax"
+  store_type: "memory"
+
+oauth2:
+  providers:
+    - name: "stub-auth"
+      type: "custom"
+      display_name: "Stub Auth"
+      client_id: "stub-client-id"
+      client_secret: "stub-client-secret"
+      auth_url: "http://localhost:3001/oauth/authorize"
+      token_url: "http://stub-auth:3001/oauth/token"
+      userinfo_url: "http://stub-auth:3001/oauth/userinfo"
+      jwks_url: "http://stub-auth:3001/oauth/jwks"
+      insecure_skip_verify: true
+
+email_auth:
+  enabled: true
+  sender_type: "smtp"
+  smtp:
+    host: "mailpit"
+    port: 1025
+    username: ""
+    password: ""
+    from: "noreply@example.com"
+    from_name: "chatbotgate E2E"
+    insecure_skip_verify: true
+  token:
+    expire: "3m"
+
+# No authorization whitelist configured - all authenticated users are allowed
+authorization:
+  allowed: []
+
+logging:
+  level: "debug"
+  module_level: ""
+  color: false
+
+# KVS configuration (unified storage for sessions, tokens, and rate limiting)
+kvs:
+  default:
+    type: "memory"
+    memory:
+      cleanup_interval: "5m"
+
+  namespaces:
+    session: "session"
+    token: "token"
+    ratelimit: "ratelimit"
+
+# User information forwarding configuration
+forwarding:
+  # Encryption settings
+  encryption:
+    # E2E test encryption key (32+ characters)
+    key: "e2e-test-encryption-key-32-chars-long-1234567890"
+    algorithm: "aes-256-gcm"
+
+  # Forward both username and email (encrypted)
+  fields:
+    - path: "username"
+      query: "chatbotgate.user"
+      header: "X-ChatbotGate-User"
+      filters: encrypt
+    - path: "email"
+      query: "chatbotgate.email"
+      header: "X-ChatbotGate-Email"
+      filters: encrypt

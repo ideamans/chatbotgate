@@ -1,0 +1,96 @@
+# E2E Test configuration for custom field forwarding with encryption
+service:
+  name: "ChatbotGate E2E Test - Custom Forwarding (Encrypted)"
+  description: "E2E test for encrypted custom field forwarding based on OAuth2 scopes"
+
+server:
+  auth_path_prefix: "/_auth"
+
+# Proxy to test backend server
+proxy:
+  upstream:
+    url: "http://localhost:8083"
+
+# Session configuration
+session:
+  cookie_name: "_oauth2_proxy_e2e_custom_encrypted"
+  cookie_secret: "e2e-test-cookie-secret-key-32-chars-long-12345678"
+  cookie_expire: "1h"
+  cookie_secure: false
+  cookie_httponly: true
+  cookie_samesite: "lax"
+
+# OAuth2 providers (mock for testing)
+oauth2:
+  providers:
+    - name: "test-provider-with-analytics"
+      type: "custom"
+      display_name: "Test Provider (Analytics Scope)"
+      client_id: "test-client-id"
+      client_secret: "test-client-secret"
+      auth_url: "http://localhost:9999/oauth/authorize"
+      token_url: "http://localhost:9999/oauth/token"
+      userinfo_url: "http://localhost:9999/oauth/userinfo"
+      insecure_skip_verify: true
+      # Request analytics scope to get additional fields
+      scopes:
+        - "openid"
+        - "email"
+        - "profile"
+        - "analytics"  # This will trigger stub-auth to return secrets.access_token
+
+# Email authentication (disabled for this test)
+email_auth:
+  enabled: false
+
+# Authorization (allow all for testing)
+authorization:
+  allowed: []
+
+# Logging
+logging:
+  level: "debug"
+  module_level: "debug"
+  color: true
+
+# KVS configuration (memory for testing)
+kvs:
+  default:
+    type: "memory"
+    memory:
+      cleanup_interval: "1m"
+
+# Global user information forwarding with encryption enabled
+forwarding:
+  # Encryption configuration
+  encryption:
+    key: "e2e-test-encryption-key-32-chars-long-1234567890"
+
+  # Forward custom fields from OAuth2 response (all encrypted)
+  fields:
+    # Forward username and email (base fields)
+    - path: "username"
+      query: "username"
+      header: "X-ChatbotGate-User"
+      filters: encrypt
+    - path: "email"
+      query: "email"
+      header: "X-ChatbotGate-Email"
+      filters: encrypt
+    # Forward access token via header and query (encrypted)
+    - path: "extra.secrets.access_token"
+      header: "X-Access-Token"
+      query: "access_token"
+      filters: encrypt
+    # Forward analytics user_id via header (encrypted)
+    - path: "extra.analytics.user_id"
+      header: "X-Analytics-User-Id"
+      filters: encrypt
+    # Test header-only forwarding (encrypted)
+    - path: "extra.analytics.tier"
+      header: "X-Analytics-Tier"
+      filters: encrypt
+    # Test query-only forwarding (encrypted)
+    - path: "extra.secrets.refresh_token"
+      query: "refresh_token"
+      filters: encrypt

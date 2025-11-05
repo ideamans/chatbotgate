@@ -2,7 +2,13 @@
 
 OAuth2/OIDC compatible stub provider used for e2e scenarios. The implementation matches the flow described in `../E2E.md` and exposes:
 
-- Login form at `/login` (`someone@example.com` / `password`)
+- Login form at `/login`
+  - Regular user: `someone@example.com` / `password` (provides email in userinfo)
+  - No-email user: `noemail@example.com` / `password` (does NOT provide email in userinfo - for testing email requirement scenarios)
+  - Whitelist test users (all provide email in userinfo):
+    - Allowed by email: `allowed@example.com` / `password`
+    - Allowed by domain: `user@allowed.example.com` / `password`
+    - Denied: `denied@example.com` / `password`
 - Authorization Code flow endpoints under `/oauth/*`
 - OIDC discovery document at `/.well-known/openid-configuration`
 

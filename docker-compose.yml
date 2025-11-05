@@ -1,12 +1,12 @@
 version: '3.8'
 
 services:
-  # Multi-OAuth2 Proxy
+  # ChatbotGate
   proxy:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: multi-oauth2-proxy
+    container_name: chatbotgate
     ports:
       - "4180:4180"
     environment:
@@ -29,7 +29,7 @@ services:
   # Redis for session storage
   redis:
     image: redis:7-alpine
-    container_name: multi-oauth2-proxy-redis
+    container_name: chatbotgate-redis
     ports:
       - "6379:6379"
     volumes:
@@ -46,7 +46,7 @@ services:
   # Example backend application
   backend:
     image: nginx:alpine
-    container_name: multi-oauth2-proxy-backend
+    container_name: chatbotgate-backend
     ports:
       - "8080:80"
     volumes:

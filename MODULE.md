@@ -1,0 +1,1270 @@
+# ChatbotGate Module Guide
+
+Developer guide for using ChatbotGate as a Go module and extending its functionality.
+
+## Table of Contents
+
+- [Introduction](#introduction)
+- [Installation](#installation)
+- [Core Concepts](#core-concepts)
+- [Architecture](#architecture)
+- [Programming Interfaces](#programming-interfaces)
+- [Examples](#examples)
+- [Testing](#testing)
+- [API Reference](#api-reference)
+
+## Introduction
+
+ChatbotGate is designed as a modular, extensible authentication reverse proxy. While it works as a standalone binary, you can also use it as a Go module to:
+
+- Build custom authentication proxies
+- Integrate authentication middleware into existing Go applications
+- Create custom OAuth2 providers
+- Implement custom session storage backends
+- Extend functionality with custom middleware
+
+## Installation
+
+### As a Go Module
+
+```bash
+go get github.com/ideamans/chatbotgate
+```
+
+### Module Structure
+
+```
+github.com/ideamans/chatbotgate/
+├── cmd/chatbotgate/          # CLI application
+├── pkg/
+│   ├── middleware/           # Authentication middleware
+│   │   ├── auth/             # Auth providers
+│   │   │   ├── oauth2/       # OAuth2 providers
+│   │   │   └── email/        # Email authentication
+│   │   ├── authz/            # Authorization
+│   │   ├── session/          # Session management
+│   │   ├── rules/            # Access control rules
+│   │   ├── forwarding/       # User info forwarding
+│   │   ├── config/           # Configuration
+│   │   ├── core/             # Core middleware logic
+│   │   └── factory/          # Middleware factory
+│   ├── proxy/                # Reverse proxy
+│   │   ├── core/             # Proxy implementation
+│   │   └── config/           # Proxy configuration
+│   └── shared/               # Shared components
+│       ├── kvs/              # Key-Value Store interface
+│       ├── i18n/             # Internationalization
+│       ├── logging/          # Structured logging
+│       ├── config/           # Config utilities
+│       ├── filewatcher/      # File watching
+│       └── factory/          # Shared factory
+```
+
+## Core Concepts
+
+### 1. Middleware Architecture
+
+ChatbotGate uses a layered middleware architecture:
+
+```
+Request → Auth Check → Authorization → Rules → Forwarding → Proxy → Upstream
+```
+
+Each layer is implemented as Go middleware (`func(http.Handler) http.Handler`).
+
+### 2. Provider Pattern
+
+Authentication providers (OAuth2, email) implement common interfaces, allowing easy extension.
+
+### 3. KVS Abstraction
+
+Session storage, token storage, and rate limiting all use a unified Key-Value Store interface, supporting multiple backends (memory, LevelDB, Redis).
+
+### 4. Configuration-Driven
+
+All components are configured via YAML, with live reload support.
+
+## Architecture
+
+### Middleware Package
+
+The `pkg/middleware` package contains all authentication and authorization logic:
+
+#### Core Middleware (`pkg/middleware/core`)
+
+The heart of the authentication system:
+
+```go
+import (
+    "github.com/ideamans/chatbotgate/pkg/middleware/core"
+    "github.com/ideamans/chatbotgate/pkg/middleware/config"
+)
+
+// Create middleware
+cfg := &config.Config{
+    Service: config.ServiceConfig{
+        Name: "My App",
+    },
+    Session: config.SessionConfig{
+        CookieSecret: "your-secret",
+    },
+    // ... other config
+}
+
+middleware, err := core.NewMiddleware(cfg)
+if err != nil {
+    log.Fatal(err)
+}
+
+// Use as HTTP middleware
+handler := middleware.Handler(upstreamHandler)
+http.ListenAndServe(":8080", handler)
+```
+
+**Key Types:**
+
+- `Middleware`: Main middleware struct
+- `Config`: Configuration struct
+- `UserInfo`: Authenticated user information
+
+#### OAuth2 Providers (`pkg/middleware/auth/oauth2`)
+
+OAuth2 provider implementations:
+
+```go
+import (
+    "github.com/ideamans/chatbotgate/pkg/middleware/auth/oauth2"
+)
+
+// Provider interface
+type Provider interface {
+    // Name returns the provider identifier (e.g., "google", "github")
+    Name() string
+
+    // DisplayName returns the human-readable name
+    DisplayName() string
+
+    // GetAuthURL returns the OAuth2 authorization URL
+    GetAuthURL(state string) string
+
+    // Exchange exchanges authorization code for user info
+    Exchange(ctx context.Context, code string) (*UserInfo, error)
+}
+```
+
+**Built-in Providers:**
+- `GoogleProvider`: Google OAuth2
+- `GitHubProvider`: GitHub OAuth2
+- `MicrosoftProvider`: Microsoft/Azure AD OAuth2
+- `CustomProvider`: Generic OIDC provider
+
+**Default Scopes:**
+
+Each provider has default scopes that are used when `scopes` configuration is empty. These defaults are designed to retrieve user email, name, and avatar (where supported).
+
+- **Google**: `openid`, `userinfo.email`, `userinfo.profile`
+- **GitHub**: `user:email`, `read:user`
+- **Microsoft**: `openid`, `profile`, `email`, `User.Read`
+- **Custom**: `openid`, `email`, `profile`
+
+**Note**: If you specify custom scopes in configuration, the defaults are NOT added automatically. You must explicitly include the default scopes if you want user information.
+
+**Standardized Fields:**
+
+All OAuth2 providers populate standardized fields in `UserInfo.Extra` for consistent access:
+
+- `_email`: User email address (string)
+- `_username`: User display name (string, GitHub fallback: name → login)
+- `_avatar_url`: User profile picture URL (string, empty for Microsoft and custom providers that don't support it)
+
+**Creating a Custom Provider:**
+
+```go
+type MyProvider struct {
+    config   *oauth2.Config
+    userInfo string
+}
+
+func (p *MyProvider) Name() string {
+    return "myprovider"
+}
+
+func (p *MyProvider) DisplayName() string {
+    return "My Provider"
+}
+
+func (p *MyProvider) GetAuthURL(state string) string {
+    return p.config.AuthCodeURL(state)
+}
+
+func (p *MyProvider) Exchange(ctx context.Context, code string) (*oauth2.UserInfo, error) {
+    token, err := p.config.Exchange(ctx, code)
+    if err != nil {
+        return nil, err
+    }
+
+    // Fetch user info
+    client := p.config.Client(ctx, token)
+    resp, err := client.Get(p.userInfo)
+    // ... parse response and return UserInfo
+}
+```
+
+#### Email Authentication (`pkg/middleware/auth/email`)
+
+Passwordless email authentication:
+
+```go
+import (
+    "github.com/ideamans/chatbotgate/pkg/middleware/auth/email"
+)
+
+// Email sender interface
+type Sender interface {
+    Send(ctx context.Context, to, subject, htmlBody, textBody string) error
+}
+
+// Token manager interface
+type TokenManager interface {
+    Generate(email string) (string, error)
+    Verify(token string) (string, error)
+}
+```
+
+**Built-in Senders:**
+- `SMTPSender`: Send via SMTP
+- `SendGridSender`: Send via SendGrid API
+
+#### Authorization (`pkg/middleware/authz`)
+
+Email/domain-based authorization:
+
+```go
+import (
+    "github.com/ideamans/chatbotgate/pkg/middleware/authz"
+)
+
+// Create authorizer
+authz := authz.NewAuthorizer([]string{
+    "user@example.com",
+    "@company.com",
+})
+
+// Check authorization
+allowed := authz.IsAllowed("user@example.com")  // true
+allowed = authz.IsAllowed("user@company.com")    // true
+allowed = authz.IsAllowed("other@gmail.com")     // false
+```
+
+#### Session Management (`pkg/middleware/session`)
+
+Session management with multiple backends:
+
+```go
+import (
+    "github.com/ideamans/chatbotgate/pkg/middleware/session"
+    "github.com/ideamans/chatbotgate/pkg/shared/kvs"
+)
+
+// Create session manager
+store := kvs.NewMemoryStore()  // or Redis, LevelDB
+manager := session.NewManager(session.Config{
+    CookieName:   "_oauth2_proxy",
+    CookieSecret: "your-secret",
+    Store:        store,
+    Expire:       time.Hour * 24 * 7,
+})
+
+// Create session
+userInfo := &core.UserInfo{
+    Email:    "user@example.com",
+    Username: "user",
+    Provider: "google",
+}
+cookie, err := manager.Create(userInfo)
+
+// Verify session
+userInfo, err = manager.Verify(r, cookie)
+```
+
+#### Access Control Rules (`pkg/middleware/rules`)
+
+Path-based access control:
+
+```go
+import (
+    "github.com/ideamans/chatbotgate/pkg/middleware/rules"
+)
+
+// Define rules
+ruleSet := []rules.Rule{
+    {
+        Type:   rules.RuleTypePrefix,
+        Pattern: "/public/",
+        Action:  rules.ActionAllow,
+    },
+    {
+        Type:   rules.RuleTypeExact,
+        Pattern: "/health",
+        Action:  rules.ActionAllow,
+    },
+    {
+        Type:   rules.RuleTypeAll,
+        Action:  rules.ActionAuth,
+    },
+}
+
+// Evaluate
+engine := rules.NewEngine(ruleSet)
+action := engine.Evaluate("/public/image.png")  // ActionAllow
+action = engine.Evaluate("/app/dashboard")       // ActionAuth
+```
+
+**Rule Types:**
+- `RuleTypeExact`: Exact path match
+- `RuleTypePrefix`: Path prefix match
+- `RuleTypeRegex`: Regular expression match
+- `RuleTypeMinimatch`: Glob pattern match
+- `RuleTypeAll`: Catch-all
+
+**Actions:**
+- `ActionAllow`: Allow without authentication
+- `ActionAuth`: Require authentication
+- `ActionDeny`: Deny access (403)
+
+#### User Information Forwarding (`pkg/middleware/forwarding`)
+
+Forward user data to upstream:
+
+```go
+import (
+    "github.com/ideamans/chatbotgate/pkg/middleware/forwarding"
+)
+
+// Configure forwarder
+forwarder, err := forwarding.NewForwarder(forwarding.Config{
+    Encryption: &forwarding.EncryptionConfig{
+        Key:       "32-char-encryption-key-here-12",
+        Algorithm: "aes-256-gcm",
+    },
+    Fields: []forwarding.FieldConfig{
+        {
+            Path:    "email",
+            Header:  "X-Auth-Email",
+            Query:   "email",
+            Filters: []string{"encrypt"},
+        },
+    },
+})
+
+// Forward to request
+userInfo := &core.UserInfo{Email: "user@example.com"}
+req, err := forwarder.ForwardToRequest(req, userInfo)
+```
+
+### Proxy Package
+
+The `pkg/proxy` package handles reverse proxying:
+
+```go
+import (
+    "github.com/ideamans/chatbotgate/pkg/proxy/core"
+    "github.com/ideamans/chatbotgate/pkg/proxy/config"
+)
+
+// Configure proxy
+cfg := &config.Config{
+    Upstream: config.UpstreamConfig{
+        URL: "http://localhost:8080",
+        Secret: &config.SecretConfig{
+            Header: "X-Chatbotgate-Secret",
+            Value:  "secret-token",
+        },
+    },
+}
+
+// Create proxy
+proxy, err := core.NewProxy(cfg)
+
+// Use as handler
+http.Handle("/", proxy)
+```
+
+**Features:**
+- HTTP/HTTPS proxying
+- WebSocket support
+- Host-based routing
+- Custom headers
+- Upstream secret injection
+
+### Shared Package
+
+The `pkg/shared` package provides reusable components:
+
+#### KVS Interface (`pkg/shared/kvs`)
+
+Unified Key-Value Store interface:
+
+```go
+import (
+    "github.com/ideamans/chatbotgate/pkg/shared/kvs"
+)
+
+// KVS interface
+type Store interface {
+    Get(ctx context.Context, key string) ([]byte, error)
+    Set(ctx context.Context, key string, value []byte, ttl time.Duration) error
+    Delete(ctx context.Context, key string) error
+    Close() error
+}
+
+// Implementations
+memStore := kvs.NewMemoryStore()
+levelStore, err := kvs.NewLevelDBStore("/path/to/db")
+redisStore, err := kvs.NewRedisStore(kvs.RedisConfig{
+    Addr: "localhost:6379",
+})
+```
+
+**Features:**
+- Namespace isolation
+- TTL support
+- Atomic operations
+- Multiple backends
+
+#### Internationalization (`pkg/shared/i18n`)
+
+Multi-language support:
+
+```go
+import (
+    "github.com/ideamans/chatbotgate/pkg/shared/i18n"
+)
+
+// Detect language
+lang := i18n.DetectLanguage(r)  // "en" or "ja"
+
+// Get translation
+text := i18n.T(lang, "login.title")  // "Sign In" or "ログイン"
+
+// With parameters
+text = i18n.T(lang, "login.welcome", "username", "John")
+```
+
+**Supported Languages:**
+- English (`en`)
+- Japanese (`ja`)
+
+#### Logging (`pkg/shared/logging`)
+
+Structured logging:
+
+```go
+import (
+    "github.com/ideamans/chatbotgate/pkg/shared/logging"
+)
+
+// Create logger
+logger := logging.New(logging.Config{
+    Level:       "info",
+    ModuleLevel: "debug",
+    Color:       true,
+})
+
+// Log messages
+logger.Info("Server started", "port", 4180)
+logger.Debug("OAuth2 token exchange", "provider", "google")
+logger.Error("Authentication failed", "error", err)
+```
+
+## Programming Interfaces
+
+### Building a Custom Auth Proxy
+
+```go
+package main
+
+import (
+    "log"
+    "net/http"
+
+    "github.com/ideamans/chatbotgate/pkg/middleware/core"
+    "github.com/ideamans/chatbotgate/pkg/middleware/config"
+    "github.com/ideamans/chatbotgate/pkg/proxy/core"
+    proxyconfig "github.com/ideamans/chatbotgate/pkg/proxy/config"
+)
+
+func main() {
+    // Configure middleware
+    middlewareConfig := &config.Config{
+        Service: config.ServiceConfig{
+            Name: "My Custom Proxy",
+        },
+        Session: config.SessionConfig{
+            CookieName:   "_session",
+            CookieSecret: "your-random-secret-here-32-chars",
+            CookieExpire: "168h",
+        },
+        OAuth2: config.OAuth2Config{
+            Providers: []config.ProviderConfig{
+                {
+                    Name:         "google",
+                    DisplayName:  "Google",
+                    ClientID:     "your-client-id",
+                    ClientSecret: "your-client-secret",
+                },
+            },
+        },
+        Authorization: config.AuthorizationConfig{
+            Allowed: []string{"@example.com"},
+        },
+    }
+
+    // Create middleware
+    middleware, err := core.NewMiddleware(middlewareConfig)
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    // Configure proxy
+    proxyConfig := &proxyconfig.Config{
+        Upstream: proxyconfig.UpstreamConfig{
+            URL: "http://localhost:8080",
+        },
+    }
+
+    // Create proxy
+    proxy, err := proxycore.NewProxy(proxyConfig)
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    // Combine middleware + proxy
+    handler := middleware.Handler(proxy)
+
+    // Start server
+    log.Println("Starting server on :4180")
+    log.Fatal(http.ListenAndServe(":4180", handler))
+}
+```
+
+### Implementing a Custom OAuth2 Provider
+
+```go
+package myprovider
+
+import (
+    "context"
+    "encoding/json"
+    "fmt"
+
+    "github.com/ideamans/chatbotgate/pkg/middleware/auth/oauth2"
+    goauth2 "golang.org/x/oauth2"
+)
+
+type MyCustomProvider struct {
+    config      *goauth2.Config
+    userinfoURL string
+}
+
+func NewMyCustomProvider(clientID, clientSecret, redirectURL string) *MyCustomProvider {
+    return &MyCustomProvider{
+        config: &goauth2.Config{
+            ClientID:     clientID,
+            ClientSecret: clientSecret,
+            RedirectURL:  redirectURL,
+            Scopes:       []string{"openid", "email", "profile"},
+            Endpoint: goauth2.Endpoint{
+                AuthURL:  "https://myprovider.com/oauth/authorize",
+                TokenURL: "https://myprovider.com/oauth/token",
+            },
+        },
+        userinfoURL: "https://myprovider.com/oauth/userinfo",
+    }
+}
+
+func (p *MyCustomProvider) Name() string {
+    return "myprovider"
+}
+
+func (p *MyCustomProvider) DisplayName() string {
+    return "My Provider"
+}
+
+func (p *MyCustomProvider) IconURL() string {
+    return "https://myprovider.com/icon.svg"
+}
+
+func (p *MyCustomProvider) GetAuthURL(state string) string {
+    return p.config.AuthCodeURL(state)
+}
+
+func (p *MyCustomProvider) Exchange(ctx context.Context, code string) (*oauth2.UserInfo, error) {
+    // Exchange code for token
+    token, err := p.config.Exchange(ctx, code)
+    if err != nil {
+        return nil, fmt.Errorf("token exchange failed: %w", err)
+    }
+
+    // Fetch user info
+    client := p.config.Client(ctx, token)
+    resp, err := client.Get(p.userinfoURL)
+    if err != nil {
+        return nil, fmt.Errorf("userinfo fetch failed: %w", err)
+    }
+    defer resp.Body.Close()
+
+    // Parse response
+    var user struct {
+        Email    string `json:"email"`
+        Name     string `json:"name"`
+        Picture  string `json:"picture"`
+    }
+    if err := json.NewDecoder(resp.Body).Decode(&user); err != nil {
+        return nil, fmt.Errorf("userinfo decode failed: %w", err)
+    }
+
+    // Return user info with standardized fields
+    return &oauth2.UserInfo{
+        Email:    user.Email,
+        Username: user.Name,
+        Provider: p.Name(),
+        Extra: map[string]any{
+            // Standardized fields (common across all providers)
+            "_email":      user.Email,
+            "_username":   user.Name,
+            "_avatar_url": user.Picture,
+            // Provider-specific fields
+            "avatar_url": user.Picture,
+            "secrets": map[string]any{
+                "access_token":  token.AccessToken,
+                "refresh_token": token.RefreshToken,
+            },
+        },
+    }, nil
+}
+
+// Register your provider
+func init() {
+    oauth2.RegisterProvider("myprovider", func(cfg config.ProviderConfig) (oauth2.Provider, error) {
+        return NewMyCustomProvider(cfg.ClientID, cfg.ClientSecret, cfg.RedirectURL), nil
+    })
+}
+```
+
+### Implementing a Custom KVS Backend
+
+```go
+package customkvs
+
+import (
+    "context"
+    "time"
+
+    "github.com/ideamans/chatbotgate/pkg/shared/kvs"
+)
+
+type CustomStore struct {
+    // Your storage implementation
+    data map[string][]byte
+}
+
+func NewCustomStore() kvs.Store {
+    return &CustomStore{
+        data: make(map[string][]byte),
+    }
+}
+
+func (s *CustomStore) Get(ctx context.Context, key string) ([]byte, error) {
+    value, ok := s.data[key]
+    if !ok {
+        return nil, kvs.ErrNotFound
+    }
+    return value, nil
+}
+
+func (s *CustomStore) Set(ctx context.Context, key string, value []byte, ttl time.Duration) error {
+    s.data[key] = value
+    // TODO: Implement TTL handling
+    return nil
+}
+
+func (s *CustomStore) Delete(ctx context.Context, key string) error {
+    delete(s.data, key)
+    return nil
+}
+
+func (s *CustomStore) Close() error {
+    // Cleanup resources
+    return nil
+}
+```
+
+### Adding Custom Middleware
+
+```go
+package main
+
+import (
+    "log"
+    "net/http"
+
+    "github.com/ideamans/chatbotgate/pkg/middleware/core"
+)
+
+// Custom middleware that logs requests
+func loggingMiddleware(next http.Handler) http.Handler {
+    return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+        log.Printf("%s %s", r.Method, r.URL.Path)
+        next.ServeHTTP(w, r)
+    })
+}
+
+// Custom middleware that adds headers
+func customHeaderMiddleware(next http.Handler) http.Handler {
+    return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+        w.Header().Set("X-Custom-Header", "My Value")
+        next.ServeHTTP(w, r)
+    })
+}
+
+func main() {
+    // Create ChatbotGate middleware
+    middleware, err := core.NewMiddleware(config)
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    // Chain middlewares
+    handler := loggingMiddleware(
+        customHeaderMiddleware(
+            middleware.Handler(upstreamHandler),
+        ),
+    )
+
+    http.ListenAndServe(":4180", handler)
+}
+```
+
+## Examples
+
+### Example 1: Simple OAuth2 Proxy
+
+```go
+package main
+
+import (
+    "log"
+    "net/http"
+
+    "github.com/ideamans/chatbotgate/pkg/middleware/config"
+    "github.com/ideamans/chatbotgate/pkg/middleware/core"
+)
+
+func main() {
+    cfg := &config.Config{
+        Service: config.ServiceConfig{Name: "My App"},
+        Session: config.SessionConfig{
+            CookieSecret: "32-char-secret-here",
+            CookieExpire: "24h",
+        },
+        OAuth2: config.OAuth2Config{
+            Providers: []config.ProviderConfig{
+                {
+                    Name:         "google",
+                    ClientID:     "your-client-id",
+                    ClientSecret: "your-client-secret",
+                },
+            },
+        },
+    }
+
+    mw, _ := core.NewMiddleware(cfg)
+
+    upstream := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+        w.Write([]byte("Hello, authenticated user!"))
+    })
+
+    http.ListenAndServe(":4180", mw.Handler(upstream))
+}
+```
+
+### Example 2: Custom Provider Registration
+
+```go
+package main
+
+import (
+    "github.com/ideamans/chatbotgate/pkg/middleware/auth/oauth2"
+)
+
+func main() {
+    // Register custom provider
+    oauth2.RegisterProviderFactory("myprovider", func(cfg config.ProviderConfig) (oauth2.Provider, error) {
+        return NewMyProvider(cfg.ClientID, cfg.ClientSecret, cfg.RedirectURL), nil
+    })
+
+    // Now use in config
+    cfg := &config.Config{
+        OAuth2: config.OAuth2Config{
+            Providers: []config.ProviderConfig{
+                {
+                    Type:         "custom",
+                    Name:         "myprovider",
+                    ClientID:     "...",
+                    ClientSecret: "...",
+                },
+            },
+        },
+    }
+}
+```
+
+### Example 3: Programmatic Rule Evaluation
+
+```go
+package main
+
+import (
+    "fmt"
+
+    "github.com/ideamans/chatbotgate/pkg/middleware/rules"
+)
+
+func main() {
+    engine := rules.NewEngine([]rules.Rule{
+        {Type: rules.RuleTypePrefix, Pattern: "/api/", Action: rules.ActionAuth},
+        {Type: rules.RuleTypeExact, Pattern: "/health", Action: rules.ActionAllow},
+        {Type: rules.RuleTypeAll, Action: rules.ActionDeny},
+    })
+
+    paths := []string{"/api/users", "/health", "/admin", "/static/style.css"}
+
+    for _, path := range paths {
+        action := engine.Evaluate(path)
+        fmt.Printf("%s -> %s\n", path, action)
+    }
+}
+```
+
+### Example 4: User Info Extraction
+
+```go
+package main
+
+import (
+    "net/http"
+
+    "github.com/ideamans/chatbotgate/pkg/middleware/core"
+)
+
+func handler(w http.ResponseWriter, r *http.Request) {
+    // Extract user info from context (set by middleware)
+    userInfo, ok := core.GetUserInfo(r.Context())
+    if !ok {
+        http.Error(w, "Not authenticated", http.StatusUnauthorized)
+        return
+    }
+
+    w.Write([]byte("Hello, " + userInfo.Email))
+}
+```
+
+## Testing
+
+### Unit Testing
+
+ChatbotGate uses Go's standard testing package:
+
+```bash
+# Run all tests
+go test ./...
+
+# Run specific package
+go test ./pkg/middleware/auth/oauth2
+
+# With verbose output
+go test -v ./pkg/...
+
+# With coverage
+go test -cover ./...
+go test -coverprofile=coverage.out ./...
+go tool cover -html=coverage.out
+```
+
+### Integration Testing
+
+Example integration test:
+
+```go
+package integration_test
+
+import (
+    "net/http"
+    "net/http/httptest"
+    "testing"
+
+    "github.com/ideamans/chatbotgate/pkg/middleware/core"
+    "github.com/ideamans/chatbotgate/pkg/middleware/config"
+)
+
+func TestAuthenticationFlow(t *testing.T) {
+    // Create test config
+    cfg := &config.Config{
+        Session: config.SessionConfig{
+            CookieSecret: "test-secret-32-characters-long",
+        },
+    }
+
+    // Create middleware
+    mw, err := core.NewMiddleware(cfg)
+    if err != nil {
+        t.Fatal(err)
+    }
+
+    // Create test upstream
+    upstream := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+        w.WriteHeader(http.StatusOK)
+    })
+
+    // Create test server
+    handler := mw.Handler(upstream)
+    server := httptest.NewServer(handler)
+    defer server.Close()
+
+    // Test unauthenticated request
+    resp, err := http.Get(server.URL + "/app")
+    if err != nil {
+        t.Fatal(err)
+    }
+    if resp.StatusCode != http.StatusFound {
+        t.Errorf("Expected redirect, got %d", resp.StatusCode)
+    }
+}
+```
+
+### Mocking
+
+Example using interfaces for mocking:
+
+```go
+package myapp_test
+
+import (
+    "context"
+    "testing"
+
+    "github.com/ideamans/chatbotgate/pkg/middleware/auth/oauth2"
+)
+
+// Mock provider
+type mockProvider struct {
+    userInfo *oauth2.UserInfo
+    err      error
+}
+
+func (m *mockProvider) Name() string { return "mock" }
+func (m *mockProvider) DisplayName() string { return "Mock" }
+func (m *mockProvider) GetAuthURL(state string) string { return "http://mock" }
+func (m *mockProvider) Exchange(ctx context.Context, code string) (*oauth2.UserInfo, error) {
+    return m.userInfo, m.err
+}
+
+func TestOAuth2Flow(t *testing.T) {
+    provider := &mockProvider{
+        userInfo: &oauth2.UserInfo{
+            Email: "test@example.com",
+        },
+    }
+
+    // Test with mock
+    user, err := provider.Exchange(context.Background(), "test-code")
+    if err != nil {
+        t.Fatal(err)
+    }
+    if user.Email != "test@example.com" {
+        t.Errorf("Expected test@example.com, got %s", user.Email)
+    }
+}
+```
+
+## API Reference
+
+### Core Types
+
+#### `middleware/core.UserInfo`
+
+```go
+type UserInfo struct {
+    Email    string                 // User email address
+    Username string                 // Username (provider-dependent, empty for email auth)
+    Provider string                 // Provider name (google, github, microsoft, email)
+    Extra    map[string]any         // Additional provider-specific data
+}
+```
+
+**Standardized Extra Fields** (common across all OAuth2 providers):
+- `_email` (string): User email address (same as `Email`)
+- `_username` (string): User display name
+  - Google: `name`
+  - GitHub: `name` (fallback to `login` if not set)
+  - Microsoft: `displayName`
+  - Email auth: empty
+- `_avatar_url` (string): User profile picture URL
+  - Google: `picture` URL
+  - GitHub: `avatar_url` URL
+  - Microsoft: empty (requires separate photo endpoint)
+  - Email auth: empty
+
+**Provider-Specific Extra Fields:**
+- Google: `email`, `name`, `picture`, `verified_email`, `given_name`, `family_name`
+- GitHub: `email`, `name`, `login`, `avatar_url`, plus other public profile data
+- Microsoft: `email`, `displayName`, `userPrincipalName`, `preferredUsername`
+
+**OAuth2 Tokens** (under `secrets`):
+- `secrets.access_token` (string): OAuth2 access token
+- `secrets.refresh_token` (string): OAuth2 refresh token (if available)
+
+#### `middleware/core.Middleware`
+
+```go
+type Middleware interface {
+    // Handler wraps an HTTP handler with authentication
+    Handler(next http.Handler) http.Handler
+
+    // Close cleans up resources
+    Close() error
+}
+```
+
+#### `middleware/config.Config`
+
+```go
+type Config struct {
+    Service       ServiceConfig       // Service branding
+    Server        ServerConfig        // Server settings
+    Session       SessionConfig       // Session configuration
+    OAuth2        OAuth2Config        // OAuth2 providers
+    EmailAuth     EmailAuthConfig     // Email authentication
+    Authorization AuthorizationConfig // Access control
+    KVS           KVSConfig           // Storage backend
+    Forwarding    ForwardingConfig    // User info forwarding
+    Rules         []RuleConfig        // Access control rules
+    Logging       LoggingConfig       // Logging settings
+}
+```
+
+### KVS Interface
+
+#### `shared/kvs.Store`
+
+```go
+type Store interface {
+    // Get retrieves a value by key
+    Get(ctx context.Context, key string) ([]byte, error)
+
+    // Set stores a value with optional TTL
+    Set(ctx context.Context, key string, value []byte, ttl time.Duration) error
+
+    // Delete removes a key
+    Delete(ctx context.Context, key string) error
+
+    // Close releases resources
+    Close() error
+}
+```
+
+### OAuth2 Interface
+
+#### `middleware/auth/oauth2.Provider`
+
+```go
+type Provider interface {
+    // Name returns provider identifier
+    Name() string
+
+    // DisplayName returns human-readable name
+    DisplayName() string
+
+    // IconURL returns provider icon URL (optional)
+    IconURL() string
+
+    // GetAuthURL returns OAuth2 authorization URL
+    GetAuthURL(state string) string
+
+    // Exchange exchanges authorization code for user info
+    Exchange(ctx context.Context, code string) (*UserInfo, error)
+}
+```
+
+### Session Interface
+
+#### `middleware/session.Manager`
+
+```go
+type Manager interface {
+    // Create creates a new session
+    Create(userInfo *UserInfo) (*http.Cookie, error)
+
+    // Verify verifies a session cookie
+    Verify(r *http.Request, cookie *http.Cookie) (*UserInfo, error)
+
+    // Destroy destroys a session
+    Destroy(cookie *http.Cookie) error
+}
+```
+
+### Rules Interface
+
+#### `middleware/rules.Engine`
+
+```go
+type Engine interface {
+    // Evaluate evaluates rules for a path
+    Evaluate(path string) Action
+}
+
+type Action string
+
+const (
+    ActionAllow Action = "allow" // Allow without auth
+    ActionAuth  Action = "auth"  // Require auth
+    ActionDeny  Action = "deny"  // Deny access
+)
+```
+
+### Proxy Interface
+
+#### `proxy/core.Proxy`
+
+```go
+type Proxy interface {
+    http.Handler
+
+    // Close cleans up resources
+    Close() error
+}
+```
+
+## Best Practices
+
+### 1. Configuration Management
+
+```go
+// Load from file
+cfg, err := config.LoadFromFile("config.yaml")
+
+// Validate before use
+if err := cfg.Validate(); err != nil {
+    log.Fatal(err)
+}
+
+// Watch for changes
+watcher := filewatcher.New("config.yaml", func(path string) {
+    cfg, _ = config.LoadFromFile(path)
+    // Reload components
+})
+```
+
+### 2. Error Handling
+
+```go
+// Always wrap errors with context
+if err != nil {
+    return fmt.Errorf("oauth2 exchange failed: %w", err)
+}
+
+// Use specific error types
+if errors.Is(err, kvs.ErrNotFound) {
+    // Handle not found
+}
+```
+
+### 3. Context Propagation
+
+```go
+// Always pass context
+ctx := r.Context()
+user, err := provider.Exchange(ctx, code)
+
+// Check context cancellation
+select {
+case <-ctx.Done():
+    return ctx.Err()
+default:
+    // Continue
+}
+```
+
+### 4. Resource Cleanup
+
+```go
+// Always defer cleanup
+store, err := kvs.NewRedisStore(cfg)
+if err != nil {
+    return err
+}
+defer store.Close()
+```
+
+### 5. Testing
+
+```go
+// Use table-driven tests
+tests := []struct {
+    name     string
+    input    string
+    expected Action
+}{
+    {"public", "/public/file.js", ActionAllow},
+    {"app", "/app/dashboard", ActionAuth},
+}
+
+for _, tt := range tests {
+    t.Run(tt.name, func(t *testing.T) {
+        got := engine.Evaluate(tt.input)
+        if got != tt.expected {
+            t.Errorf("got %v, want %v", got, tt.expected)
+        }
+    })
+}
+```
+
+## Contributing
+
+### Development Setup
+
+```bash
+# Clone repository
+git clone https://github.com/ideamans/chatbotgate.git
+cd chatbotgate
+
+# Install dependencies
+go mod download
+
+# Run tests
+go test ./...
+
+# Run linters
+go fmt ./...
+go vet ./...
+```
+
+### Adding Features
+
+1. Create feature branch
+2. Implement feature with tests
+3. Update documentation
+4. Submit pull request
+
+### Code Style
+
+- Follow [Go Code Review Comments](https://github.com/golang/go/wiki/CodeReviewComments)
+- Use `go fmt` for formatting
+- Write tests for new code
+- Document exported functions
+- Aim for 80%+ test coverage
+
+---
+
+**Questions?** Open an issue or discussion on [GitHub](https://github.com/ideamans/chatbotgate).

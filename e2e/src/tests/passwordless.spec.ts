@@ -1,12 +1,14 @@
 import { test, expect } from '@playwright/test';
-import { clearOtpFile, waitForOtp } from '../support/otp-reader';
+import { waitForLoginEmail, clearAllMessages } from '../support/mailpit-helper';
 import { routeStubAuthRequests } from '../support/stub-auth-route';
 
-const TEST_EMAIL = 'someone@example.com';
+// Use unique email address to avoid conflicts with parallel tests
+const TEST_EMAIL = 'passwordless-basic@example.com';
 
 test.describe('Passwordless email flow', () => {
   test.beforeEach(async ({ page }) => {
-    await clearOtpFile();
+    // Note: Not clearing Mailpit messages to avoid conflicts with parallel tests
+    // Each test uses a unique email address to ensure isolation
     await routeStubAuthRequests(page);
   });
 
@@ -19,17 +21,26 @@ test.describe('Passwordless email flow', () => {
     await page.getByLabel('Email Address').fill(TEST_EMAIL);
 
     await Promise.all([
-      page.waitForURL(/\/_auth\/email\/send/),
+      page.waitForURL(/\/_auth\/email\/sent/),
       page.getByRole('button', { name: 'Send Login Link' }).click(),
     ]);
 
-    const otp = await waitForOtp(TEST_EMAIL);
+    // Wait for email to arrive in Mailpit and extract login URL
+    console.log(`Waiting for email to ${TEST_EMAIL}...`);
+    const loginUrl = await waitForLoginEmail(TEST_EMAIL, {
+      timeoutMs: 30_000,
+      pollIntervalMs: 500,
+    });
 
-    await page.goto(otp.login_url);
+    console.log(`Got login URL: ${loginUrl}`);
+
+    // Navigate to the login URL
+    await page.goto(loginUrl);
 
     await expect(page.locator('[data-test="app-user-email"]')).toContainText(TEST_EMAIL);
 
-    await page.goto(otp.login_url);
+    // Try to reuse the same URL - should fail
+    await page.goto(loginUrl);
 
     await expect(page.locator('body')).toContainText('Invalid or Expired Token');
   });
