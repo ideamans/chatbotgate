@@ -1,6 +1,6 @@
 service:
-  name: "chatbotgate e2e passthrough"
-  description: "E2E verification environment with passthrough"
+  name: "chatbotgate e2e rules"
+  description: "E2E verification environment with rules"
 
 server:
   auth_path_prefix: "/_auth"
@@ -82,18 +82,26 @@ forwarding:
     - path: "email"
       header: "X-ChatbotGate-Email"
 
-# Passthrough configuration
-# Paths matching these patterns will bypass authentication
-passthrough:
-  # Exact prefix matches
-  prefix:
-    - "/embed.js"
-    - "/public/"
+# Rules configuration
+# Access control rules for paths (evaluated in order, first match wins)
+rules:
+  rules:
+    # Allow embed.js without authentication
+    - prefix: "/embed.js"
+      action: allow
+      description: "Embed script"
 
-  # Regular expression patterns
-  regex:
-    - "^/api/public/.*$"
+    # Allow public directory without authentication
+    - prefix: "/public/"
+      action: allow
+      description: "Public directory"
 
-  # Minimatch/glob patterns
-  minimatch:
-    - "/static/**"
+    # Allow public API endpoints
+    - regex: "^/api/public/"
+      action: allow
+      description: "Public API endpoints"
+
+    # Allow static directory
+    - minimatch: "/static/**"
+      action: allow
+      description: "Static files"

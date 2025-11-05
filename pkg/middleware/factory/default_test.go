@@ -114,40 +114,43 @@ func TestDefaultFactory_CreateForwarder(t *testing.T) {
 	}
 }
 
-func TestDefaultFactory_CreatePassthroughMatcher(t *testing.T) {
+func TestDefaultFactory_CreateRulesEvaluator(t *testing.T) {
 	logger := logging.NewSimpleLogger("test", logging.LevelInfo, false)
 	factory := NewDefaultFactory("localhost", 4180, logger)
 
 	tests := []struct {
 		name        string
 		configFunc  func() *config.Config
-		expectNil   bool
+		expectError bool
 		description string
 	}{
 		{
-			name: "passthrough configured",
+			name: "valid rules configured",
 			configFunc: func() *config.Config {
 				cfg := CreateTestConfig()
-				cfg.Passthrough.Prefix = []string{"/health", "/metrics"}
+				// CreateTestConfig returns empty rules, which will use defaults
 				return cfg
 			},
-			expectNil:   false,
-			description: "Should return matcher when passthrough paths are configured",
+			expectError: false,
+			description: "Should create evaluator successfully with default rules",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			cfg := tt.configFunc()
-			matcher := factory.CreatePassthroughMatcher(cfg.Passthrough)
+			evaluator, err := factory.CreateRulesEvaluator(&cfg.Rules)
 
-			if tt.expectNil {
-				if matcher != nil {
-					t.Errorf("%s: expected nil, got %v", tt.description, matcher)
+			if tt.expectError {
+				if err == nil {
+					t.Errorf("%s: expected error, got nil", tt.description)
 				}
 			} else {
-				if matcher == nil {
-					t.Errorf("%s: expected non-nil matcher", tt.description)
+				if err != nil {
+					t.Errorf("%s: unexpected error: %v", tt.description, err)
+				}
+				if evaluator == nil {
+					t.Errorf("%s: expected non-nil evaluator", tt.description)
 				}
 			}
 		})

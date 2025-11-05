@@ -7,13 +7,13 @@ import (
 	"github.com/ideamans/chatbotgate/pkg/middleware/auth/oauth2"
 	"github.com/ideamans/chatbotgate/pkg/middleware/authz"
 	"github.com/ideamans/chatbotgate/pkg/middleware/config"
+	"github.com/ideamans/chatbotgate/pkg/middleware/core"
 	"github.com/ideamans/chatbotgate/pkg/middleware/forwarding"
+	"github.com/ideamans/chatbotgate/pkg/middleware/rules"
+	"github.com/ideamans/chatbotgate/pkg/middleware/session"
 	"github.com/ideamans/chatbotgate/pkg/shared/i18n"
 	"github.com/ideamans/chatbotgate/pkg/shared/kvs"
 	"github.com/ideamans/chatbotgate/pkg/shared/logging"
-	"github.com/ideamans/chatbotgate/pkg/middleware/core"
-	"github.com/ideamans/chatbotgate/pkg/middleware/passthrough"
-	"github.com/ideamans/chatbotgate/pkg/middleware/session"
 )
 
 // Factory is the interface for creating middleware and its components.
@@ -53,8 +53,8 @@ type Factory interface {
 	// CreateForwarder creates a forwarder for user info forwarding (may return nil)
 	CreateForwarder(forwardingCfg config.ForwardingConfig, providers []config.OAuth2Provider) forwarding.Forwarder
 
-	// CreatePassthroughMatcher creates a matcher for authentication bypass (may return nil)
-	CreatePassthroughMatcher(passthroughCfg config.PassthroughConfig) passthrough.Matcher
+	// CreateRulesEvaluator creates a rules evaluator from configuration
+	CreateRulesEvaluator(rulesCfg *rules.Config) (*rules.Evaluator, error)
 
 	// CreateTranslator creates an i18n translator
 	CreateTranslator() *i18n.Translator

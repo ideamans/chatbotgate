@@ -15,7 +15,6 @@ import (
 	"github.com/ideamans/chatbotgate/pkg/shared/i18n"
 	"github.com/ideamans/chatbotgate/pkg/shared/kvs"
 	"github.com/ideamans/chatbotgate/pkg/shared/logging"
-	"github.com/ideamans/chatbotgate/pkg/middleware/passthrough"
 	"github.com/ideamans/chatbotgate/pkg/middleware/session"
 )
 
@@ -114,8 +113,7 @@ func TestMiddleware_RequiresEmail(t *testing.T) {
 			})
 
 			authzChecker := authz.NewEmailChecker(tt.authzConfig)
-			passthroughMatcher := passthrough.NewMatcher(&cfg.Passthrough)
-			translator := i18n.NewTranslator()
+				translator := i18n.NewTranslator()
 			logger := logging.NewTestLogger()
 
 			middleware := New(
@@ -125,7 +123,7 @@ func TestMiddleware_RequiresEmail(t *testing.T) {
 				nil, // email handler
 				authzChecker,
 				nil,                // forwarder
-				passthroughMatcher, // passthrough matcher
+				nil, // rules evaluator
 				translator,
 				logger,
 			)
@@ -161,7 +159,6 @@ func TestMiddleware_Authorization_NoWhitelist(t *testing.T) {
 
 	oauthManager := oauth2.NewManager()
 	authzChecker := authz.NewEmailChecker(cfg.Authorization)
-	passthroughMatcher := passthrough.NewMatcher(&cfg.Passthrough)
 	translator := i18n.NewTranslator()
 	logger := logging.NewTestLogger()
 
@@ -171,8 +168,8 @@ func TestMiddleware_Authorization_NoWhitelist(t *testing.T) {
 		oauthManager,
 		nil,
 		authzChecker,
-		nil,                // forwarder
-		passthroughMatcher, // passthrough matcher
+		nil, // forwarder
+		nil, // rules evaluator
 		translator,
 		logger,
 	)
@@ -261,7 +258,6 @@ func TestMiddleware_Authorization_WithWhitelist(t *testing.T) {
 
 	oauthManager := oauth2.NewManager()
 	authzChecker := authz.NewEmailChecker(cfg.Authorization)
-	passthroughMatcher := passthrough.NewMatcher(&cfg.Passthrough)
 	translator := i18n.NewTranslator()
 	logger := logging.NewTestLogger()
 
@@ -271,8 +267,8 @@ func TestMiddleware_Authorization_WithWhitelist(t *testing.T) {
 		oauthManager,
 		nil,
 		authzChecker,
-		nil,                // forwarder
-		passthroughMatcher, // passthrough matcher
+		nil, // forwarder
+		nil, // rules evaluator
 		translator,
 		logger,
 	)
