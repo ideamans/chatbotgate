@@ -102,7 +102,19 @@ func runServe(cmd *cobra.Command, args []string) error {
 
 // formatConfigError formats configuration errors with helpful messages
 func formatConfigError(component string, err error) error {
-	// Check if it's a validation error
+	// Check if it's a ValidationError (multiple errors)
+	var validationErr *config.ValidationError
+	if errors.As(err, &validationErr) {
+		var sb strings.Builder
+		sb.WriteString(fmt.Sprintf("Configuration validation failed for %s with %d error(s):\n\n", component, len(validationErr.Errors)))
+		for i, e := range validationErr.Errors {
+			sb.WriteString(fmt.Sprintf("  %d. %v\n", i+1, e))
+		}
+		sb.WriteString("\nPlease fix the errors above in your configuration file.")
+		return errors.New(sb.String())
+	}
+
+	// Check if it's a validation error (wrapped)
 	if errors.Is(err, config.ErrServiceNameRequired) ||
 		errors.Is(err, config.ErrCookieSecretRequired) ||
 		errors.Is(err, config.ErrCookieSecretTooShort) ||

@@ -218,18 +218,20 @@ func (n *NamespaceConfig) SetDefaults() {
 }
 
 // Validate checks if the configuration is valid
+// Returns a ValidationError containing all validation errors found
 func (c *Config) Validate() error {
+	verr := NewValidationError()
+
+	// Validate service name
 	if c.Service.Name == "" {
-		return ErrServiceNameRequired
+		verr.Add(ErrServiceNameRequired)
 	}
 
-
+	// Validate session cookie secret
 	if c.Session.CookieSecret == "" {
-		return ErrCookieSecretRequired
-	}
-
-	if len(c.Session.CookieSecret) < 32 {
-		return ErrCookieSecretTooShort
+		verr.Add(ErrCookieSecretRequired)
+	} else if len(c.Session.CookieSecret) < 32 {
+		verr.Add(ErrCookieSecretTooShort)
 	}
 
 	// Check at least one OAuth2 provider is available (not disabled)
@@ -241,15 +243,15 @@ func (c *Config) Validate() error {
 		}
 	}
 	if !hasAvailableProvider {
-		return ErrNoEnabledProviders
+		verr.Add(ErrNoEnabledProviders)
 	}
 
 	// Validate forwarding configuration
 	if err := c.validateForwarding(); err != nil {
-		return err
+		verr.Add(err)
 	}
 
-	return nil
+	return verr.ErrorOrNil()
 }
 
 // validateForwarding validates the forwarding configuration
@@ -262,16 +264,19 @@ func (c *Config) validateForwarding() error {
 		return nil // No forwarding enabled, no validation needed
 	}
 
+	verr := NewValidationError()
+
 	// Check that fields are specified when forwarding is enabled
 	if len(fwd.Fields) == 0 {
-		return ErrForwardingFieldsRequired
+		verr.Add(ErrForwardingFieldsRequired)
 	}
 
 	// Validate field names
 	validFields := map[string]bool{"username": true, "email": true}
 	for _, field := range fwd.Fields {
 		if !validFields[field] {
-			return ErrInvalidForwardingField
+			verr.Add(ErrInvalidForwardingField)
+			break // Only report once
 		}
 	}
 
@@ -280,14 +285,13 @@ func (c *Config) validateForwarding() error {
 
 	if needsEncryption {
 		if fwd.Encryption.Key == "" {
-			return ErrEncryptionKeyRequired
-		}
-		if len(fwd.Encryption.Key) < 32 {
-			return ErrEncryptionKeyTooShort
+			verr.Add(ErrEncryptionKeyRequired)
+		} else if len(fwd.Encryption.Key) < 32 {
+			verr.Add(ErrEncryptionKeyTooShort)
 		}
 	}
 
-	return nil
+	return verr.ErrorOrNil()
 }
 
 // ForwardingConfig contains user info forwarding settings

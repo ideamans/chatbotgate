@@ -46,6 +46,7 @@ func (f *DefaultFactory) CreateMiddleware(
 	translator := f.CreateTranslator()
 	authzChecker := f.CreateAuthzChecker(cfg.Authorization)
 	forwarder := f.CreateForwarder(cfg.Forwarding, cfg.OAuth2.Providers)
+	passthroughMatcher := f.CreatePassthroughMatcher(cfg.Passthrough)
 
 	// Create KVS stores for email auth (if needed)
 	var tokenKVS, rateLimitKVS kvs.Store
@@ -86,6 +87,7 @@ func (f *DefaultFactory) CreateMiddleware(
 		emailHandler,
 		authzChecker,
 		forwarder,
+		passthroughMatcher,
 		translator,
 		logger,
 	)

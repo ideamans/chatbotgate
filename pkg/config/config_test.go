@@ -1,6 +1,7 @@
 package config
 
 import (
+	"errors"
 	"testing"
 	"time"
 )
@@ -96,7 +97,7 @@ func TestConfig_Validate(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			err := tt.config.Validate()
-			if err != tt.wantErr {
+			if !errors.Is(err, tt.wantErr) {
 				t.Errorf("Validate() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
@@ -211,7 +212,7 @@ func TestConfig_ValidateForwarding(t *testing.T) {
 			cfg := baseConfig()
 			cfg.Forwarding = tt.forwarding
 			err := cfg.Validate()
-			if err != tt.wantErr {
+			if !errors.Is(err, tt.wantErr) {
 				t.Errorf("Validate() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})

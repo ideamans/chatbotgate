@@ -4,10 +4,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
 
+	"github.com/ideamans/chatbotgate/pkg/config"
 	"github.com/ideamans/chatbotgate/pkg/logging"
 	"github.com/ideamans/chatbotgate/pkg/proxy"
 	"gopkg.in/yaml.v3"
@@ -95,17 +97,26 @@ func loadProxyConfig(path string) (proxy.UpstreamConfig, error) {
 }
 
 // validateProxyConfig validates the proxy configuration
+// Returns a ValidationError containing all validation errors found
 func validateProxyConfig(cfg *ProxyConfig) error {
+	verr := config.NewValidationError()
+
 	// Validate required fields
 	if cfg.Proxy.Upstream.URL == "" {
-		return fmt.Errorf("proxy.upstream.url is required")
+		verr.Add(fmt.Errorf("proxy.upstream.url is required"))
+	} else {
+		// Validate URL format
+		if _, err := url.Parse(cfg.Proxy.Upstream.URL); err != nil {
+			verr.Add(fmt.Errorf("proxy.upstream.url is not a valid URL: %w", err))
+		}
 	}
 
-	// Add more validation as needed
-	// For example, validate URL format
-	// url.Parse() could be used here
+	// Validate secret header configuration (if specified)
+	if cfg.Proxy.Upstream.Secret.Header != "" && cfg.Proxy.Upstream.Secret.Value == "" {
+		verr.Add(fmt.Errorf("proxy.upstream.secret.value is required when header is specified"))
+	}
 
-	return nil
+	return verr.ErrorOrNil()
 }
 
 // Handler returns the HTTP handler

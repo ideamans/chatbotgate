@@ -15,6 +15,7 @@ import (
 	"github.com/ideamans/chatbotgate/pkg/i18n"
 	"github.com/ideamans/chatbotgate/pkg/kvs"
 	"github.com/ideamans/chatbotgate/pkg/logging"
+	"github.com/ideamans/chatbotgate/pkg/passthrough"
 	"github.com/ideamans/chatbotgate/pkg/session"
 )
 
@@ -113,6 +114,7 @@ func TestMiddleware_RequiresEmail(t *testing.T) {
 			})
 
 			authzChecker := authz.NewEmailChecker(tt.authzConfig)
+			passthroughMatcher := passthrough.NewMatcher(&cfg.Passthrough)
 			translator := i18n.NewTranslator()
 			logger := logging.NewTestLogger()
 
@@ -122,7 +124,8 @@ func TestMiddleware_RequiresEmail(t *testing.T) {
 				oauthManager,
 				nil, // email handler
 				authzChecker,
-				nil, // forwarder
+				nil,                // forwarder
+				passthroughMatcher, // passthrough matcher
 				translator,
 				logger,
 			)
@@ -158,6 +161,7 @@ func TestMiddleware_Authorization_NoWhitelist(t *testing.T) {
 
 	oauthManager := oauth2.NewManager()
 	authzChecker := authz.NewEmailChecker(cfg.Authorization)
+	passthroughMatcher := passthrough.NewMatcher(&cfg.Passthrough)
 	translator := i18n.NewTranslator()
 	logger := logging.NewTestLogger()
 
@@ -167,7 +171,8 @@ func TestMiddleware_Authorization_NoWhitelist(t *testing.T) {
 		oauthManager,
 		nil,
 		authzChecker,
-		nil, // forwarder
+		nil,                // forwarder
+		passthroughMatcher, // passthrough matcher
 		translator,
 		logger,
 	)
@@ -256,6 +261,7 @@ func TestMiddleware_Authorization_WithWhitelist(t *testing.T) {
 
 	oauthManager := oauth2.NewManager()
 	authzChecker := authz.NewEmailChecker(cfg.Authorization)
+	passthroughMatcher := passthrough.NewMatcher(&cfg.Passthrough)
 	translator := i18n.NewTranslator()
 	logger := logging.NewTestLogger()
 
@@ -265,7 +271,8 @@ func TestMiddleware_Authorization_WithWhitelist(t *testing.T) {
 		oauthManager,
 		nil,
 		authzChecker,
-		nil, // forwarder
+		nil,                // forwarder
+		passthroughMatcher, // passthrough matcher
 		translator,
 		logger,
 	)

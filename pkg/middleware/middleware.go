@@ -37,16 +37,11 @@ func New(
 	oauthManager *oauth2.Manager,
 	emailHandler *email.Handler,
 	authzChecker authz.Checker,
-	forwarder forwarding.Forwarder, // Interface type
+	forwarder forwarding.Forwarder,         // Interface type
+	passthroughMatcher passthrough.Matcher, // Interface type (injected)
 	translator *i18n.Translator,
 	logger logging.Logger,
 ) *Middleware {
-	// Create passthrough matcher from config
-	passthroughMatcher := passthrough.NewMatcher(&cfg.Passthrough)
-	if passthroughMatcher.HasErrors() {
-		logger.Warn("Passthrough configuration has errors", "errors", passthroughMatcher.Errors())
-	}
-
 	return &Middleware{
 		config:             cfg,
 		sessionStore:       sessionStore,
