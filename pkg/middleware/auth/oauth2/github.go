@@ -60,7 +60,7 @@ func (p *GitHubProvider) GetUserInfo(ctx context.Context, token *oauth2.Token) (
 	var avatarURL string
 	userResp, err := client.Get("https://api.github.com/user")
 	if err == nil && userResp.StatusCode == 200 {
-		defer userResp.Body.Close()
+		defer func() { _ = userResp.Body.Close() }()
 		var user struct {
 			Name      string `json:"name"`
 			Login     string `json:"login"`
@@ -80,7 +80,7 @@ func (p *GitHubProvider) GetUserInfo(ctx context.Context, token *oauth2.Token) (
 	if err != nil {
 		return nil, fmt.Errorf("failed to get user emails: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != 200 {
 		return nil, fmt.Errorf("failed to get user emails: status %d", resp.StatusCode)

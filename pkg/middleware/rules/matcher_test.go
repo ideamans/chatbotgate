@@ -280,11 +280,11 @@ func TestRegexMatcher(t *testing.T) {
 // TestRegexMatcher_InvalidPattern tests error handling for invalid regex patterns
 func TestRegexMatcher_InvalidPattern(t *testing.T) {
 	invalidPatterns := []string{
-		"[invalid",         // unclosed bracket
-		"(invalid",         // unclosed parenthesis
-		"(?P<invalid",      // invalid named group
-		"*invalid",         // invalid quantifier
-		"(?invalid)",       // invalid flag
+		"[invalid",    // unclosed bracket
+		"(invalid",    // unclosed parenthesis
+		"(?P<invalid", // invalid named group
+		"*invalid",    // invalid quantifier
+		"(?invalid)",  // invalid flag
 	}
 
 	for _, pattern := range invalidPatterns {

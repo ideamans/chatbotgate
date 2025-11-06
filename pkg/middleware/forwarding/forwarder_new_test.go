@@ -238,12 +238,12 @@ func TestForwarder_NonExistentPathsNotAdded(t *testing.T) {
 
 func TestForwarder_MultiplePathsSameDestination(t *testing.T) {
 	tests := []struct {
-		name          string
-		fields        []config.ForwardingField
-		userInfo      *UserInfo
-		expectQuery   map[string]string
-		expectHeader  map[string]string
-		notPresentQuery []string
+		name             string
+		fields           []config.ForwardingField
+		userInfo         *UserInfo
+		expectQuery      map[string]string
+		expectHeader     map[string]string
+		notPresentQuery  []string
 		notPresentHeader []string
 	}{
 		{

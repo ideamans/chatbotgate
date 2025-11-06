@@ -24,19 +24,6 @@ jobs:
           go-version-file: go.mod
           cache: true
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'yarn'
-          cache-dependency-path: web/yarn.lock
-
-      - name: Install web dependencies
-        run: make install-web
-
-      - name: Build web assets
-        run: make build-web
-
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v6
         with:
@@ -44,7 +31,7 @@ jobs:
           args: --timeout=5m
 
       - name: Check code formatting
-        run: make fmt
+        run: make fmt-check
 
   test:
     name: Unit Tests
@@ -58,19 +45,6 @@ jobs:
         with:
           go-version-file: go.mod
           cache: true
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'yarn'
-          cache-dependency-path: web/yarn.lock
-
-      - name: Install web dependencies
-        run: make install-web
-
-      - name: Build web assets
-        run: make build-web
 
       - name: Run unit tests
         run: make test
@@ -105,10 +79,3 @@ jobs:
         working-directory: e2e
         run: make test
 
-      - name: Upload test results
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: playwright-results
-          path: e2e/test-results/
-          retention-days: 7

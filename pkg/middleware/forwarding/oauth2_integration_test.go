@@ -37,13 +37,13 @@ func TestOAuth2GoogleIntegration(t *testing.T) {
 	}
 
 	tests := []struct {
-		name             string
-		config           *config.ForwardingConfig
-		testQuery        bool
-		testHeaders      bool
-		expectedQuery    map[string]string
-		expectedHeaders  map[string]string
-		shouldContain    map[string]bool // For checking if value exists
+		name            string
+		config          *config.ForwardingConfig
+		testQuery       bool
+		testHeaders     bool
+		expectedQuery   map[string]string
+		expectedHeaders map[string]string
+		shouldContain   map[string]bool // For checking if value exists
 	}{
 		{
 			name: "Standardized fields to query",
@@ -315,13 +315,13 @@ func TestOAuth2MicrosoftIntegration(t *testing.T) {
 			"_username":   "John Doe",
 			"_avatar_url": "", // Microsoft doesn't provide direct avatar URL
 			// Microsoft-specific fields
-			"email":              "user@example.com",
-			"displayName":        "John Doe",
-			"userPrincipalName":  "user@tenant.onmicrosoft.com",
-			"preferredUsername":  "user@example.com",
-			"id":                 "00000000-0000-0000-0000-000000000000",
-			"jobTitle":           "Software Engineer",
-			"officeLocation":     "Building 1",
+			"email":             "user@example.com",
+			"displayName":       "John Doe",
+			"userPrincipalName": "user@tenant.onmicrosoft.com",
+			"preferredUsername": "user@example.com",
+			"id":                "00000000-0000-0000-0000-000000000000",
+			"jobTitle":          "Software Engineer",
+			"officeLocation":    "Building 1",
 			// OAuth2 tokens
 			"secrets": map[string]any{
 				"access_token":  "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiIsIng1dCI6...",
@@ -590,13 +590,13 @@ func TestNonExistentPaths(t *testing.T) {
 	}
 
 	tests := []struct {
-		name                  string
-		config                *config.ForwardingConfig
-		testQuery             bool
-		testHeaders           bool
-		expectedEmptyQuery    []string
-		expectedEmptyHeaders  []string
-		shouldNotError        bool
+		name                 string
+		config               *config.ForwardingConfig
+		testQuery            bool
+		testHeaders          bool
+		expectedEmptyQuery   []string
+		expectedEmptyHeaders []string
+		shouldNotError       bool
 	}{
 		{
 			name: "Non-existent top-level field",
@@ -606,9 +606,9 @@ func TestNonExistentPaths(t *testing.T) {
 					{Path: "_email", Query: "email"}, // Valid field for comparison
 				},
 			},
-			testQuery: true,
+			testQuery:          true,
 			expectedEmptyQuery: []string{"ne"},
-			shouldNotError: true,
+			shouldNotError:     true,
 		},
 		{
 			name: "Non-existent nested field in extra",
@@ -618,9 +618,9 @@ func TestNonExistentPaths(t *testing.T) {
 					{Path: "_username", Query: "username"}, // Valid field
 				},
 			},
-			testQuery: true,
+			testQuery:          true,
 			expectedEmptyQuery: []string{"dne"},
-			shouldNotError: true,
+			shouldNotError:     true,
 		},
 		{
 			name: "Deeply nested non-existent path",
@@ -631,9 +631,9 @@ func TestNonExistentPaths(t *testing.T) {
 					{Path: "_email", Query: "email"}, // Valid field
 				},
 			},
-			testQuery: true,
+			testQuery:          true,
 			expectedEmptyQuery: []string{"deep", "token"},
-			shouldNotError: true,
+			shouldNotError:     true,
 		},
 		{
 			name: "Non-existent fields in headers",
@@ -644,9 +644,9 @@ func TestNonExistentPaths(t *testing.T) {
 					{Path: "_email", Header: "X-Email"}, // Valid field
 				},
 			},
-			testHeaders: true,
+			testHeaders:          true,
 			expectedEmptyHeaders: []string{"X-NonExistent", "X-Missing"},
-			shouldNotError: true,
+			shouldNotError:       true,
 		},
 		{
 			name: "Non-existent path with filters",
@@ -659,9 +659,9 @@ func TestNonExistentPaths(t *testing.T) {
 					{Path: "_email", Query: "email"}, // Valid field
 				},
 			},
-			testQuery: true,
+			testQuery:          true,
 			expectedEmptyQuery: []string{"ne"},
-			shouldNotError: true,
+			shouldNotError:     true,
 		},
 		{
 			name: "All non-existent paths",
@@ -672,11 +672,11 @@ func TestNonExistentPaths(t *testing.T) {
 					{Path: "extra.field3", Query: "f3"},
 				},
 			},
-			testQuery: true,
-			testHeaders: true,
-			expectedEmptyQuery: []string{"f1", "f3"},
+			testQuery:            true,
+			testHeaders:          true,
+			expectedEmptyQuery:   []string{"f1", "f3"},
 			expectedEmptyHeaders: []string{"X-F2"},
-			shouldNotError: true,
+			shouldNotError:       true,
 		},
 		{
 			name: "Invalid path in secrets",
@@ -687,11 +687,11 @@ func TestNonExistentPaths(t *testing.T) {
 					{Path: "secrets.access_token", Query: "valid_token"}, // Valid field
 				},
 			},
-			testQuery: true,
-			testHeaders: true,
-			expectedEmptyQuery: []string{"token"},
+			testQuery:            true,
+			testHeaders:          true,
+			expectedEmptyQuery:   []string{"token"},
 			expectedEmptyHeaders: []string{"X-Token"},
-			shouldNotError: true,
+			shouldNotError:       true,
 		},
 	}
 
@@ -961,10 +961,10 @@ func TestExtremelyDeepPaths(t *testing.T) {
 // paths don't overwrite valid data
 func TestMultiplePathsSameDestination(t *testing.T) {
 	tests := []struct {
-		name        string
-		userInfo    *UserInfo
-		fields      []config.ForwardingField
-		expectQuery map[string]string // expected query parameters
+		name         string
+		userInfo     *UserInfo
+		fields       []config.ForwardingField
+		expectQuery  map[string]string // expected query parameters
 		expectHeader map[string]string // expected headers
 	}{
 		{
@@ -1027,9 +1027,9 @@ func TestMultiplePathsSameDestination(t *testing.T) {
 				},
 			},
 			fields: []config.ForwardingField{
-				{Path: "missing_field", Query: "test"},  // Doesn't exist - skip
-				{Path: "user.email", Query: "test"},     // Exists - should be used
-				{Path: "info.email", Query: "test"},     // Doesn't exist - should NOT overwrite
+				{Path: "missing_field", Query: "test"}, // Doesn't exist - skip
+				{Path: "user.email", Query: "test"},    // Exists - should be used
+				{Path: "info.email", Query: "test"},    // Doesn't exist - should NOT overwrite
 			},
 			expectQuery: map[string]string{
 				"test": "valid@example.com",
@@ -1105,10 +1105,10 @@ func TestMultiplePathsSameDestination(t *testing.T) {
 				},
 			},
 			fields: []config.ForwardingField{
-				{Path: "email", Query: "email"},                       // Top-level email is empty - skip
+				{Path: "email", Query: "email"},                      // Top-level email is empty - skip
 				{Path: "level1.level2.level3.email", Query: "email"}, // Too deep - doesn't exist
-				{Path: "shallow.email", Query: "email"},               // Exists - should win
-				{Path: "level1.level2.email", Query: "email"},         // Exists but comes later
+				{Path: "shallow.email", Query: "email"},              // Exists - should win
+				{Path: "level1.level2.email", Query: "email"},        // Exists but comes later
 			},
 			expectQuery: map[string]string{
 				"email": "shallow@example.com", // First existing path

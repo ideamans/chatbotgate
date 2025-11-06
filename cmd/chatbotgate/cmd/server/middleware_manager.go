@@ -6,10 +6,10 @@ import (
 	"sync/atomic"
 
 	"github.com/ideamans/chatbotgate/pkg/middleware/config"
-	"github.com/ideamans/chatbotgate/pkg/middleware/factory"
-	"github.com/ideamans/chatbotgate/pkg/shared/logging"
 	"github.com/ideamans/chatbotgate/pkg/middleware/core"
+	"github.com/ideamans/chatbotgate/pkg/middleware/factory"
 	"github.com/ideamans/chatbotgate/pkg/shared/filewatcher"
+	"github.com/ideamans/chatbotgate/pkg/shared/logging"
 )
 
 // MiddlewareManager is an interface for managing middleware lifecycle

@@ -52,11 +52,11 @@ server:
 	nonExistentConfig := filepath.Join(tmpDir, "non-existent.yaml")
 
 	tests := []struct {
-		name           string
-		config         Config
-		expectedHost   string
-		expectedPort   int
-		description    string
+		name         string
+		config       Config
+		expectedHost string
+		expectedPort int
+		description  string
 	}{
 		{
 			name: "flags override config file (both)",
@@ -75,8 +75,8 @@ server:
 			name: "use config file when flags not set",
 			config: Config{
 				ConfigPath: configWithBoth,
-				Host:       "0.0.0.0",  // default value
-				Port:       4180,       // default value
+				Host:       "0.0.0.0", // default value
+				Port:       4180,      // default value
 				HostSet:    false,
 				PortSet:    false,
 			},
@@ -89,7 +89,7 @@ server:
 			config: Config{
 				ConfigPath: configWithBoth,
 				Host:       "10.0.0.1",
-				Port:       4180,  // default value
+				Port:       4180, // default value
 				HostSet:    true,
 				PortSet:    false,
 			},
@@ -101,7 +101,7 @@ server:
 			name: "port flag overrides, host from config",
 			config: Config{
 				ConfigPath: configWithBoth,
-				Host:       "0.0.0.0",  // default value
+				Host:       "0.0.0.0", // default value
 				Port:       6666,
 				HostSet:    false,
 				PortSet:    true,
@@ -120,7 +120,7 @@ server:
 				PortSet:    false,
 			},
 			expectedHost: "192.168.1.1",
-			expectedPort: 4180,  // default value
+			expectedPort: 4180, // default value
 			description:  "Use host from config, default port",
 		},
 		{
@@ -132,7 +132,7 @@ server:
 				HostSet:    false,
 				PortSet:    false,
 			},
-			expectedHost: "0.0.0.0",  // default value
+			expectedHost: "0.0.0.0", // default value
 			expectedPort: 8888,
 			description:  "Use default host, port from config",
 		},
@@ -166,8 +166,8 @@ server:
 			name: "flags set to defaults should still override config",
 			config: Config{
 				ConfigPath: configWithBoth,
-				Host:       "0.0.0.0",  // default, but explicitly set
-				Port:       4180,       // default, but explicitly set
+				Host:       "0.0.0.0", // default, but explicitly set
+				Port:       4180,      // default, but explicitly set
 				HostSet:    true,
 				PortSet:    true,
 			},
@@ -254,9 +254,9 @@ server:
 			expectError:  false,
 		},
 		{
-			name:     "empty YAML",
-			filename: "empty.yaml",
-			content:  "",
+			name:         "empty YAML",
+			filename:     "empty.yaml",
+			content:      "",
 			expectedHost: "",
 			expectedPort: 0,
 			expectError:  false,

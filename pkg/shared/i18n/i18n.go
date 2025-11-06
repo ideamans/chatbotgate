@@ -169,14 +169,14 @@ var defaultTranslations = Translations{
 		"login.back":            "Back to login options",
 
 		// Email auth
-		"email.sent.title":         "Check Your Email",
-		"email.sent.heading":       "Check Your Email",
-		"email.sent.message":       "If your email address is authorized, you will receive a login link shortly.",
-		"email.sent.detail":        "Please check your inbox and click the link to log in.",
-		"email.sent.otp_label":     "Or enter the code from your email:",
+		"email.sent.title":           "Check Your Email",
+		"email.sent.heading":         "Check Your Email",
+		"email.sent.message":         "If your email address is authorized, you will receive a login link shortly.",
+		"email.sent.detail":          "Please check your inbox and click the link to log in.",
+		"email.sent.otp_label":       "Or enter the code from your email:",
 		"email.sent.otp_placeholder": "XXXX XXXX XXXX",
-		"email.sent.verify_button": "Verify Code",
-		"email.sent.back":          "Back to login",
+		"email.sent.verify_button":   "Verify Code",
+		"email.sent.back":            "Back to login",
 
 		"email.invalid.title":   "Invalid Token",
 		"email.invalid.heading": "Invalid or Expired Token",
@@ -212,13 +212,13 @@ var defaultTranslations = Translations{
 		"error.details.title":          "Error Details",
 
 		// Theme and Language
-		"ui.theme":         "Theme",
-		"ui.theme.auto":    "🌗 Auto",
-		"ui.theme.light":   "☀️ Light",
-		"ui.theme.dark":    "🌙 Dark",
-		"ui.language":      "Language",
-		"ui.language.en":   "English",
-		"ui.language.ja":   "日本語",
+		"ui.theme":       "Theme",
+		"ui.theme.auto":  "🌗 Auto",
+		"ui.theme.light": "☀️ Light",
+		"ui.theme.dark":  "🌙 Dark",
+		"ui.language":    "Language",
+		"ui.language.en": "English",
+		"ui.language.ja": "日本語",
 
 		// Email
 		"email.login.subject":      "Login Link - %s",
@@ -251,14 +251,14 @@ var defaultTranslations = Translations{
 		"login.back":            "ログイン方法の選択に戻る",
 
 		// Email auth
-		"email.sent.title":         "メールを確認してください",
-		"email.sent.heading":       "メールを確認してください",
-		"email.sent.message":       "メールアドレスが承認されている場合、まもなくログインリンクが届きます。",
-		"email.sent.detail":        "受信箱を確認し、リンクをクリックしてログインしてください。",
-		"email.sent.otp_label":     "またはメールに記載されたコードを入力してください:",
+		"email.sent.title":           "メールを確認してください",
+		"email.sent.heading":         "メールを確認してください",
+		"email.sent.message":         "メールアドレスが承認されている場合、まもなくログインリンクが届きます。",
+		"email.sent.detail":          "受信箱を確認し、リンクをクリックしてログインしてください。",
+		"email.sent.otp_label":       "またはメールに記載されたコードを入力してください:",
 		"email.sent.otp_placeholder": "XXXX XXXX XXXX",
-		"email.sent.verify_button": "コードを確認",
-		"email.sent.back":          "ログインに戻る",
+		"email.sent.verify_button":   "コードを確認",
+		"email.sent.back":            "ログインに戻る",
 
 		"email.invalid.title":   "無効なトークン",
 		"email.invalid.heading": "無効または期限切れのトークン",
@@ -294,13 +294,13 @@ var defaultTranslations = Translations{
 		"error.details.title":          "エラーの詳細",
 
 		// Theme and Language
-		"ui.theme":         "テーマ",
-		"ui.theme.auto":    "🌗 Auto",
-		"ui.theme.light":   "☀️ Light",
-		"ui.theme.dark":    "🌙 Dark",
-		"ui.language":      "言語",
-		"ui.language.en":   "English",
-		"ui.language.ja":   "日本語",
+		"ui.theme":       "テーマ",
+		"ui.theme.auto":  "🌗 Auto",
+		"ui.theme.light": "☀️ Light",
+		"ui.theme.dark":  "🌙 Dark",
+		"ui.language":    "言語",
+		"ui.language.en": "English",
+		"ui.language.ja": "日本語",
 
 		// Email
 		"email.login.subject":      "ログインリンク - %s",

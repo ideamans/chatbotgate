@@ -69,6 +69,7 @@ func (m *Manager) GetAuthURL(providerName, state string) (string, error) {
 //   - A full base URL (e.g., "http://localhost:4182")
 //   - A host with port (e.g., "localhost:4182")
 //   - Just a host (e.g., "example.com")
+//
 // Deprecated: Use GetAuthURLWithRedirect instead which returns both auth URL and redirect URL
 func (m *Manager) GetAuthURLWithHost(providerName, state, hostOrBaseURL, authPathPrefix string) (string, error) {
 	authURL, _, err := m.GetAuthURLWithRedirect(providerName, state, hostOrBaseURL, authPathPrefix)
@@ -81,6 +82,7 @@ func (m *Manager) GetAuthURLWithHost(providerName, state, hostOrBaseURL, authPat
 //   - A full base URL (e.g., "http://localhost:4182")
 //   - A host with port (e.g., "localhost:4182")
 //   - Just a host (e.g., "example.com")
+//
 // Returns: (authURL, redirectURL, error)
 func (m *Manager) GetAuthURLWithRedirect(providerName, state, hostOrBaseURL, authPathPrefix string) (string, string, error) {
 	provider, err := m.GetProvider(providerName)

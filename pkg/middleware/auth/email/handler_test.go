@@ -13,8 +13,8 @@ import (
 
 // MockAuthzChecker is a mock authorization checker
 type MockAuthzChecker struct {
-	allowed        bool
-	requiresEmail  bool
+	allowed       bool
+	requiresEmail bool
 }
 
 func (m *MockAuthzChecker) RequiresEmail() bool {
@@ -258,7 +258,9 @@ func TestHandler_VerifyToken(t *testing.T) {
 	email := "user@example.com"
 
 	// Send login link
-	handler.SendLoginLink(email, i18n.English)
+	if err := handler.SendLoginLink(email, i18n.English); err != nil {
+		t.Fatalf("SendLoginLink() error = %v", err)
+	}
 
 	// Extract token from HTML email body
 	call := mockSender.HTMLCalls[0]

@@ -62,11 +62,11 @@ func TestDifyCSSContent(t *testing.T) {
 
 	// Check for key Dify CSS features based on dify.css content
 	expectedPatterns := []string{
-		"body",         // Should style body element
-		"background",   // Should have background styling
-		"in-iframe",    // Should have in-iframe class references
-		"@media",       // Should have media queries for responsive design
-		"auth-card",    // Should style auth-card element
+		"body",       // Should style body element
+		"background", // Should have background styling
+		"in-iframe",  // Should have in-iframe class references
+		"@media",     // Should have media queries for responsive design
+		"auth-card",  // Should style auth-card element
 	}
 
 	for _, pattern := range expectedPatterns {

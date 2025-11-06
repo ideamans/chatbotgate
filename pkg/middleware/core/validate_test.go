@@ -468,7 +468,7 @@ func TestValidateConfig_MultipleErrors(t *testing.T) {
 		},
 		Session: config.SessionConfig{
 			CookieName:   "_oauth2_proxy",
-			CookieSecret: "short", // Too short
+			CookieSecret: "short",   // Too short
 			CookieExpire: "invalid", // Invalid format
 		},
 		OAuth2: config.OAuth2Config{

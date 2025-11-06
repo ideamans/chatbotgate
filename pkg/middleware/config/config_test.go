@@ -75,7 +75,7 @@ func TestConfig_Validate(t *testing.T) {
 			wantErr: ErrCookieSecretTooShort,
 		},
 		{
-			name: "no available providers (all disabled)",
+			name: "no auth method (OAuth2 disabled, email disabled)",
 			config: &Config{
 				Service: ServiceConfig{
 					Name: "Test",
@@ -89,8 +89,65 @@ func TestConfig_Validate(t *testing.T) {
 						{Disabled: true},
 					},
 				},
+				EmailAuth: EmailAuthConfig{
+					Enabled: false,
+				},
 			},
-			wantErr: ErrNoEnabledProviders,
+			wantErr: ErrNoAuthMethod,
+		},
+		{
+			name: "valid with only email auth (OAuth2 disabled)",
+			config: &Config{
+				Service: ServiceConfig{
+					Name:        "Test Service",
+					Description: "Test Description",
+				},
+				Server: ServerConfig{
+					AuthPathPrefix: "/_auth",
+				},
+				Session: SessionConfig{
+					CookieSecret: "this-is-a-secret-key-with-32-characters",
+				},
+				OAuth2: OAuth2Config{
+					Providers: []OAuth2Provider{
+						{Disabled: true},
+					},
+				},
+				EmailAuth: EmailAuthConfig{
+					Enabled: true,
+				},
+			},
+			wantErr: nil,
+		},
+		{
+			name: "valid with only OAuth2 (email disabled)",
+			config: &Config{
+				Service: ServiceConfig{
+					Name:        "Test Service",
+					Description: "Test Description",
+				},
+				Server: ServerConfig{
+					AuthPathPrefix: "/_auth",
+				},
+				Session: SessionConfig{
+					CookieSecret: "this-is-a-secret-key-with-32-characters",
+				},
+				OAuth2: OAuth2Config{
+					Providers: []OAuth2Provider{
+						{
+							Name:         "google",
+							DisplayName:  "Google",
+							ClientID:     "test-client-id",
+							ClientSecret: "test-client-secret",
+							Disabled:     false,
+						},
+					},
+				},
+				EmailAuth: EmailAuthConfig{
+					Enabled: false,
+				},
+			},
+			wantErr: nil,
 		},
 	}
 

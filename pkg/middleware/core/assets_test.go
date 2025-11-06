@@ -319,3 +319,154 @@ func TestMiddleware_DifyCSSRoute_CustomPrefix(t *testing.T) {
 		t.Errorf("Expected Content-Type 'text/css; charset=utf-8', got '%s'", contentType)
 	}
 }
+
+// TestBuildAuthHeader tests the buildAuthHeader method with different configurations
+func TestBuildAuthHeader(t *testing.T) {
+	tests := []struct {
+		name        string
+		serviceName string
+		iconURL     string
+		logoURL     string
+		logoWidth   string
+		wantLogoImg bool
+		wantIconImg bool
+		wantTitle   bool
+		wantWidth   string
+	}{
+		{
+			name:        "title only (no icon, no logo)",
+			serviceName: "Test Service",
+			iconURL:     "",
+			logoURL:     "",
+			logoWidth:   "",
+			wantLogoImg: false,
+			wantIconImg: false,
+			wantTitle:   true,
+			wantWidth:   "",
+		},
+		{
+			name:        "icon and title (no logo)",
+			serviceName: "Test Service",
+			iconURL:     "https://example.com/icon.svg",
+			logoURL:     "",
+			logoWidth:   "",
+			wantLogoImg: false,
+			wantIconImg: true,
+			wantTitle:   true,
+			wantWidth:   "",
+		},
+		{
+			name:        "logo and title (no icon)",
+			serviceName: "Test Service",
+			iconURL:     "",
+			logoURL:     "https://example.com/logo.svg",
+			logoWidth:   "",
+			wantLogoImg: true,
+			wantIconImg: false,
+			wantTitle:   true,
+			wantWidth:   "200px", // default
+		},
+		{
+			name:        "logo with custom width (icon ignored)",
+			serviceName: "Test Service",
+			iconURL:     "https://example.com/icon.svg", // This should be ignored when logo is present
+			logoURL:     "https://example.com/logo.svg",
+			logoWidth:   "150px",
+			wantLogoImg: true,
+			wantIconImg: false, // Icon should not be rendered when logo is present
+			wantTitle:   true,
+			wantWidth:   "150px",
+		},
+		{
+			name:        "logo with default width (icon ignored)",
+			serviceName: "Test Service",
+			iconURL:     "https://example.com/icon.svg", // This should be ignored when logo is present
+			logoURL:     "https://example.com/logo.svg",
+			logoWidth:   "",
+			wantLogoImg: true,
+			wantIconImg: false, // Icon should not be rendered when logo is present
+			wantTitle:   true,
+			wantWidth:   "200px", // default
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := &config.Config{
+				Service: config.ServiceConfig{
+					Name:      tt.serviceName,
+					IconURL:   tt.iconURL,
+					LogoURL:   tt.logoURL,
+					LogoWidth: tt.logoWidth,
+				},
+				Server: config.ServerConfig{
+					AuthPathPrefix: "/_auth",
+				},
+				Session: config.SessionConfig{
+					CookieName: "_test",
+				},
+			}
+
+			sessionStore := func() kvs.Store { store, _ := kvs.NewMemoryStore("test", kvs.MemoryConfig{}); return store }()
+			oauthManager := oauth2.NewManager()
+			authzChecker := authz.NewEmailChecker(cfg.Authorization)
+			translator := i18n.NewTranslator()
+			logger := logging.NewTestLogger()
+
+			middleware := New(
+				cfg,
+				sessionStore,
+				oauthManager,
+				nil,
+				authzChecker,
+				nil,
+				nil,
+				translator,
+				logger,
+			)
+
+			result := middleware.buildAuthHeader("/_auth")
+
+			// Check logo image
+			if tt.wantLogoImg {
+				if !strings.Contains(result, `<img src="`+tt.logoURL+`"`) {
+					t.Errorf("Expected logo image with src '%s', got: %s", tt.logoURL, result)
+				}
+				if !strings.Contains(result, `class="auth-logo"`) {
+					t.Errorf("Expected auth-logo class, got: %s", result)
+				}
+				if !strings.Contains(result, `--auth-logo-width: `+tt.wantWidth) {
+					t.Errorf("Expected logo width '%s', got: %s", tt.wantWidth, result)
+				}
+			} else {
+				if strings.Contains(result, `class="auth-logo"`) {
+					t.Errorf("Unexpected logo image in result: %s", result)
+				}
+			}
+
+			// Check icon image
+			if tt.wantIconImg {
+				if !strings.Contains(result, `<img src="`+tt.iconURL+`"`) {
+					t.Errorf("Expected icon image with src '%s', got: %s", tt.iconURL, result)
+				}
+				if !strings.Contains(result, `class="auth-icon"`) {
+					t.Errorf("Expected auth-icon class, got: %s", result)
+				}
+				if !strings.Contains(result, `class="auth-header"`) {
+					t.Errorf("Expected auth-header wrapper div, got: %s", result)
+				}
+			} else {
+				if strings.Contains(result, `class="auth-icon"`) {
+					t.Errorf("Unexpected icon image in result: %s", result)
+				}
+			}
+
+			// Check title
+			if tt.wantTitle {
+				if !strings.Contains(result, `<h1 class="auth-title">`+tt.serviceName+`</h1>`) {
+					t.Errorf("Expected title '%s', got: %s", tt.serviceName, result)
+				}
+			}
+		})
+	}
+}

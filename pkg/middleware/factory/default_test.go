@@ -165,7 +165,7 @@ func TestDefaultFactory_CreateTokenKVS(t *testing.T) {
 	if kvsStore == nil {
 		t.Fatal("CreateTokenKVS returned nil")
 	}
-	defer kvsStore.Close()
+	defer func() { _ = kvsStore.Close() }()
 
 	// Test basic KVS operations with context
 	ctx := context.Background()
@@ -191,7 +191,7 @@ func TestDefaultFactory_CreateRateLimitKVS(t *testing.T) {
 	if kvsStore == nil {
 		t.Fatal("CreateRateLimitKVS returned nil")
 	}
-	defer kvsStore.Close()
+	defer func() { _ = kvsStore.Close() }()
 
 	// Test basic KVS operations
 	ctx := context.Background()
@@ -219,9 +219,9 @@ func TestDefaultFactory_CreateKVSStores(t *testing.T) {
 	if err != nil {
 		t.Fatalf("CreateKVSStores failed: %v", err)
 	}
-	defer sessionKVS.Close()
-	defer tokenKVS.Close()
-	defer rateLimitKVS.Close()
+	defer func() { _ = sessionKVS.Close() }()
+	defer func() { _ = tokenKVS.Close() }()
+	defer func() { _ = rateLimitKVS.Close() }()
 
 	if sessionKVS == nil {
 		t.Error("Expected sessionKVS to be non-nil")
@@ -260,7 +260,7 @@ func TestDefaultFactory_CreateSessionStore(t *testing.T) {
 	if err != nil {
 		t.Fatalf("CreateKVSStores failed: %v", err)
 	}
-	defer sessionKVS.Close()
+	defer func() { _ = sessionKVS.Close() }()
 
 	sessionStore := factory.CreateSessionStore(sessionKVS)
 	if sessionStore == nil {
@@ -291,7 +291,7 @@ func TestDefaultFactory_CreateMiddleware(t *testing.T) {
 	if err != nil {
 		t.Fatalf("CreateKVSStores failed: %v", err)
 	}
-	defer sessionKVS.Close()
+	defer func() { _ = sessionKVS.Close() }()
 
 	sessionStore := factory.CreateSessionStore(sessionKVS)
 

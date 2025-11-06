@@ -18,10 +18,10 @@ type Config struct {
 	EmailAuth     EmailAuthConfig     `yaml:"email_auth" json:"email_auth"`
 	Authorization AuthorizationConfig `yaml:"authorization" json:"authorization"`
 	Logging       LoggingConfig       `yaml:"logging" json:"logging"`
-	KVS           KVSConfig           `yaml:"kvs" json:"kvs"`         // KVS storage configuration
+	KVS           KVSConfig           `yaml:"kvs" json:"kvs"`               // KVS storage configuration
 	Forwarding    ForwardingConfig    `yaml:"forwarding" json:"forwarding"` // User info forwarding configuration
-	Rules         rules.Config        `yaml:"rules" json:"rules"`         // Access control rules configuration
-	Assets        AssetsConfig        `yaml:"assets" json:"assets"`       // Assets configuration
+	Rules         rules.Config        `yaml:"rules" json:"rules"`           // Access control rules configuration
+	Assets        AssetsConfig        `yaml:"assets" json:"assets"`         // Assets configuration
 }
 
 // ServiceConfig contains service-level settings
@@ -30,7 +30,7 @@ type ServiceConfig struct {
 	Description string `yaml:"description" json:"description"`
 	IconURL     string `yaml:"icon_url" json:"icon_url"`     // Icon URL for auth header (48px icon)
 	LogoURL     string `yaml:"logo_url" json:"logo_url"`     // Logo URL for auth header (larger logo image)
-	LogoWidth   string `yaml:"logo_width" json:"logo_width"`   // Logo width (e.g., "100px", "150px", "200px", default: "200px")
+	LogoWidth   string `yaml:"logo_width" json:"logo_width"` // Logo width (e.g., "100px", "150px", "200px", default: "200px")
 }
 
 // ServerConfig contains authentication server settings
@@ -69,22 +69,22 @@ func (s ServerConfig) GetCallbackURL(host string, port int) string {
 
 // SessionConfig contains session management settings
 type SessionConfig struct {
-	CookieName     string            `yaml:"cookie_name" json:"cookie_name"`
-	CookieSecret   string            `yaml:"cookie_secret" json:"cookie_secret"`
-	CookieExpire   string            `yaml:"cookie_expire" json:"cookie_expire"`
-	CookieSecure   bool              `yaml:"cookie_secure" json:"cookie_secure"`
-	CookieHTTPOnly bool              `yaml:"cookie_httponly" json:"cookie_httponly"`
-	CookieSameSite string            `yaml:"cookie_samesite" json:"cookie_samesite"`
-	StoreType      string            `yaml:"store_type" json:"store_type"` // "memory" or "redis" (default: "memory")
-	Redis          RedisSessionConfig `yaml:"redis" json:"redis"`      // Redis configuration (used when store_type is "redis")
+	CookieName     string             `yaml:"cookie_name" json:"cookie_name"`
+	CookieSecret   string             `yaml:"cookie_secret" json:"cookie_secret"`
+	CookieExpire   string             `yaml:"cookie_expire" json:"cookie_expire"`
+	CookieSecure   bool               `yaml:"cookie_secure" json:"cookie_secure"`
+	CookieHTTPOnly bool               `yaml:"cookie_httponly" json:"cookie_httponly"`
+	CookieSameSite string             `yaml:"cookie_samesite" json:"cookie_samesite"`
+	StoreType      string             `yaml:"store_type" json:"store_type"` // "memory" or "redis" (default: "memory")
+	Redis          RedisSessionConfig `yaml:"redis" json:"redis"`           // Redis configuration (used when store_type is "redis")
 }
 
 // RedisSessionConfig contains Redis session store settings
 type RedisSessionConfig struct {
-	Addr     string `yaml:"addr" json:"addr"`     // Redis server address (host:port)
+	Addr     string `yaml:"addr" json:"addr"`         // Redis server address (host:port)
 	Password string `yaml:"password" json:"password"` // Redis password (optional)
-	DB       int    `yaml:"db" json:"db"`       // Redis database number
-	Prefix   string `yaml:"prefix" json:"prefix"`   // Key prefix for sessions (default: "session:")
+	DB       int    `yaml:"db" json:"db"`             // Redis database number
+	Prefix   string `yaml:"prefix" json:"prefix"`     // Key prefix for sessions (default: "session:")
 }
 
 // GetCookieExpireDuration returns the cookie expiration as a time.Duration
@@ -108,10 +108,10 @@ type OAuth2Provider struct {
 	IconURL      string `yaml:"icon_url" json:"icon_url"` // Optional custom icon URL (if not set, uses default icon based on provider type)
 
 	// Custom provider settings (only used when Type is "custom")
-	AuthURL            string `yaml:"auth_url" json:"auth_url"`              // Custom authorization endpoint
-	TokenURL           string `yaml:"token_url" json:"token_url"`             // Custom token endpoint
-	UserInfoURL        string `yaml:"userinfo_url" json:"userinfo_url"`          // Custom userinfo endpoint
-	JWKSURL            string `yaml:"jwks_url" json:"jwks_url"`              // Optional OIDC JWKS URL
+	AuthURL            string `yaml:"auth_url" json:"auth_url"`                         // Custom authorization endpoint
+	TokenURL           string `yaml:"token_url" json:"token_url"`                       // Custom token endpoint
+	UserInfoURL        string `yaml:"userinfo_url" json:"userinfo_url"`                 // Custom userinfo endpoint
+	JWKSURL            string `yaml:"jwks_url" json:"jwks_url"`                         // Optional OIDC JWKS URL
 	InsecureSkipVerify bool   `yaml:"insecure_skip_verify" json:"insecure_skip_verify"` // Allow HTTP for testing (default: false)
 
 	// OAuth2 scopes to request
@@ -130,14 +130,14 @@ type EmailAuthConfig struct {
 
 // SMTPConfig contains SMTP server settings
 type SMTPConfig struct {
-	Host      string `yaml:"host" json:"host"`
-	Port      int    `yaml:"port" json:"port"`
-	Username  string `yaml:"username" json:"username"`
-	Password  string `yaml:"password" json:"password"`
-	From      string `yaml:"from" json:"from"`
-	FromName  string `yaml:"from_name" json:"from_name"`
-	TLS       bool   `yaml:"tls" json:"tls"`
-	StartTLS  bool   `yaml:"starttls" json:"starttls"`
+	Host     string `yaml:"host" json:"host"`
+	Port     int    `yaml:"port" json:"port"`
+	Username string `yaml:"username" json:"username"`
+	Password string `yaml:"password" json:"password"`
+	From     string `yaml:"from" json:"from"`
+	FromName string `yaml:"from_name" json:"from_name"`
+	TLS      bool   `yaml:"tls" json:"tls"`
+	StartTLS bool   `yaml:"starttls" json:"starttls"`
 }
 
 // SendGridConfig contains SendGrid API settings
@@ -233,16 +233,19 @@ func (c *Config) Validate() error {
 		verr.Add(ErrCookieSecretTooShort)
 	}
 
-	// Check at least one OAuth2 provider is available (not disabled)
-	hasAvailableProvider := false
+	// Check at least one authentication method is available (OAuth2 or email)
+	hasAvailableOAuth2 := false
 	for _, p := range c.OAuth2.Providers {
 		if !p.Disabled {
-			hasAvailableProvider = true
+			hasAvailableOAuth2 = true
 			break
 		}
 	}
-	if !hasAvailableProvider {
-		verr.Add(ErrNoEnabledProviders)
+	hasEmailAuth := c.EmailAuth.Enabled
+
+	// At least one authentication method must be enabled
+	if !hasAvailableOAuth2 && !hasEmailAuth {
+		verr.Add(ErrNoAuthMethod)
 	}
 
 	// Validate forwarding configuration
@@ -310,18 +313,11 @@ func (c *Config) validateForwarding() error {
 		}
 
 		// Validate filters
+		// Note: base64 filter is auto-added by the system when needed, explicit specification is allowed but redundant
 		validFilters := map[string]bool{"encrypt": true, "zip": true, "base64": true}
 		for _, filter := range field.Filters {
 			if !validFilters[filter] {
 				verr.Add(fmt.Errorf("forwarding.fields[%d]: invalid filter '%s' (valid: encrypt, zip, base64)", i, filter))
-			}
-		}
-
-		// Warn if base64 is explicitly specified (it's auto-added)
-		for _, filter := range field.Filters {
-			if filter == "base64" {
-				// Note: This is just a warning, not an error
-				// In a production system, you might want to log this
 			}
 		}
 	}
@@ -337,10 +333,10 @@ type ForwardingConfig struct {
 
 // ForwardingField defines how to forward a single field
 type ForwardingField struct {
-	Path    string        `yaml:"path" json:"path"`               // Dot-separated path to field (e.g., "email", "userinfo.avatar_url", "." for entire object)
-	Query   string        `yaml:"query,omitempty" json:"query,omitempty"`   // Query parameter name for login redirect (optional)
-	Header  string        `yaml:"header,omitempty" json:"header,omitempty"` // HTTP header name for all requests (optional)
-	Filters FilterList    `yaml:"filters,omitempty" json:"filters,omitempty"` // Filters to apply (e.g., "encrypt,zip" or ["encrypt", "zip"])
+	Path    string     `yaml:"path" json:"path"`                           // Dot-separated path to field (e.g., "email", "userinfo.avatar_url", "." for entire object)
+	Query   string     `yaml:"query,omitempty" json:"query,omitempty"`     // Query parameter name for login redirect (optional)
+	Header  string     `yaml:"header,omitempty" json:"header,omitempty"`   // HTTP header name for all requests (optional)
+	Filters FilterList `yaml:"filters,omitempty" json:"filters,omitempty"` // Filters to apply (e.g., "encrypt,zip" or ["encrypt", "zip"])
 }
 
 // FilterList represents a list of filters (can be comma-separated string or array)
@@ -381,7 +377,7 @@ func (f *FilterList) UnmarshalYAML(unmarshal func(interface{}) error) error {
 
 // EncryptionConfig contains encryption settings
 type EncryptionConfig struct {
-	Key       string `yaml:"key" json:"key"`             // Encryption key (required if encrypt filter is used)
+	Key       string `yaml:"key" json:"key"`                                 // Encryption key (required if encrypt filter is used)
 	Algorithm string `yaml:"algorithm,omitempty" json:"algorithm,omitempty"` // Encryption algorithm (default: "aes-256-gcm")
 }
 

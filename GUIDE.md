@@ -21,6 +21,14 @@ Complete guide for deploying, configuring, and operating ChatbotGate as an authe
   - [Logging](#logging)
 - [Running the Server](#running-the-server)
 - [Authentication Flow](#authentication-flow)
+- [Production Deployment](#production-deployment)
+  - [Docker Hub Deployment](#docker-hub-deployment)
+  - [Production Configuration Best Practices](#production-configuration-best-practices)
+  - [Reverse Proxy Setup (Nginx)](#reverse-proxy-setup-nginx)
+  - [Kubernetes Deployment](#kubernetes-deployment)
+  - [Monitoring & Observability](#monitoring--observability)
+  - [Scaling Considerations](#scaling-considerations)
+  - [CI/CD Integration](#cicd-integration)
 - [Advanced Topics](#advanced-topics)
 - [Troubleshooting](#troubleshooting)
 
@@ -65,13 +73,86 @@ mv chatbotgate-linux-amd64 /usr/local/bin/chatbotgate
 
 ### Using Docker
 
+ChatbotGate provides official Docker images on [Docker Hub](https://hub.docker.com/r/ideamans/chatbotgate) with multi-architecture support (amd64/arm64).
+
+#### Quick Start with Docker
+
 ```bash
-# Pull the image
+# Pull the latest version
 docker pull ideamans/chatbotgate:latest
 
 # Run with config file
-docker run -p 4180:4180 \
+docker run -d \
+  --name chatbotgate \
+  -p 4180:4180 \
   -v $(pwd)/config.yaml:/app/config/config.yaml:ro \
+  ideamans/chatbotgate:latest
+
+# View logs
+docker logs -f chatbotgate
+```
+
+#### Using Docker Compose
+
+Create a `docker-compose.yml`:
+
+```yaml
+version: '3.8'
+
+services:
+  chatbotgate:
+    image: ideamans/chatbotgate:latest
+    container_name: chatbotgate
+    restart: unless-stopped
+    ports:
+      - "4180:4180"
+    volumes:
+      - ./config.yaml:/app/config/config.yaml:ro
+    environment:
+      - TZ=Asia/Tokyo
+    # Optional: use external network to connect to upstream
+    # networks:
+    #   - myapp-network
+
+  # Optional: Redis for production session storage
+  redis:
+    image: redis:7-alpine
+    container_name: chatbotgate-redis
+    restart: unless-stopped
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes
+
+volumes:
+  redis-data:
+```
+
+Start the services:
+
+```bash
+docker-compose up -d
+docker-compose logs -f chatbotgate
+```
+
+#### Available Tags
+
+- `latest` - Latest stable release (multi-arch)
+- `v1.0.0` - Specific version (multi-arch)
+- `v1.0.0-amd64` - AMD64 architecture only
+- `v1.0.0-arm64` - ARM64 architecture only
+- `sha-abc1234` - Specific commit (for testing)
+
+#### Configuration with Environment Variables
+
+While YAML configuration is recommended, you can also use environment variables:
+
+```bash
+docker run -d \
+  --name chatbotgate \
+  -p 4180:4180 \
+  -e CHATBOTGATE_SERVER_PORT=4180 \
+  -e CHATBOTGATE_PROXY_UPSTREAM=http://myapp:8080 \
+  -e CHATBOTGATE_SESSION_COOKIE_SECRET=your-secret-key \
   ideamans/chatbotgate:latest
 ```
 
@@ -399,6 +480,20 @@ email_auth:
 3. Verify sender email address or domain
 4. Copy API key to config
 
+**User Information Fields:**
+
+Email authentication provides the same standardized fields as OAuth2 for consistent forwarding:
+
+- `email`: User email address
+- `username`: Email local part (before @)
+- `provider`: "email"
+- `_email`: User email address (standardized field)
+- `_username`: Email local part (standardized field)
+- `_avatar_url`: Empty string (standardized field)
+- `userpart`: Email local part (same as `_username`)
+
+These fields can be used in [User Information Forwarding](#user-information-forwarding) configuration.
+
 ### Authorization
 
 Control who can access your application:
@@ -592,29 +687,38 @@ forwarding:
     - path: provider
       header: X-Auth-Provider
 
-    # Example 8: Standardized user fields (common across all OAuth2 providers)
+    # Example 8: Standardized user fields (common across all OAuth2 providers and email auth)
     - path: _email
       header: X-User-Email
     - path: _username
       header: X-User-Name
     - path: _avatar_url
       header: X-User-Avatar
+
+    # Example 9: Email auth userpart (same as _username for email auth)
+    - path: userpart
+      header: X-User-Part
 ```
 
 **Available User Fields:**
 - `email`: User email address
-- `username`: Username (provider-dependent, empty for email auth)
+- `username`: Username (provider-dependent; for email auth: email local part before @)
 - `provider`: Provider name (google, github, microsoft, email)
 
-**Standardized OAuth2 Fields** (common across all providers):
+**Standardized Fields** (common across all OAuth2 providers and email auth):
 - `_email`: User email address (same as `email`)
-- `_username`: User display name (GitHub: name → login fallback, Microsoft: displayName, Google: name)
-- `_avatar_url`: User profile picture URL (Google, GitHub supported; empty for Microsoft and email auth)
+- `_username`: User display name
+  - OAuth2 providers: GitHub (name → login fallback), Microsoft (displayName), Google (name)
+  - Email auth: email local part (before @)
+- `_avatar_url`: User profile picture URL
+  - OAuth2 providers: Google and GitHub supported; empty for Microsoft
+  - Email auth: empty
 
 **Provider-Specific Fields** (under `extra`):
 - Google: `email`, `name`, `picture`, `verified_email`, `given_name`, `family_name`
 - GitHub: `email`, `name`, `login`, `avatar_url`, plus other public profile data
 - Microsoft: `email`, `displayName`, `userPrincipalName`, `preferredUsername`
+- Email auth: `userpart` (email local part before @, same as `_username`)
 
 **OAuth2 Tokens** (under `extra.secrets`):
 - `extra.secrets.access_token`: OAuth2 access token
@@ -947,6 +1051,292 @@ session:
 - Sessions expire after `cookie_expire` duration (default: 7 days)
 - Sliding expiration: Each request refreshes the expiration
 - Logout: Clears session and redirects to login
+
+## Production Deployment
+
+### Docker Hub Deployment
+
+ChatbotGate provides official Docker images on [Docker Hub](https://hub.docker.com/r/ideamans/chatbotgate) with automatic builds on every release.
+
+#### Production Docker Compose Example
+
+```yaml
+version: '3.8'
+
+services:
+  chatbotgate:
+    image: ideamans/chatbotgate:v1.0.0  # Pin to specific version
+    container_name: chatbotgate
+    restart: unless-stopped
+    ports:
+      - "4180:4180"
+    volumes:
+      - ./config.yaml:/app/config/config.yaml:ro
+      - ./leveldb:/data/leveldb  # For LevelDB persistence
+    environment:
+      - TZ=Asia/Tokyo
+    depends_on:
+      - redis
+    networks:
+      - app-network
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+
+  redis:
+    image: redis:7-alpine
+    container_name: chatbotgate-redis
+    restart: unless-stopped
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    networks:
+      - app-network
+
+  # Your upstream application
+  upstream-app:
+    image: your-app:latest
+    container_name: upstream-app
+    restart: unless-stopped
+    networks:
+      - app-network
+
+volumes:
+  redis-data:
+
+networks:
+  app-network:
+    driver: bridge
+```
+
+#### Production Configuration Best Practices
+
+1. **Pin Docker Image Version**
+   ```yaml
+   image: ideamans/chatbotgate:v1.0.0  # Not :latest
+   ```
+
+2. **Use Redis for Session Storage**
+   ```yaml
+   kvs:
+     default:
+       type: "redis"
+       redis:
+         addr: "redis:6379"
+         pool_size: 20
+   ```
+
+3. **Enable HTTPS with Secure Cookies**
+   ```yaml
+   session:
+     cookie_secure: true
+     cookie_httponly: true
+     cookie_samesite: "strict"
+   ```
+
+4. **Use Strong Secrets**
+   ```bash
+   # Generate random secret (32+ characters)
+   openssl rand -base64 32
+   ```
+
+5. **Configure Resource Limits**
+   - CPU: 0.5-1.0 cores per instance
+   - Memory: 256-512 MB per instance
+   - Redis: 256-512 MB depending on session count
+
+6. **Enable Structured Logging**
+   ```yaml
+   logging:
+     level: "info"  # Use "debug" only for troubleshooting
+     color: false   # Better for log aggregators
+   ```
+
+7. **Set Up Health Checks**
+   ```yaml
+   healthcheck:
+     test: ["CMD", "wget", "--spider", "-q", "http://localhost:4180/health"]
+     interval: 30s
+     timeout: 10s
+     retries: 3
+     start_period: 10s
+   ```
+
+#### Reverse Proxy Setup (Nginx)
+
+Place ChatbotGate behind Nginx for SSL termination:
+
+```nginx
+upstream chatbotgate {
+    server localhost:4180;
+}
+
+server {
+    listen 443 ssl http2;
+    server_name app.example.com;
+
+    ssl_certificate /etc/ssl/certs/example.com.crt;
+    ssl_certificate_key /etc/ssl/private/example.com.key;
+
+    # SSL best practices
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers HIGH:!aNULL:!MD5;
+    ssl_prefer_server_ciphers on;
+
+    location / {
+        proxy_pass http://chatbotgate;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        # WebSocket support
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+
+        # Timeouts
+        proxy_connect_timeout 60s;
+        proxy_send_timeout 60s;
+        proxy_read_timeout 60s;
+    }
+}
+
+# Redirect HTTP to HTTPS
+server {
+    listen 80;
+    server_name app.example.com;
+    return 301 https://$server_name$request_uri;
+}
+```
+
+#### Kubernetes Deployment
+
+Example Kubernetes manifests:
+
+```yaml
+# deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: chatbotgate
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: chatbotgate
+  template:
+    metadata:
+      labels:
+        app: chatbotgate
+    spec:
+      containers:
+      - name: chatbotgate
+        image: ideamans/chatbotgate:v1.0.0
+        ports:
+        - containerPort: 4180
+        volumeMounts:
+        - name: config
+          mountPath: /app/config
+          readOnly: true
+        resources:
+          limits:
+            cpu: "1"
+            memory: "512Mi"
+          requests:
+            cpu: "500m"
+            memory: "256Mi"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 4180
+          initialDelaySeconds: 10
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 4180
+          initialDelaySeconds: 5
+          periodSeconds: 10
+      volumes:
+      - name: config
+        configMap:
+          name: chatbotgate-config
+---
+# service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: chatbotgate
+spec:
+  selector:
+    app: chatbotgate
+  ports:
+  - port: 4180
+    targetPort: 4180
+  type: ClusterIP
+```
+
+#### Monitoring & Observability
+
+1. **Health Endpoint**
+   ```bash
+   curl http://localhost:4180/health
+   ```
+
+2. **Structured Logs**
+   - Use JSON format for log aggregators (Datadog, CloudWatch)
+   - Enable `module_level: "debug"` for specific packages
+
+3. **Metrics** (Future)
+   - Prometheus metrics endpoint planned
+   - Monitor session count, request latency, auth failures
+
+4. **Alerts**
+   - High error rate on authentication
+   - Redis connection failures
+   - Upstream unavailability
+
+#### Scaling Considerations
+
+1. **Horizontal Scaling**
+   - ChatbotGate is stateless (when using Redis)
+   - Scale to N replicas behind load balancer
+   - Use Redis for shared session storage
+
+2. **Session Affinity**
+   - Not required when using Redis
+   - Memory KVS requires sticky sessions
+
+3. **Performance**
+   - Each instance handles ~1000 req/s
+   - Memory: ~50MB base + ~1KB per session
+   - Redis: ~1KB per session
+
+#### CI/CD Integration
+
+ChatbotGate publishes Docker images automatically:
+
+- **On Release Tag** (`v*`): Builds and publishes to Docker Hub
+- **Multi-Arch**: AMD64 and ARM64 images
+- **Versioning**: Semantic versioning (v1.0.0, v1.0, v1)
+- **Latest**: Always points to latest stable release
+
+Example CI/CD pipeline (GitHub Actions):
+
+```yaml
+- name: Deploy ChatbotGate
+  run: |
+    docker pull ideamans/chatbotgate:v1.0.0
+    docker-compose up -d chatbotgate
+    docker-compose exec chatbotgate chatbotgate version
+```
 
 ## Advanced Topics
 

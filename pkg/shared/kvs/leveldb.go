@@ -45,7 +45,7 @@ func NewLevelDBStore(namespace string, cfg LevelDBConfig) (*LevelDBStore, error)
 	}
 
 	// Append namespace to create isolated directory
-	dbPath := basePath
+	var dbPath string
 	if namespace != "" {
 		// Sanitize namespace for use in directory name
 		sanitized := strings.Map(func(r rune) rune {
@@ -160,7 +160,7 @@ func (l *LevelDBStore) Get(ctx context.Context, key string) ([]byte, error) {
 	}
 	if expired {
 		// Delete expired key asynchronously
-		go l.Delete(context.Background(), key)
+		go func() { _ = l.Delete(context.Background(), key) }()
 		return nil, ErrNotFound
 	}
 

@@ -17,10 +17,10 @@ import (
 	"github.com/ideamans/chatbotgate/pkg/middleware/config"
 	"github.com/ideamans/chatbotgate/pkg/middleware/factory"
 	"github.com/ideamans/chatbotgate/pkg/middleware/forwarding"
+	"github.com/ideamans/chatbotgate/pkg/middleware/session"
+	"github.com/ideamans/chatbotgate/pkg/proxy/core"
 	"github.com/ideamans/chatbotgate/pkg/shared/kvs"
 	"github.com/ideamans/chatbotgate/pkg/shared/logging"
-	"github.com/ideamans/chatbotgate/pkg/proxy/core"
-	"github.com/ideamans/chatbotgate/pkg/middleware/session"
 )
 
 const (
@@ -31,8 +31,8 @@ const (
 
 // TestUserInfoResponse matches the backend server's response structure
 type TestUserInfoResponse struct {
-	QueryString *TestUserData `json:"querystring,omitempty"`
-	Header      *TestUserData `json:"header,omitempty"`
+	QueryString *TestUserData  `json:"querystring,omitempty"`
+	Header      *TestUserData  `json:"header,omitempty"`
 	RawHeaders  TestRawHeaders `json:"raw_headers,omitempty"`
 }
 
@@ -55,7 +55,7 @@ func TestForwarding_E2E(t *testing.T) {
 
 	// Start test backend server
 	backendCmd, backendURL := startTestBackend(t)
-	defer backendCmd.Process.Kill()
+	defer func() { _ = backendCmd.Process.Kill() }()
 
 	// Wait for backend to be ready
 	waitForServer(t, backendURL+"/health", 5*time.Second)
@@ -66,8 +66,6 @@ func TestForwarding_E2E(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to load config: %v", err)
 	}
-
-	backendURL = backendURL
 
 	// Create logger
 	logger := logging.NewSimpleLogger("e2e", logging.LevelDebug, true)
@@ -85,7 +83,7 @@ func TestForwarding_E2E(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create session KVS: %v", err)
 	}
-	defer sessionKVS.Close()
+	defer func() { _ = sessionKVS.Close() }()
 
 	// Create session store
 	sessionStore := sessionKVS
@@ -147,7 +145,7 @@ func TestForwarding_E2E(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Request failed: %v", err)
 		}
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		// Should get 200 OK (proxied to backend)
 		if resp.StatusCode != http.StatusOK {
@@ -222,7 +220,7 @@ func TestForwarding_E2E(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Request failed: %v", err)
 		}
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		// Parse response
 		var response TestUserInfoResponse
@@ -304,7 +302,7 @@ func TestForwarding_E2E(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Request failed: %v", err)
 		}
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		// Should get 200 OK (proxied to backend)
 		if resp.StatusCode != http.StatusOK {
@@ -351,7 +349,7 @@ func TestCustomFieldsForwarding_E2E_Encrypted(t *testing.T) {
 
 	// Start test backend server
 	backendCmd, backendURL := startTestBackend(t)
-	defer backendCmd.Process.Kill()
+	defer func() { _ = backendCmd.Process.Kill() }()
 
 	// Wait for backend to be ready
 	waitForServer(t, backendURL+"/health", 5*time.Second)
@@ -362,8 +360,6 @@ func TestCustomFieldsForwarding_E2E_Encrypted(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to load config: %v", err)
 	}
-
-	backendURL = backendURL
 
 	// Create logger
 	logger := logging.NewSimpleLogger("e2e", logging.LevelDebug, true)
@@ -381,7 +377,7 @@ func TestCustomFieldsForwarding_E2E_Encrypted(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create session KVS: %v", err)
 	}
-	defer sessionKVS.Close()
+	defer func() { _ = sessionKVS.Close() }()
 
 	// Create session store
 	sessionStore := sessionKVS
@@ -454,7 +450,7 @@ func TestCustomFieldsForwarding_E2E_Encrypted(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Request failed: %v", err)
 		}
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		// Should get 200 OK (proxied to backend)
 		if resp.StatusCode != http.StatusOK {
@@ -530,7 +526,7 @@ func waitForServer(t *testing.T, url string, timeout time.Duration) {
 		case <-ticker.C:
 			resp, err := http.Get(url)
 			if err == nil {
-				resp.Body.Close()
+				_ = resp.Body.Close()
 				if resp.StatusCode == http.StatusOK {
 					t.Logf("Server %s is ready", url)
 					return

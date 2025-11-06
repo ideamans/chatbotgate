@@ -8,9 +8,9 @@ import (
 
 	"github.com/ideamans/chatbotgate/pkg/middleware/authz"
 	"github.com/ideamans/chatbotgate/pkg/middleware/config"
+	"github.com/ideamans/chatbotgate/pkg/middleware/ratelimit"
 	"github.com/ideamans/chatbotgate/pkg/shared/i18n"
 	"github.com/ideamans/chatbotgate/pkg/shared/kvs"
-	"github.com/ideamans/chatbotgate/pkg/middleware/ratelimit"
 )
 
 // Handler manages email authentication

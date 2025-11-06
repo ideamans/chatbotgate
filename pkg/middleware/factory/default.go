@@ -317,7 +317,7 @@ func (f *DefaultFactory) CreateKVSStores(cfg *config.Config) (session kvs.Store,
 	if cfg.KVS.Token != nil {
 		token, err = kvs.New(*cfg.KVS.Token)
 		if err != nil {
-			session.Close() // Cleanup
+			_ = session.Close() // Cleanup
 			return nil, nil, nil, fmt.Errorf("failed to create token KVS: %w", err)
 		}
 		f.logger.Debug("Token KVS initialized (dedicated)", "type", cfg.KVS.Token.Type, "namespace", cfg.KVS.Token.Namespace)
@@ -326,7 +326,7 @@ func (f *DefaultFactory) CreateKVSStores(cfg *config.Config) (session kvs.Store,
 		tokenCfg.Namespace = cfg.KVS.Namespaces.Token
 		token, err = kvs.New(tokenCfg)
 		if err != nil {
-			session.Close() // Cleanup
+			_ = session.Close() // Cleanup
 			return nil, nil, nil, fmt.Errorf("failed to create token KVS: %w", err)
 		}
 		f.logger.Debug("Token KVS initialized (default)", "type", tokenCfg.Type, "namespace", tokenCfg.Namespace)
@@ -336,8 +336,8 @@ func (f *DefaultFactory) CreateKVSStores(cfg *config.Config) (session kvs.Store,
 	if cfg.KVS.RateLimit != nil {
 		rateLimit, err = kvs.New(*cfg.KVS.RateLimit)
 		if err != nil {
-			session.Close() // Cleanup
-			token.Close()
+			_ = session.Close() // Cleanup
+			_ = token.Close()
 			return nil, nil, nil, fmt.Errorf("failed to create rate limit KVS: %w", err)
 		}
 		f.logger.Debug("Rate limit KVS initialized (dedicated)", "type", cfg.KVS.RateLimit.Type, "namespace", cfg.KVS.RateLimit.Namespace)
@@ -346,8 +346,8 @@ func (f *DefaultFactory) CreateKVSStores(cfg *config.Config) (session kvs.Store,
 		rateLimitCfg.Namespace = cfg.KVS.Namespaces.RateLimit
 		rateLimit, err = kvs.New(rateLimitCfg)
 		if err != nil {
-			session.Close() // Cleanup
-			token.Close()
+			_ = session.Close() // Cleanup
+			_ = token.Close()
 			return nil, nil, nil, fmt.Errorf("failed to create rate limit KVS: %w", err)
 		}
 		f.logger.Debug("Rate limit KVS initialized (default)", "type", rateLimitCfg.Type, "namespace", rateLimitCfg.Namespace)

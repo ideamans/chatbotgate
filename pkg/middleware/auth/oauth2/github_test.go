@@ -215,7 +215,9 @@ func TestGitHubProvider_GetUserEmail(t *testing.T) {
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(tt.statusCode)
 				if tt.response != nil {
-					json.NewEncoder(w).Encode(tt.response)
+					if err := json.NewEncoder(w).Encode(tt.response); err != nil {
+						t.Fatalf("Failed to encode response: %v", err)
+					}
 				}
 			}))
 			defer server.Close()

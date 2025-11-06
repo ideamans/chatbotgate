@@ -43,7 +43,7 @@ func skipIfRedisUnavailable(t *testing.T) Store {
 // TestRedisNativeTTL tests that Redis uses native TTL support (no cleanup loop needed)
 func TestRedisNativeTTL(t *testing.T) {
 	store := skipIfRedisUnavailable(t)
-	defer store.Close()
+	defer func() { _ = store.Close() }()
 
 	ctx := context.Background()
 
@@ -72,7 +72,7 @@ func TestRedisNativeTTL(t *testing.T) {
 // TestRedisConnectionPooling tests that Redis uses connection pooling
 func TestRedisConnectionPooling(t *testing.T) {
 	store := skipIfRedisUnavailable(t)
-	defer store.Close()
+	defer func() { _ = store.Close() }()
 
 	redisStore, ok := store.(*RedisStore)
 	require.True(t, ok, "Should be RedisStore")
@@ -135,11 +135,11 @@ func TestRedisMultipleDatabase(t *testing.T) {
 		t.Skipf("Redis not available, skipping test: %v", err)
 		return
 	}
-	defer store1.Close()
+	defer func() { _ = store1.Close() }()
 
 	store2, err := New(config2)
 	require.NoError(t, err, "Should create second store")
-	defer store2.Close()
+	defer func() { _ = store2.Close() }()
 
 	ctx := context.Background()
 
@@ -198,11 +198,11 @@ func TestRedisNamespace(t *testing.T) {
 		t.Skipf("Redis not available, skipping test: %v", err)
 		return
 	}
-	defer store1.Close()
+	defer func() { _ = store1.Close() }()
 
 	store2, err := New(config2)
 	require.NoError(t, err, "Should create second store")
-	defer store2.Close()
+	defer func() { _ = store2.Close() }()
 
 	ctx := context.Background()
 
@@ -241,7 +241,7 @@ func TestRedisNamespace(t *testing.T) {
 // TestRedisConcurrentOperations tests concurrent operations on Redis store
 func TestRedisConcurrentOperations(t *testing.T) {
 	store := skipIfRedisUnavailable(t)
-	defer store.Close()
+	defer func() { _ = store.Close() }()
 
 	ctx := context.Background()
 	numGoroutines := 20
@@ -297,7 +297,7 @@ func TestRedisConcurrentOperations(t *testing.T) {
 // TestRedisLargeValue tests storing and retrieving large values
 func TestRedisLargeValue(t *testing.T) {
 	store := skipIfRedisUnavailable(t)
-	defer store.Close()
+	defer func() { _ = store.Close() }()
 
 	ctx := context.Background()
 
@@ -323,7 +323,7 @@ func TestRedisLargeValue(t *testing.T) {
 // TestRedisListPagination tests List with many keys
 func TestRedisListPagination(t *testing.T) {
 	store := skipIfRedisUnavailable(t)
-	defer store.Close()
+	defer func() { _ = store.Close() }()
 
 	ctx := context.Background()
 
@@ -349,7 +349,7 @@ func TestRedisListPagination(t *testing.T) {
 // TestRedisTTLPrecision tests TTL precision
 func TestRedisTTLPrecision(t *testing.T) {
 	store := skipIfRedisUnavailable(t)
-	defer store.Close()
+	defer func() { _ = store.Close() }()
 
 	ctx := context.Background()
 
@@ -381,7 +381,7 @@ func TestRedisTTLPrecision(t *testing.T) {
 // TestRedisEmptyValue tests storing and retrieving empty values
 func TestRedisEmptyValue(t *testing.T) {
 	store := skipIfRedisUnavailable(t)
-	defer store.Close()
+	defer func() { _ = store.Close() }()
 
 	ctx := context.Background()
 
