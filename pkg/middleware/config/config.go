@@ -233,16 +233,19 @@ func (c *Config) Validate() error {
 		verr.Add(ErrCookieSecretTooShort)
 	}
 
-	// Check at least one OAuth2 provider is available (not disabled)
-	hasAvailableProvider := false
+	// Check at least one authentication method is available (OAuth2 or email)
+	hasAvailableOAuth2 := false
 	for _, p := range c.OAuth2.Providers {
 		if !p.Disabled {
-			hasAvailableProvider = true
+			hasAvailableOAuth2 = true
 			break
 		}
 	}
-	if !hasAvailableProvider {
-		verr.Add(ErrNoEnabledProviders)
+	hasEmailAuth := c.EmailAuth.Enabled
+
+	// At least one authentication method must be enabled
+	if !hasAvailableOAuth2 && !hasEmailAuth {
+		verr.Add(ErrNoAuthMethod)
 	}
 
 	// Validate forwarding configuration

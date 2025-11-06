@@ -15,6 +15,9 @@ var (
 	// ErrNoEnabledProviders is returned when no OAuth2 providers are enabled
 	ErrNoEnabledProviders = errors.New("at least one OAuth2 provider must be enabled")
 
+	// ErrNoAuthMethod is returned when no authentication method is enabled (OAuth2 or email)
+	ErrNoAuthMethod = errors.New("at least one authentication method must be enabled (OAuth2 or email authentication)")
+
 	// ErrConfigFileNotFound is returned when config file is not found
 	ErrConfigFileNotFound = errors.New("configuration file not found")
 
