@@ -4,11 +4,13 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
 	stdoauth2 "golang.org/x/oauth2"
 
+	"github.com/ideamans/chatbotgate/pkg/middleware/auth/email"
 	"github.com/ideamans/chatbotgate/pkg/middleware/auth/oauth2"
 	"github.com/ideamans/chatbotgate/pkg/middleware/authz"
 	"github.com/ideamans/chatbotgate/pkg/middleware/config"
@@ -334,5 +336,128 @@ func TestMiddleware_Authorization_WithWhitelist(t *testing.T) {
 
 	if !nextCalled {
 		t.Error("Expected next handler to be called for authorized email")
+	}
+}
+
+// TestHandleLogin_DividerDisplay tests the login page divider (OR) display logic
+func TestHandleLogin_DividerDisplay(t *testing.T) {
+	tests := []struct {
+		name          string
+		hasOAuth2     bool
+		hasEmailAuth  bool
+		wantDivider   bool
+		wantOAuth2    bool
+		wantEmailAuth bool
+	}{
+		{
+			name:          "both OAuth2 and email auth",
+			hasOAuth2:     true,
+			hasEmailAuth:  true,
+			wantDivider:   true,
+			wantOAuth2:    true,
+			wantEmailAuth: true,
+		},
+		{
+			name:          "only OAuth2 (no email auth)",
+			hasOAuth2:     true,
+			hasEmailAuth:  false,
+			wantDivider:   false,
+			wantOAuth2:    true,
+			wantEmailAuth: false,
+		},
+		{
+			name:          "only email auth (no OAuth2)",
+			hasOAuth2:     false,
+			hasEmailAuth:  true,
+			wantDivider:   false,
+			wantOAuth2:    false,
+			wantEmailAuth: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := &config.Config{
+				Service: config.ServiceConfig{
+					Name: "Test Service",
+				},
+				Server: config.ServerConfig{
+					AuthPathPrefix: "/_auth",
+				},
+				Session: config.SessionConfig{
+					CookieName: "_test",
+				},
+				EmailAuth: config.EmailAuthConfig{
+					Enabled: tt.hasEmailAuth,
+				},
+			}
+
+			sessionStore := func() kvs.Store { store, _ := kvs.NewMemoryStore("test", kvs.MemoryConfig{}); return store }()
+			oauthManager := oauth2.NewManager()
+
+			// Add OAuth2 provider if needed
+			if tt.hasOAuth2 {
+				oauthManager.AddProvider(&mockProvider{
+					name:          "google",
+					emailToReturn: "test@example.com",
+				})
+			}
+
+			authzChecker := authz.NewEmailChecker(cfg.Authorization)
+			translator := i18n.NewTranslator()
+			logger := logging.NewTestLogger()
+
+			var emailHandler *email.Handler = nil
+			if tt.hasEmailAuth {
+				// For this test, we just need a non-nil value to indicate email auth is enabled
+				// The actual implementation doesn't matter for checking HTML output
+				// Since handleLogin only checks if emailHandler is nil, an empty struct is sufficient
+				emailHandler = &email.Handler{}
+			}
+
+			middleware := New(
+				cfg,
+				sessionStore,
+				oauthManager,
+				emailHandler,
+				authzChecker,
+				nil,
+				nil,
+				translator,
+				logger,
+			)
+
+			req := httptest.NewRequest("GET", "/_auth/login", nil)
+			w := httptest.NewRecorder()
+
+			middleware.handleLogin(w, req)
+
+			html := w.Body.String()
+
+			// Check OAuth2 provider buttons
+			if tt.wantOAuth2 {
+				if !strings.Contains(html, "provider-btn") || !strings.Contains(html, "oauth2/start/") {
+					t.Errorf("Expected OAuth2 provider buttons in HTML, but not found")
+				}
+			}
+
+			// Check divider (OR)
+			if tt.wantDivider {
+				if !strings.Contains(html, `class="auth-divider"`) {
+					t.Errorf("Expected divider in HTML when both OAuth2 and email auth are present, but not found")
+				}
+			} else {
+				if strings.Contains(html, `class="auth-divider"`) {
+					t.Errorf("Unexpected divider in HTML when only one auth method is present")
+				}
+			}
+
+			// Check email auth form
+			if tt.wantEmailAuth {
+				if !strings.Contains(html, `id="email-form"`) || !strings.Contains(html, `type="email"`) {
+					t.Errorf("Expected email auth form in HTML, but not found")
+				}
+			}
+		})
 	}
 }
