@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"html"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/ideamans/chatbotgate/pkg/middleware/assets"
@@ -714,6 +715,15 @@ func generateSessionID() (string, error) {
 	return base64.URLEncoding.EncodeToString(b), nil
 }
 
+// extractUserpart extracts the local part (before @) from an email address
+func extractUserpart(email string) string {
+	at := strings.Index(email, "@")
+	if at == -1 {
+		return email
+	}
+	return email[:at]
+}
+
 // handleEmailSend sends a login link to the provided email address
 func (m *Middleware) handleEmailSend(w http.ResponseWriter, r *http.Request) {
 	lang := i18n.DetectLanguage(r)
@@ -954,10 +964,20 @@ func (m *Middleware) handleEmailVerify(w http.ResponseWriter, r *http.Request) {
 		duration = 168 * time.Hour // Default 7 days
 	}
 
+	// Create Extra fields with standardized OAuth2-compatible fields
+	userpart := extractUserpart(email)
+	extra := make(map[string]interface{})
+	extra["_email"] = email
+	extra["_username"] = userpart
+	extra["_avatar_url"] = ""
+	extra["userpart"] = userpart
+
 	sess := &session.Session{
 		ID:            sessionID,
 		Email:         email,
+		Name:          userpart, // Set Name to userpart for consistency with forwarding
 		Provider:      "email",
+		Extra:         extra,
 		CreatedAt:     time.Now(),
 		ExpiresAt:     time.Now().Add(duration),
 		Authenticated: true,
@@ -990,9 +1010,9 @@ func (m *Middleware) handleEmailVerify(w http.ResponseWriter, r *http.Request) {
 	// Add user info to query string if forwarding is enabled
 	if m.forwarder != nil {
 		fwdUserInfo := &forwarding.UserInfo{
-			Username: "", // Email auth has no username (name)
+			Username: userpart,
 			Email:    email,
-			Extra:    make(map[string]any), // Email auth has no extra data
+			Extra:    extra,
 			Provider: "email",
 		}
 		if modifiedURL, err := m.forwarder.AddToQueryString(redirectURL, fwdUserInfo); err == nil {
@@ -1066,10 +1086,20 @@ func (m *Middleware) handleEmailVerifyOTP(w http.ResponseWriter, r *http.Request
 		duration = 168 * time.Hour // Default 7 days
 	}
 
+	// Create Extra fields with standardized OAuth2-compatible fields
+	userpart := extractUserpart(email)
+	extra := make(map[string]interface{})
+	extra["_email"] = email
+	extra["_username"] = userpart
+	extra["_avatar_url"] = ""
+	extra["userpart"] = userpart
+
 	sess := &session.Session{
 		ID:            sessionID,
 		Email:         email,
+		Name:          userpart, // Set Name to userpart for consistency with forwarding
 		Provider:      "email",
+		Extra:         extra,
 		CreatedAt:     time.Now(),
 		ExpiresAt:     time.Now().Add(duration),
 		Authenticated: true,
@@ -1101,9 +1131,9 @@ func (m *Middleware) handleEmailVerifyOTP(w http.ResponseWriter, r *http.Request
 	// Add user info to query string if forwarding is enabled
 	if m.forwarder != nil {
 		fwdUserInfo := &forwarding.UserInfo{
-			Username: "", // Email auth has no username (name)
+			Username: userpart,
 			Email:    email,
-			Extra:    make(map[string]any), // Email auth has no extra data
+			Extra:    extra,
 			Provider: "email",
 		}
 		if modifiedURL, err := m.forwarder.AddToQueryString(redirectURL, fwdUserInfo); err == nil {

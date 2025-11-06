@@ -480,6 +480,20 @@ email_auth:
 3. Verify sender email address or domain
 4. Copy API key to config
 
+**User Information Fields:**
+
+Email authentication provides the same standardized fields as OAuth2 for consistent forwarding:
+
+- `email`: User email address
+- `username`: Email local part (before @)
+- `provider`: "email"
+- `_email`: User email address (standardized field)
+- `_username`: Email local part (standardized field)
+- `_avatar_url`: Empty string (standardized field)
+- `userpart`: Email local part (same as `_username`)
+
+These fields can be used in [User Information Forwarding](#user-information-forwarding) configuration.
+
 ### Authorization
 
 Control who can access your application:
@@ -673,29 +687,38 @@ forwarding:
     - path: provider
       header: X-Auth-Provider
 
-    # Example 8: Standardized user fields (common across all OAuth2 providers)
+    # Example 8: Standardized user fields (common across all OAuth2 providers and email auth)
     - path: _email
       header: X-User-Email
     - path: _username
       header: X-User-Name
     - path: _avatar_url
       header: X-User-Avatar
+
+    # Example 9: Email auth userpart (same as _username for email auth)
+    - path: userpart
+      header: X-User-Part
 ```
 
 **Available User Fields:**
 - `email`: User email address
-- `username`: Username (provider-dependent, empty for email auth)
+- `username`: Username (provider-dependent; for email auth: email local part before @)
 - `provider`: Provider name (google, github, microsoft, email)
 
-**Standardized OAuth2 Fields** (common across all providers):
+**Standardized Fields** (common across all OAuth2 providers and email auth):
 - `_email`: User email address (same as `email`)
-- `_username`: User display name (GitHub: name → login fallback, Microsoft: displayName, Google: name)
-- `_avatar_url`: User profile picture URL (Google, GitHub supported; empty for Microsoft and email auth)
+- `_username`: User display name
+  - OAuth2 providers: GitHub (name → login fallback), Microsoft (displayName), Google (name)
+  - Email auth: email local part (before @)
+- `_avatar_url`: User profile picture URL
+  - OAuth2 providers: Google and GitHub supported; empty for Microsoft
+  - Email auth: empty
 
 **Provider-Specific Fields** (under `extra`):
 - Google: `email`, `name`, `picture`, `verified_email`, `given_name`, `family_name`
 - GitHub: `email`, `name`, `login`, `avatar_url`, plus other public profile data
 - Microsoft: `email`, `displayName`, `userPrincipalName`, `preferredUsername`
+- Email auth: `userpart` (email local part before @, same as `_username`)
 
 **OAuth2 Tokens** (under `extra.secrets`):
 - `extra.secrets.access_token`: OAuth2 access token

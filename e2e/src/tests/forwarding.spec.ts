@@ -128,8 +128,9 @@ test.describe('Email authentication forwarding', () => {
     await routeStubAuthRequests(page);
   });
 
-  test('Email authentication forwards only email (username is empty)', async ({ page }) => {
+  test('Email authentication forwards email and username (userpart)', async ({ page }) => {
     const emailAuthAddress = 'forwarding-email@example.com';
+    const expectedUsername = 'forwarding-email'; // Email local part (before @)
 
     // Start from home page on the forwarding proxy
     await page.goto(FORWARDING_BASE_URL + '/');
@@ -171,23 +172,23 @@ test.describe('Email authentication forwarding', () => {
     await expect(page.locator('[data-test="auth-provider"]')).toContainText('email');
     console.log('✓ Authentication Status Headers verified (email auth)');
 
-    // 2. Verify Forwarding Headers - username should be EMPTY for email auth
-    await expect(page.locator('[data-test="forwarding-header-username"]')).toContainText('(empty)');
+    // 2. Verify Forwarding Headers - username should be userpart (email local part) for email auth
+    await expect(page.locator('[data-test="forwarding-header-username"]')).toContainText(expectedUsername);
     await expect(page.locator('[data-test="forwarding-header-email"]')).toContainText(emailAuthAddress);
-    console.log('✓ Forwarding Headers verified: Username is empty for email auth');
+    console.log('✓ Forwarding Headers verified: Username is userpart for email auth');
 
     // 3. Check QueryString forwarding
     const currentUrl = page.url();
     const hasQueryString = currentUrl.includes('chatbotgate.user=') || currentUrl.includes('chatbotgate.email=') || forwardingLoginUrl.includes('chatbotgate.user=') || forwardingLoginUrl.includes('chatbotgate.email=');
     if (hasQueryString) {
       console.log('✓ QueryString forwarding detected');
-      await expect(page.locator('[data-test="forwarding-qs-username"]')).toContainText('(empty)');
+      await expect(page.locator('[data-test="forwarding-qs-username"]')).toContainText(expectedUsername);
       await expect(page.locator('[data-test="forwarding-qs-email"]')).toContainText(emailAuthAddress);
-      console.log('✓ Forwarding QueryString verified: Username is empty for email auth');
+      console.log('✓ Forwarding QueryString verified: Username is userpart for email auth');
     } else {
       console.log('ℹ QueryString forwarding not present');
     }
 
-    console.log('Email authentication forwarding test completed: Username is empty, only email is forwarded');
+    console.log('Email authentication forwarding test completed: Email and username (userpart) are forwarded');
   });
 });
