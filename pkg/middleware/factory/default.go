@@ -200,9 +200,14 @@ func (f *DefaultFactory) CreateEmailHandler(
 	if serverCfg.BaseURL != "" {
 		emailBaseURL = serverCfg.BaseURL
 	} else {
-		emailBaseURL = fmt.Sprintf("http://%s:%d", host, port)
+		// Use HTTPS by default for security, except for localhost/127.0.0.1 (development)
+		scheme := "https"
+		if host == "localhost" || host == "127.0.0.1" || host == "0.0.0.0" {
+			scheme = "http"
+		}
+		emailBaseURL = fmt.Sprintf("%s://%s:%d", scheme, host, port)
 		if host == "0.0.0.0" {
-			emailBaseURL = fmt.Sprintf("http://localhost:%d", port)
+			emailBaseURL = fmt.Sprintf("%s://localhost:%d", scheme, port)
 		}
 	}
 

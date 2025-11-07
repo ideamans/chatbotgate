@@ -60,9 +60,11 @@ func (s *SMTPSender) Send(to, subject, body string) error {
 
 // sendWithTLS sends email using TLS from the start
 func (s *SMTPSender) sendWithTLS(addr string, auth smtp.Auth, from string, to []string, msg []byte) error {
-	// Create TLS configuration
+	// Create TLS configuration with explicit certificate verification
 	tlsConfig := &tls.Config{
-		ServerName: s.config.Host,
+		ServerName:         s.config.Host,
+		InsecureSkipVerify: false, // Always verify certificates for security
+		MinVersion:         tls.VersionTLS12,
 	}
 
 	// Connect with TLS

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strings"
 
 	"github.com/ideamans/chatbotgate/pkg/middleware/config"
 )
@@ -14,6 +15,26 @@ var (
 	// ErrNoFieldsConfigured is returned when no fields are configured for forwarding
 	ErrNoFieldsConfigured = errors.New("no fields configured for forwarding")
 )
+
+// sanitizeHeaderValue removes control characters and limits length for header values
+// This prevents header injection attacks via user-controlled data
+func sanitizeHeaderValue(value string) string {
+	// Remove control characters (including CR/LF)
+	cleaned := strings.Map(func(r rune) rune {
+		if r < 32 || r == 127 { // Control characters
+			return -1 // Remove
+		}
+		return r
+	}, value)
+
+	// Limit length to prevent DoS
+	const maxHeaderLength = 8192
+	if len(cleaned) > maxHeaderLength {
+		cleaned = cleaned[:maxHeaderLength]
+	}
+
+	return cleaned
+}
 
 // UserInfo contains user information to be forwarded
 type UserInfo struct {
@@ -142,8 +163,11 @@ func (f *DefaultForwarder) AddToHeaders(headers http.Header, userInfo *UserInfo)
 			continue
 		}
 
+		// Sanitize header value to prevent injection attacks
+		sanitized := sanitizeHeaderValue(processed)
+
 		// Add to headers and mark as set
-		result.Set(field.Header, processed)
+		result.Set(field.Header, sanitized)
 		setHeaders[field.Header] = true
 	}
 

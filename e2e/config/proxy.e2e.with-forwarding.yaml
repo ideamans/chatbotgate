@@ -5,6 +5,7 @@ service:
 server:
   auth_path_prefix: "/_auth"
   base_url: "http://localhost:4182"  # External base URL for email links and OAuth2 callback
+  development: true  # Enable development mode for E2E tests
 
 proxy:
   upstream:

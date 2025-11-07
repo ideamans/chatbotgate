@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"net/http"
 	"strings"
 	"time"
 
@@ -37,6 +38,7 @@ type ServiceConfig struct {
 type ServerConfig struct {
 	AuthPathPrefix string `yaml:"auth_path_prefix" json:"auth_path_prefix"` // Path prefix for authentication endpoints (default: "/_auth")
 	BaseURL        string `yaml:"base_url" json:"base_url"`                 // Optional: Base URL for email links and OAuth2 callback (e.g., "https://example.com:8443" or "http://localhost:4181")
+	Development    bool   `yaml:"development" json:"development"`           // Enable development mode (relaxes CSP for inline scripts, default: false)
 }
 
 // GetAuthPathPrefix returns the authentication path prefix
@@ -90,6 +92,20 @@ type RedisSessionConfig struct {
 // GetCookieExpireDuration returns the cookie expiration as a time.Duration
 func (s SessionConfig) GetCookieExpireDuration() (time.Duration, error) {
 	return time.ParseDuration(s.CookieExpire)
+}
+
+// GetCookieSameSite returns the SameSite cookie attribute based on configuration
+func (s SessionConfig) GetCookieSameSite() http.SameSite {
+	switch strings.ToLower(s.CookieSameSite) {
+	case "strict":
+		return http.SameSiteStrictMode
+	case "none":
+		return http.SameSiteNoneMode
+	case "lax", "":
+		return http.SameSiteLaxMode
+	default:
+		return http.SameSiteLaxMode
+	}
 }
 
 // OAuth2Config contains OAuth2 provider settings
