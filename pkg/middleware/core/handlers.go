@@ -372,6 +372,7 @@ function getCookie(name) {
 </body>
 </html>`
 
+	m.setSecurityHeaders(w)
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write([]byte(html))
@@ -441,6 +442,7 @@ func (m *Middleware) handleLogout(w http.ResponseWriter, r *http.Request) {
 </body>
 </html>`
 
+	m.setSecurityHeaders(w)
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write([]byte(html))
@@ -491,7 +493,7 @@ func (m *Middleware) handleOAuth2Start(w http.ResponseWriter, r *http.Request) {
 		MaxAge:   600, // 10 minutes
 		HttpOnly: true,
 		Secure:   m.config.Session.CookieSecure,
-		SameSite: http.SameSiteLaxMode,
+		SameSite: m.config.Session.GetCookieSameSite(),
 	})
 
 	// Store provider in cookie
@@ -502,7 +504,7 @@ func (m *Middleware) handleOAuth2Start(w http.ResponseWriter, r *http.Request) {
 		MaxAge:   600,
 		HttpOnly: true,
 		Secure:   m.config.Session.CookieSecure,
-		SameSite: http.SameSiteLaxMode,
+		SameSite: m.config.Session.GetCookieSameSite(),
 	})
 
 	// Store redirect URL in cookie for token exchange
@@ -513,7 +515,7 @@ func (m *Middleware) handleOAuth2Start(w http.ResponseWriter, r *http.Request) {
 		MaxAge:   600,
 		HttpOnly: true,
 		Secure:   m.config.Session.CookieSecure,
-		SameSite: http.SameSiteLaxMode,
+		SameSite: m.config.Session.GetCookieSameSite(),
 	})
 
 	// Redirect to OAuth2 provider
@@ -604,7 +606,7 @@ func (m *Middleware) handleOAuth2Callback(w http.ResponseWriter, r *http.Request
 
 		// Check authorization
 		if !m.authzChecker.IsAllowed(email) {
-			m.logger.Info("OAuth2 authentication denied: user not authorized", "email", email, "provider", providerName)
+			m.logger.Info("OAuth2 authentication denied: user not authorized", "email", maskEmail(email), "provider", providerName)
 			m.handleForbidden(w, r)
 			return
 		}
@@ -618,7 +620,12 @@ func (m *Middleware) handleOAuth2Callback(w http.ResponseWriter, r *http.Request
 		}
 	}
 
-	// Create session
+	// Delete any existing session to prevent session fixation attacks
+	if oldCookie, err := r.Cookie(m.config.Session.CookieName); err == nil {
+		_ = session.Delete(m.sessionStore, oldCookie.Value)
+	}
+
+	// Create session with new session ID
 	sessionID, err := generateSessionID()
 	if err != nil {
 		m.logger.Error("Failed to generate session ID", "error", err)
@@ -631,12 +638,20 @@ func (m *Middleware) handleOAuth2Callback(w http.ResponseWriter, r *http.Request
 		duration = 168 * time.Hour // Default 7 days
 	}
 
+	// Safely extract Extra data, handling nil userInfo case
+	var extra map[string]interface{}
+	if userInfo != nil && userInfo.Extra != nil {
+		extra = userInfo.Extra
+	} else {
+		extra = make(map[string]interface{})
+	}
+
 	sess := &session.Session{
 		ID:            sessionID,
 		Email:         email,
 		Name:          name,
 		Provider:      providerName,
-		Extra:         userInfo.Extra, // Store additional user data for custom forwarding
+		Extra:         extra, // Store additional user data for custom forwarding
 		CreatedAt:     time.Now(),
 		ExpiresAt:     time.Now().Add(duration),
 		Authenticated: true,
@@ -658,7 +673,7 @@ func (m *Middleware) handleOAuth2Callback(w http.ResponseWriter, r *http.Request
 		MaxAge:   int(duration.Seconds()),
 		HttpOnly: m.config.Session.CookieHTTPOnly,
 		Secure:   m.config.Session.CookieSecure,
-		SameSite: http.SameSiteLaxMode,
+		SameSite: m.config.Session.GetCookieSameSite(),
 	})
 
 	// Clear OAuth cookies
@@ -682,7 +697,7 @@ func (m *Middleware) handleOAuth2Callback(w http.ResponseWriter, r *http.Request
 	})
 
 	// Log success after all session/cookie operations succeed
-	m.logger.Info("OAuth2 authentication successful", "email", email, "name", name, "provider", providerName)
+	m.logger.Info("OAuth2 authentication successful", "email", maskEmail(email), "name", name, "provider", providerName)
 
 	// Get redirect URL
 	redirectURL := m.getRedirectURL(w, r)
@@ -740,9 +755,16 @@ func (m *Middleware) handleEmailSend(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Validate email address to prevent SMTP injection
+	if !isValidEmail(email) {
+		m.logger.Warn("Invalid email address format", "email", maskEmail(email))
+		http.Error(w, t("error.invalid_email"), http.StatusBadRequest)
+		return
+	}
+
 	// Check authorization before sending
 	if !m.authzChecker.IsAllowed(email) {
-		m.logger.Info("Email authentication denied: user not authorized", "email", email)
+		m.logger.Info("Email authentication denied: user not authorized", "email", maskEmail(email))
 		m.handleForbidden(w, r)
 		return
 	}
@@ -750,12 +772,12 @@ func (m *Middleware) handleEmailSend(w http.ResponseWriter, r *http.Request) {
 	// Send login link
 	err := m.emailHandler.SendLoginLink(email, lang)
 	if err != nil {
-		m.logger.Debug("Email send failed", "email", email, "error", err)
-		m.logger.Error("Email authentication failed: could not send login link", "email", email)
+		m.logger.Debug("Email send failed", "email", maskEmail(email), "error", err)
+		m.logger.Error("Email authentication failed: could not send login link", "email", maskEmail(email))
 		http.Error(w, t("error.internal"), http.StatusInternalServerError)
 		return
 	}
-	m.logger.Info("Login link sent", "email", email)
+	m.logger.Info("Login link sent", "email", maskEmail(email))
 
 	// Redirect to email sent page
 	prefix := m.config.Server.GetAuthPathPrefix()
@@ -869,6 +891,7 @@ func (m *Middleware) handleEmailSent(w http.ResponseWriter, r *http.Request) {
 </body>
 </html>`
 
+	m.setSecurityHeaders(w)
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write([]byte(html))
@@ -933,6 +956,7 @@ func (m *Middleware) handleEmailVerify(w http.ResponseWriter, r *http.Request) {
 </div>
 </body>
 </html>`
+		m.setSecurityHeaders(w)
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		w.WriteHeader(http.StatusBadRequest)
 		_, _ = w.Write([]byte(html))
@@ -942,16 +966,21 @@ func (m *Middleware) handleEmailVerify(w http.ResponseWriter, r *http.Request) {
 	// Check authorization if whitelist is configured
 	if m.authzChecker.RequiresEmail() {
 		if !m.authzChecker.IsAllowed(email) {
-			m.logger.Info("Email authentication denied: user not authorized", "email", email)
+			m.logger.Info("Email authentication denied: user not authorized", "email", maskEmail(email))
 			m.handleForbidden(w, r)
 			return
 		}
-		m.logger.Debug("User authorized", "email", email)
+		m.logger.Debug("User authorized", "email", maskEmail(email))
 	} else {
-		m.logger.Debug("No whitelist configured, skipping authorization check", "email", email)
+		m.logger.Debug("No whitelist configured, skipping authorization check", "email", maskEmail(email))
 	}
 
-	// Create session
+	// Delete any existing session to prevent session fixation attacks
+	if oldCookie, err := r.Cookie(m.config.Session.CookieName); err == nil {
+		_ = session.Delete(m.sessionStore, oldCookie.Value)
+	}
+
+	// Create session with new session ID
 	sessionID, err := generateSessionID()
 	if err != nil {
 		m.logger.Error("Failed to generate session ID", "error", err)
@@ -999,10 +1028,10 @@ func (m *Middleware) handleEmailVerify(w http.ResponseWriter, r *http.Request) {
 		MaxAge:   int(duration.Seconds()),
 		HttpOnly: m.config.Session.CookieHTTPOnly,
 		Secure:   m.config.Session.CookieSecure,
-		SameSite: http.SameSiteLaxMode,
+		SameSite: m.config.Session.GetCookieSameSite(),
 	})
 
-	m.logger.Info("Email authentication successful", "email", email)
+	m.logger.Info("Email authentication successful", "email", maskEmail(email))
 
 	// Get redirect URL
 	redirectURL := m.getRedirectURL(w, r)
@@ -1064,16 +1093,21 @@ func (m *Middleware) handleEmailVerifyOTP(w http.ResponseWriter, r *http.Request
 	// Check authorization if whitelist is configured
 	if m.authzChecker.RequiresEmail() {
 		if !m.authzChecker.IsAllowed(email) {
-			m.logger.Info("Email authentication denied: user not authorized", "email", email)
+			m.logger.Info("Email authentication denied: user not authorized", "email", maskEmail(email))
 			m.handleForbidden(w, r)
 			return
 		}
-		m.logger.Debug("User authorized", "email", email)
+		m.logger.Debug("User authorized", "email", maskEmail(email))
 	} else {
-		m.logger.Debug("No whitelist configured, skipping authorization check", "email", email)
+		m.logger.Debug("No whitelist configured, skipping authorization check", "email", maskEmail(email))
 	}
 
-	// Create session
+	// Delete any existing session to prevent session fixation attacks
+	if oldCookie, err := r.Cookie(m.config.Session.CookieName); err == nil {
+		_ = session.Delete(m.sessionStore, oldCookie.Value)
+	}
+
+	// Create session with new session ID
 	sessionID, err := generateSessionID()
 	if err != nil {
 		m.logger.Error("Failed to generate session ID", "error", err)
@@ -1120,10 +1154,10 @@ func (m *Middleware) handleEmailVerifyOTP(w http.ResponseWriter, r *http.Request
 		MaxAge:   int(duration.Seconds()),
 		HttpOnly: m.config.Session.CookieHTTPOnly,
 		Secure:   m.config.Session.CookieSecure,
-		SameSite: http.SameSiteLaxMode,
+		SameSite: m.config.Session.GetCookieSameSite(),
 	})
 
-	m.logger.Info("Email authentication successful via OTP", "email", email)
+	m.logger.Info("Email authentication successful via OTP", "email", maskEmail(email))
 
 	// Get redirect URL
 	redirectURL := m.getRedirectURL(w, r)
@@ -1194,6 +1228,7 @@ func (m *Middleware) handleForbidden(w http.ResponseWriter, r *http.Request) {
 </body>
 </html>`
 
+	m.setSecurityHeaders(w)
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(http.StatusForbidden)
 	_, _ = w.Write([]byte(html))
@@ -1246,6 +1281,7 @@ func (m *Middleware) handleEmailFetchError(w http.ResponseWriter, r *http.Reques
 </body>
 </html>`
 
+	m.setSecurityHeaders(w)
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(http.StatusBadRequest)
 	_, _ = w.Write([]byte(html))
@@ -1296,6 +1332,7 @@ func (m *Middleware) handle404(w http.ResponseWriter, r *http.Request) {
 </body>
 </html>`
 
+	m.setSecurityHeaders(w)
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(http.StatusNotFound)
 	_, _ = w.Write([]byte(html))
@@ -1362,6 +1399,7 @@ func (m *Middleware) handle500(w http.ResponseWriter, r *http.Request, err error
 </body>
 </html>`
 
+	m.setSecurityHeaders(w)
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(http.StatusInternalServerError)
 	_, _ = w.Write([]byte(html))

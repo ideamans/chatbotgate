@@ -200,15 +200,18 @@ func (m *Middleware) redirectToLogin(w http.ResponseWriter, r *http.Request) {
 	if !isStaticResource(r.URL.Path) && originalURL != "" && originalURL != "/" {
 		// Only save if there's no existing redirect cookie (don't overwrite)
 		if _, err := r.Cookie(redirectCookieName); err != nil {
-			http.SetCookie(w, &http.Cookie{
-				Name:     redirectCookieName,
-				Value:    originalURL,
-				Path:     "/",
-				MaxAge:   600, // 10 minutes - enough time to complete authentication
-				HttpOnly: true,
-				Secure:   m.config.Session.CookieSecure,
-				SameSite: http.SameSiteLaxMode,
-			})
+			// Validate redirect URL to prevent open redirect attacks
+			if isValidRedirectURL(originalURL) {
+				http.SetCookie(w, &http.Cookie{
+					Name:     redirectCookieName,
+					Value:    originalURL,
+					Path:     "/",
+					MaxAge:   600, // 10 minutes - enough time to complete authentication
+					HttpOnly: true,
+					Secure:   m.config.Session.CookieSecure,
+					SameSite: m.config.Session.GetCookieSameSite(),
+				})
+			}
 		}
 	}
 

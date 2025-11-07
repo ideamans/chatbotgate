@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"strings"
 
 	"golang.org/x/oauth2"
 )
@@ -110,14 +111,19 @@ func (m *Manager) GetAuthURLWithRedirect(providerName, state, hostOrBaseURL, aut
 		redirectPath = redirectPath[:len(redirectPath)-1]
 	}
 
-	// Build redirect URL
+	// Build redirect URL with HTTPS by default for security
 	var baseURL string
 	if len(hostOrBaseURL) > 7 && (hostOrBaseURL[:7] == "http://" || hostOrBaseURL[:8] == "https://") {
 		// It's a full base URL, use it as-is
 		baseURL = hostOrBaseURL
 	} else {
 		// It's just a host or host:port, prepend scheme
-		baseURL = "http://" + hostOrBaseURL
+		// Use HTTPS by default, except for localhost (development)
+		scheme := "https://"
+		if strings.HasPrefix(hostOrBaseURL, "localhost") || strings.HasPrefix(hostOrBaseURL, "127.0.0.1") {
+			scheme = "http://"
+		}
+		baseURL = scheme + hostOrBaseURL
 	}
 
 	// Remove trailing slash from baseURL if present
