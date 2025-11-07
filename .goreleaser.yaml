@@ -43,6 +43,7 @@ archives:
       - README*
       - CHANGELOG*
       - config.example.yaml
+      - examples/**/*
 
 checksum:
   name_template: 'checksums.txt'
