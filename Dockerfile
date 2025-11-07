@@ -38,6 +38,9 @@ WORKDIR /app
 # Copy binary from builder
 COPY --from=builder /build/chatbotgate /app/chatbotgate
 
+# Copy example configurations
+COPY --from=builder /build/examples /app/examples
+
 # Note: Web assets are embedded in the binary via Go embed
 # No need to copy /build/web directory
 
