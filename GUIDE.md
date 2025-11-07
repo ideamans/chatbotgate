@@ -429,7 +429,7 @@ Passwordless email authentication via magic links:
 email_auth:
   enabled: true
 
-  # Sender type: "smtp" or "sendgrid"
+  # Sender type: "smtp", "sendgrid", or "sendmail"
   sender_type: "smtp"
 
   # Token expiration
@@ -479,6 +479,37 @@ email_auth:
 2. Create an API key with "Mail Send" permissions
 3. Verify sender email address or domain
 4. Copy API key to config
+
+#### Sendmail Configuration
+
+Use the local sendmail command to send emails via your system's MTA (Mail Transfer Agent):
+
+```yaml
+email_auth:
+  sender_type: "sendmail"
+  sendmail:
+    # Path to sendmail binary (default: /usr/sbin/sendmail)
+    # Common locations:
+    # - Linux/Unix: /usr/sbin/sendmail
+    # - macOS: /usr/sbin/sendmail
+    # - Some systems: /usr/bin/sendmail
+    path: "/usr/sbin/sendmail"
+    from: "noreply@example.com"
+    from_name: "My Application"
+```
+
+**Sendmail Setup:**
+
+1. Ensure your system has a working MTA (Postfix, Sendmail, etc.)
+2. Verify sendmail path: `which sendmail`
+3. Test email delivery: `echo "Test" | sendmail -v your@email.com`
+4. Configure your MTA to relay emails if needed
+
+**Common MTAs:**
+- **Postfix** (most Linux distributions): Already includes sendmail-compatible command
+- **Sendmail**: Original MTA with sendmail command
+- **Exim**: Provides sendmail compatibility layer
+- **ssmtp/msmtp**: Lightweight alternatives for forwarding to external SMTP
 
 **User Information Fields:**
 

@@ -50,6 +50,8 @@ func NewHandler(
 		sender = NewSMTPSender(cfg.SMTP)
 	case "sendgrid":
 		sender = NewSendGridSender(cfg.SendGrid)
+	case "sendmail":
+		sender = NewSendmailSender(cfg.Sendmail)
 	default:
 		return nil, fmt.Errorf("unsupported sender type: %s", cfg.SenderType)
 	}
