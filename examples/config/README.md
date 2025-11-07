@@ -49,6 +49,27 @@ cp examples/config/service.yaml config.yaml
 chatbotgate -config config.yaml
 ```
 
+**Docker Usage:**
+
+The example configuration is included in the Docker image:
+
+```bash
+# Test the example config
+docker run --rm ideamans/chatbotgate:latest \
+  test-config -c /app/examples/config/service.yaml
+
+# Copy example to customize
+docker run --rm ideamans/chatbotgate:latest \
+  cat /app/examples/config/service.yaml > config.yaml
+
+# Edit config.yaml, then run with your config
+docker run -d \
+  -p 4180:4180 \
+  -v $(pwd)/config.yaml:/app/config/config.yaml:ro \
+  ideamans/chatbotgate:latest \
+  serve -c /app/config/config.yaml
+```
+
 **Important Settings to Change:**
 
 1. **cookie_secret**: Generate a random secret (minimum 32 characters)
