@@ -139,7 +139,7 @@ oauth2:
 email_auth:
   enabled: true
 
-  # Sender type: "smtp" or "sendgrid"
+  # Sender type: "smtp", "sendgrid", or "sendmail"
   sender_type: "smtp"
 
   # SMTP configuration (when sender_type: "smtp")
@@ -161,6 +161,15 @@ email_auth:
   #   # Optional: Custom endpoint URL (default: https://api.sendgrid.com)
   #   # Useful for proxies, testing, or internal infrastructure routing
   #   # endpoint_url: "https://custom-sendgrid-proxy.example.com"
+
+  # Sendmail configuration (when sender_type: "sendmail")
+  # Uses the sendmail command to send emails via local MTA
+  # sendmail:
+  #   # Path to sendmail binary (default: /usr/sbin/sendmail)
+  #   # Common locations: /usr/sbin/sendmail, /usr/bin/sendmail
+  #   path: "/usr/sbin/sendmail"
+  #   from: "noreply@example.com"
+  #   from_name: "ChatbotGate"
 
   # Token expiration
   token:

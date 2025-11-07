@@ -138,9 +138,10 @@ type OAuth2Provider struct {
 // EmailAuthConfig contains email authentication settings
 type EmailAuthConfig struct {
 	Enabled    bool             `yaml:"enabled" json:"enabled"`
-	SenderType string           `yaml:"sender_type" json:"sender_type"` // "smtp" or "sendgrid"
+	SenderType string           `yaml:"sender_type" json:"sender_type"` // "smtp", "sendgrid", or "sendmail"
 	SMTP       SMTPConfig       `yaml:"smtp" json:"smtp"`
 	SendGrid   SendGridConfig   `yaml:"sendgrid" json:"sendgrid"`
+	Sendmail   SendmailConfig   `yaml:"sendmail" json:"sendmail"`
 	Token      EmailTokenConfig `yaml:"token" json:"token"`
 }
 
@@ -162,6 +163,13 @@ type SendGridConfig struct {
 	From        string `yaml:"from" json:"from"`
 	FromName    string `yaml:"from_name" json:"from_name"`
 	EndpointURL string `yaml:"endpoint_url" json:"endpoint_url"` // Optional custom endpoint URL (default: https://api.sendgrid.com)
+}
+
+// SendmailConfig contains sendmail command settings
+type SendmailConfig struct {
+	Path     string `yaml:"path" json:"path"`           // Path to sendmail binary (default: /usr/sbin/sendmail)
+	From     string `yaml:"from" json:"from"`           // From email address
+	FromName string `yaml:"from_name" json:"from_name"` // From display name
 }
 
 // EmailTokenConfig contains token expiration settings

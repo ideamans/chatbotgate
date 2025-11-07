@@ -12,7 +12,7 @@
 
 ### 🔐 Multiple Authentication Methods
 - **OAuth2/OIDC**: Google, GitHub, Microsoft, and custom OIDC providers
-- **Passwordless Email**: Magic link authentication via SMTP or SendGrid
+- **Passwordless Email**: Magic link authentication via SMTP, SendGrid, or sendmail
 - Mix and match providers for different user groups
 
 ### 🛡️ Flexible Access Control
@@ -242,7 +242,7 @@ Key configuration sections:
 - **Proxy**: Upstream URL and routing rules
 - **Session**: Cookie settings and expiration
 - **OAuth2**: Provider configurations
-- **Email Auth**: SMTP or SendGrid setup
+- **Email Auth**: SMTP, SendGrid, or sendmail setup
 - **Authorization**: Email/domain whitelisting
 - **KVS**: Storage backend (memory/leveldb/redis)
 - **Forwarding**: User information to upstream
