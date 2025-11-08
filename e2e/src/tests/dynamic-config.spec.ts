@@ -139,11 +139,18 @@ test.describe('Dynamic Configuration Reload', () => {
     // Step 2: Record timestamp before making changes
     const changeTime = new Date();
 
-    // Step 3: Write config with validation error (missing required field)
+    // Step 3: Write config with validation error (empty cookie secret)
+    // Match the secret field under session.cookie (it's indented with 4 spaces)
     const invalidConfig = originalConfig.replace(
-      /cookie_secret: .+/,
-      'cookie_secret: ""  # Empty secret should fail validation'
+      /^(\s{4}secret: ).+$/m,
+      '$1""  # Empty secret should fail validation'
     );
+
+    // Verify replacement worked
+    if (!invalidConfig.includes('secret: ""')) {
+      throw new Error('Failed to create invalid config - regex did not match');
+    }
+
     writeConfig(invalidConfig);
 
     // Step 4: Wait for validation error to appear in logs
