@@ -3,18 +3,19 @@
 #
 # IMPORTANT: Change these settings before deploying:
 #   1. proxy.upstream.url - Your upstream application URL
-#   2. session.cookie_secret - Generate a random 32+ character string
+#   2. session.cookie.secret - Generate a random 32+ character string
 #   3. email_auth.from - Your sender email address
 #
 # IMPORTANT: Before deploying to production with HTTPS:
 #   4. Set server.base_url to your public HTTPS URL (e.g., "https://auth.example.com")
-#   5. Set session.cookie_secure to true
+#   5. Set session.cookie.secure to true
 #
 # Example for production:
 #   server:
 #     base_url: "https://auth.example.com"
 #   session:
-#     cookie_secure: true
+#     cookie:
+#       secure: true
 
 service:
   name: "ChatbotGate"
@@ -35,12 +36,13 @@ proxy:
 
 # Session configuration
 session:
-  cookie_name: "_chatbotgate_session"
-  cookie_secret: "CHANGE-THIS-TO-RANDOM-32-CHARS-OR-MORE"  # <-- CHANGE THIS: openssl rand -base64 32
-  cookie_expire: "168h"  # 7 days
-  cookie_secure: false   # Set to true when using HTTPS in production
-  cookie_httponly: true
-  cookie_samesite: "lax"
+  cookie:
+    name: "_chatbotgate_session"
+    secret: "CHANGE-THIS-TO-RANDOM-32-CHARS-OR-MORE"  # <-- CHANGE THIS: openssl rand -base64 32
+    expire: "168h"  # 7 days
+    secure: false   # Set to true when using HTTPS in production
+    httponly: true
+    samesite: "lax"
 
 # OAuth2 disabled for simple setup
 # To enable OAuth2, add providers here (see config.example.yaml)

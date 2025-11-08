@@ -3,7 +3,7 @@
 #
 # IMPORTANT: Change these settings before deploying:
 #   1. proxy.upstream.url - Your upstream application URL
-#   2. session.cookie_secret - Generate a random 32+ character string
+#   2. session.cookie.secret - Generate a random 32+ character string
 #   3. email_auth.from - Your sender email address
 
 service:
@@ -23,12 +23,13 @@ proxy:
 
 # Session configuration
 session:
-  cookie_name: "_chatbotgate_session"
-  cookie_secret: "CHANGE-THIS-TO-RANDOM-32-CHARS-OR-MORE"  # <-- CHANGE THIS: openssl rand -base64 32
-  cookie_expire: "168h"  # 7 days
-  cookie_secure: true    # HTTPS required
-  cookie_httponly: true
-  cookie_samesite: "lax"
+  cookie:
+    name: "_chatbotgate_session"
+    secret: "CHANGE-THIS-TO-RANDOM-32-CHARS-OR-MORE"  # <-- CHANGE THIS: openssl rand -base64 32
+    expire: "168h"  # 7 days
+    secure: true    # HTTPS required
+    httponly: true
+    samesite: "lax"
 
 # OAuth2 disabled for simple setup
 oauth2:

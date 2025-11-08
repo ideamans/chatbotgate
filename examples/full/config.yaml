@@ -98,7 +98,6 @@ oauth2:
 
     # Custom OIDC Provider (e.g., Keycloak, Auth0, Okta)
     - type: "custom"
-      type: "custom"
       display_name: "Corporate SSO"
       client_id: "chatbotgate-client"
       client_secret: "custom-oidc-secret-abc123xyz456"

@@ -19,12 +19,13 @@ proxy:
 
 # Session configuration
 session:
-  cookie_name: "_chatbotgate_session"
-  cookie_secret: "demo-secret-change-in-production-min-32-chars"
-  cookie_expire: "168h"  # 7 days
-  cookie_secure: false   # Set to true when using HTTPS
-  cookie_httponly: true
-  cookie_samesite: "lax"
+  cookie:
+    name: "_chatbotgate_session"
+    secret: "demo-secret-change-in-production-min-32-chars"
+    expire: "168h"  # 7 days
+    secure: false   # Set to true when using HTTPS
+    httponly: true
+    samesite: "lax"
 
 # OAuth2 providers (disabled for simple email-only demo)
 oauth2:
