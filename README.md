@@ -23,6 +23,9 @@
 
 ### 🔄 Seamless Reverse Proxy
 - Transparent proxying of HTTP/WebSocket requests
+- Server-Sent Events (SSE) streaming support
+- X-Forwarded headers (X-Real-IP, X-Forwarded-For, X-Forwarded-Proto, X-Forwarded-Host)
+- Large file handling with 32KB buffer pool
 - Configurable authentication path prefix (default: `/_auth`)
 - Host-based routing for multi-tenant deployments
 - Automatic upstream secret header injection
@@ -46,11 +49,14 @@
 - Query parameters and HTTP headers
 
 ### ⚙️ Production-Ready
-- Live configuration reloading
+- Live configuration reloading (most settings)
+- Configuration validation tool (`test-config`)
+- Shell completion (bash, zsh, fish, powershell)
+- Health check endpoints (`/health`, `/ready`)
 - Structured logging with configurable levels
-- Rate limiting support
+- Rate limiting infrastructure (internal)
 - Comprehensive test coverage
-- Docker support
+- Docker support with multi-arch images (amd64/arm64)
 
 ## Quick Start
 
@@ -85,24 +91,37 @@ service:
 server:
   host: "0.0.0.0"
   port: 4180
+  # Base URL for OAuth2 callbacks (auto-generated: {base_url}/_auth/oauth2/callback)
+  # Set when behind reverse proxy or using HTTPS
+  # base_url: "https://your-domain.com"
 
 proxy:
   upstream:
     url: "http://localhost:8080"
 
 session:
-  cookie_secret: "CHANGE-THIS-TO-A-RANDOM-SECRET"
-  cookie_expire: "168h"
+  cookie:
+    secret: "CHANGE-THIS-TO-A-RANDOM-SECRET"
+    expire: "168h"
 
 oauth2:
   providers:
-    - name: "google"
+    - id: "google"
+      type: "google"
       client_id: "YOUR-CLIENT-ID"
       client_secret: "YOUR-CLIENT-SECRET"
 
 authorization:
   allowed:
     - "@example.com"  # Allow all @example.com emails
+```
+
+### Validate Configuration
+
+Before starting, validate your configuration:
+
+```bash
+./chatbotgate test-config -c config.yaml
 ```
 
 ### Run the Server
@@ -113,10 +132,29 @@ authorization:
 
 Visit `http://localhost:4180` to see the authentication flow in action.
 
+### Shell Completion (Optional)
+
+Generate shell completion for easier CLI usage:
+
+```bash
+# Bash
+./chatbotgate completion bash > /etc/bash_completion.d/chatbotgate
+
+# Zsh
+./chatbotgate completion zsh > ~/.zsh/completion/_chatbotgate
+
+# Fish
+./chatbotgate completion fish > ~/.config/fish/completions/chatbotgate.fish
+
+# PowerShell
+./chatbotgate completion powershell > chatbotgate.ps1
+```
+
 ## Documentation
 
 - **[User Guide (GUIDE.md)](GUIDE.md)** - Complete guide for deploying and configuring ChatbotGate
 - **[Module Guide (MODULE.md)](MODULE.md)** - Developer guide for using ChatbotGate as a Go module
+- **[Examples Directory](examples/)** - Production-ready deployment examples (Docker, systemd, full configurations)
 
 ## Project Structure
 
@@ -331,6 +369,8 @@ docker logs --since 2024-01-01T00:00:00 chatbotgate
 - `info`: General informational messages (default)
 - `warn`: Warning messages
 - `error`: Error messages
+
+**For comprehensive logging documentation**, see the [Logging Guide in GUIDE.md](GUIDE.md#logging) for detailed systemd/journald configuration, file logging strategies, and troubleshooting.
 
 ## Use Cases
 

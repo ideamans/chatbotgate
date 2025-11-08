@@ -26,17 +26,22 @@ server:
   # All authentication endpoints will use this prefix
   # auth_path_prefix: "/_auth"
 
-  # Base URL for email links and redirects (optional)
-  # Used for email authentication login links
+  # Base URL for email links and OAuth2 callbacks (optional)
+  # Used for:
+  # - Email authentication magic links
+  # - OAuth2 callback URL (auto-generated: {base_url}{auth_path_prefix}/oauth2/callback)
   # If not set, defaults to http://host:port (e.g., http://localhost:4180)
-  # Set this when running behind a reverse proxy or using a different external URL
+  # Set this when running behind a reverse proxy or using HTTPS
+  # Example: base_url: "https://auth.example.com" generates callback:
+  #          https://auth.example.com/_auth/oauth2/callback
   # base_url: "https://auth.example.com"
 
-  # OAuth2 callback URL override (optional)
-  # Used for OAuth2 provider callback redirects
-  # If not set, defaults to http://host:port/_auth/oauth2/callback
-  # Set this when the external callback URL differs from the internal URL
-  # callback_url: "https://auth.example.com/_auth/oauth2/callback"
+  # Development mode (default: false)
+  # SECURITY WARNING: NEVER enable in production!
+  # When enabled, relaxes Content Security Policy to allow 'unsafe-inline' scripts
+  # This makes browser debugging easier but reduces security
+  # Only use for local development and testing
+  development: false
 
 # Proxy configuration
 proxy:

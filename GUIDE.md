@@ -142,19 +142,7 @@ docker-compose logs -f chatbotgate
 - `v1.0.0-arm64` - ARM64 architecture only
 - `sha-abc1234` - Specific commit (for testing)
 
-#### Configuration with Environment Variables
-
-While YAML configuration is recommended, you can also use environment variables:
-
-```bash
-docker run -d \
-  --name chatbotgate \
-  -p 4180:4180 \
-  -e CHATBOTGATE_SERVER_PORT=4180 \
-  -e CHATBOTGATE_PROXY_UPSTREAM=http://myapp:8080 \
-  -e CHATBOTGATE_SESSION_COOKIE_SECRET=your-secret-key \
-  ideamans/chatbotgate:latest
-```
+**Note:** Environment variable configuration is not currently supported. ChatbotGate requires a YAML configuration file specified via the `--config` or `-c` flag.
 
 ## Configuration
 
@@ -198,26 +186,48 @@ server:
   # All auth endpoints will be under this prefix
   auth_path_prefix: "/_auth"
 
-  # Base URL for email links and redirects
-  # Set this when behind a reverse proxy
+  # Base URL for email links and OAuth2 callbacks
+  # Set this when behind a reverse proxy or using HTTPS
+  # OAuth2 callback URL is auto-generated: {base_url}{auth_path_prefix}/oauth2/callback
+  # Example: "https://auth.example.com" -> callback: https://auth.example.com/_auth/oauth2/callback
   base_url: "https://auth.example.com"
 
-  # OAuth2 callback URL override
-  # Useful when external URL differs from internal
-  callback_url: "https://auth.example.com/_auth/oauth2/callback"
+  # Development mode (default: false)
+  # NEVER enable in production
+  development: false
 ```
+
+**Development Mode:**
+
+Development mode relaxes security policies for easier testing and debugging:
+
+```yaml
+server:
+  development: true
+```
+
+**Effects:**
+- **Content Security Policy**: Allows `'unsafe-inline'` scripts for browser debugging
+- **Easier Testing**: Simplifies integration with browser developer tools
+- **⚠️ Security Warning**: Should NEVER be enabled in production
+
+**CSP Comparison:**
+- **Production**: `script-src 'self'` (strict, safe)
+- **Development**: `script-src 'self' 'unsafe-inline'` (relaxed, debugging-friendly)
+
+The CSP is only applied to authentication pages (login, email verification, etc.), not to proxied upstream responses.
 
 **CLI Overrides:**
 
 ```bash
 # Override host
-./chatbotgate -config config.yaml --host 127.0.0.1
+./chatbotgate --config config.yaml --host 127.0.0.1
 
 # Override port
-./chatbotgate -config config.yaml -p 8080
+./chatbotgate --config config.yaml -p 8080
 
 # Both
-./chatbotgate -config config.yaml --host 0.0.0.0 --port 4180
+./chatbotgate --config config.yaml --host 0.0.0.0 --port 4180
 ```
 
 ### Proxy Configuration
@@ -245,32 +255,35 @@ Session cookie configuration:
 
 ```yaml
 session:
-  # Cookie name
-  cookie_name: "_oauth2_proxy"
+  # Cookie configuration
+  cookie:
+    # Cookie name
+    name: "_oauth2_proxy"
 
-  # Cookie secret (REQUIRED, 32+ characters)
-  # Generate with: openssl rand -base64 32
-  cookie_secret: "CHANGE-THIS-TO-A-RANDOM-SECRET"
+    # Cookie secret (REQUIRED, 32+ characters)
+    # Generate with: openssl rand -base64 32
+    secret: "CHANGE-THIS-TO-A-RANDOM-SECRET"
 
-  # Session expiration (Go duration format)
-  cookie_expire: "168h"  # 7 days
+    # Session expiration (Go duration format)
+    expire: "168h"  # 7 days
 
-  # Secure flag (HTTPS only, enable in production)
-  cookie_secure: true
+    # Secure flag (HTTPS only, set to true in production)
+    # Default: false (allows HTTP for development)
+    secure: false
 
-  # HttpOnly flag (prevent JavaScript access)
-  cookie_httponly: true
+    # HttpOnly flag (prevent JavaScript access)
+    httponly: true
 
-  # SameSite policy
-  cookie_samesite: "lax"  # "strict", "lax", or "none"
+    # SameSite policy
+    samesite: "lax"  # "strict", "lax", or "none"
 ```
 
 **Security Best Practices:**
 
 - Generate a strong random secret: `openssl rand -base64 32`
-- Set `cookie_secure: true` when using HTTPS
-- Keep `cookie_httponly: true` to prevent XSS attacks
-- Use `cookie_samesite: "strict"` for maximum CSRF protection
+- Set `secure: true` when using HTTPS
+- Keep `httponly: true` to prevent XSS attacks
+- Use `samesite: "strict"` for maximum CSRF protection
 
 ### OAuth2 Providers
 
@@ -281,7 +294,8 @@ Configure OAuth2/OIDC providers:
 ```yaml
 oauth2:
   providers:
-    - name: "google"
+    - id: "google"
+      type: "google"
       display_name: "Google"
       client_id: "YOUR-CLIENT-ID.apps.googleusercontent.com"
       client_secret: "YOUR-CLIENT-SECRET"
@@ -305,6 +319,8 @@ oauth2:
 - `https://www.googleapis.com/auth/userinfo.email` - User email address
 - `https://www.googleapis.com/auth/userinfo.profile` - User profile (name, picture)
 
+**⚠️ Important**: When you specify custom `scopes`, the default scopes are NOT automatically added. You must explicitly include them if you need user information (email, name, avatar).
+
 **Standardized Fields** (available in forwarding):
 - `_email`: User's email address
 - `_username`: User's display name
@@ -314,9 +330,17 @@ oauth2:
 
 1. Go to [Google Cloud Console](https://console.cloud.google.com/)
 2. Create a new project or select existing
-3. Enable "Google+ API"
-4. Create OAuth 2.0 credentials (Web application)
-5. Add authorized redirect URI: `https://your-domain.com/_auth/oauth2/callback`
+3. Navigate to "APIs & Services" → "Credentials"
+4. Configure OAuth consent screen:
+   - Choose "External" user type (or "Internal" for Workspace)
+   - Fill in required app information
+   - Add scopes: `userinfo.email`, `userinfo.profile`, `openid`
+5. Create OAuth 2.0 credentials (Web application):
+   - Click "Create Credentials" → "OAuth client ID"
+   - Application type: Web application
+   - Add authorized redirect URI: `{base_url}{auth_path_prefix}/oauth2/callback`
+     - Example: If `base_url: "https://your-domain.com"` and `auth_path_prefix: "/_auth"` (default)
+     - Callback URL: `https://your-domain.com/_auth/oauth2/callback`
 6. Copy Client ID and Client Secret to config
 
 #### GitHub
@@ -324,7 +348,8 @@ oauth2:
 ```yaml
 oauth2:
   providers:
-    - name: "github"
+    - id: "github"
+      type: "github"
       display_name: "GitHub"
       client_id: "YOUR-GITHUB-CLIENT-ID"
       client_secret: "YOUR-GITHUB-CLIENT-SECRET"
@@ -343,6 +368,8 @@ oauth2:
 - `user:email` - User email addresses (verified)
 - `read:user` - User profile data (name, login, avatar)
 
+**⚠️ Important**: When you specify custom `scopes`, the default scopes are NOT automatically added. You must explicitly include them if you need user information (email, name, avatar).
+
 **Standardized Fields** (available in forwarding):
 - `_email`: User's verified email address
 - `_username`: User's display name (fallback to login name if not set)
@@ -352,7 +379,9 @@ oauth2:
 
 1. Go to [GitHub Developer Settings](https://github.com/settings/developers)
 2. Click "New OAuth App"
-3. Set Authorization callback URL: `https://your-domain.com/_auth/oauth2/callback`
+3. Set Authorization callback URL: `{base_url}{auth_path_prefix}/oauth2/callback`
+   - Example: If `base_url: "https://your-domain.com"` and default `auth_path_prefix: "/_auth"`
+   - Callback URL: `https://your-domain.com/_auth/oauth2/callback`
 4. Copy Client ID and Client Secret to config
 
 #### Microsoft (Azure AD)
@@ -360,7 +389,8 @@ oauth2:
 ```yaml
 oauth2:
   providers:
-    - name: "microsoft"
+    - id: "microsoft"
+      type: "microsoft"
       display_name: "Microsoft"
       client_id: "YOUR-AZURE-APP-ID"
       client_secret: "YOUR-AZURE-CLIENT-SECRET"
@@ -383,6 +413,8 @@ oauth2:
 - `email` - User email address
 - `User.Read` - Microsoft Graph user information
 
+**⚠️ Important**: When you specify custom `scopes`, the default scopes are NOT automatically added. You must explicitly include them if you need user information (email, name).
+
 **Standardized Fields** (available in forwarding):
 - `_email`: User's email address
 - `_username`: User's display name
@@ -393,7 +425,9 @@ oauth2:
 1. Go to [Azure Portal](https://portal.azure.com/)
 2. Navigate to "Azure Active Directory" → "App registrations"
 3. Create new registration
-4. Add redirect URI: `https://your-domain.com/_auth/oauth2/callback`
+4. Add redirect URI: `{base_url}{auth_path_prefix}/oauth2/callback`
+   - Example: If `base_url: "https://your-domain.com"` and default `auth_path_prefix: "/_auth"`
+   - Callback URL: `https://your-domain.com/_auth/oauth2/callback`
 5. Generate client secret in "Certificates & secrets"
 6. Copy Application ID and Client Secret to config
 
@@ -402,7 +436,7 @@ oauth2:
 ```yaml
 oauth2:
   providers:
-    - name: "custom-oidc"
+    - id: "custom-oidc"
       type: "custom"
       display_name: "My Identity Provider"
       client_id: "YOUR-CLIENT-ID"
@@ -432,6 +466,13 @@ email_auth:
   # Sender type: "smtp", "sendgrid", or "sendmail"
   sender_type: "smtp"
 
+  # Sender email address (RFC 5322 format)
+  # Required field for all sender types
+  from: "My Application <noreply@example.com>"
+  # Or separate fields:
+  # from: "noreply@example.com"
+  # from_name: "My Application"
+
   # Token expiration
   token:
     expire: "15m"  # 15 minutes
@@ -442,13 +483,21 @@ email_auth:
 ```yaml
 email_auth:
   sender_type: "smtp"
+
+  # Shared sender configuration (supports RFC 5322 format)
+  from: "My Application <noreply@example.com>"
+  # Or separate fields:
+  # from: "noreply@example.com"
+  # from_name: "My Application"
+
   smtp:
     host: "smtp.gmail.com"
     port: 587
     username: "your-email@gmail.com"
     password: "your-app-password"
-    from: "noreply@example.com"
-    from_name: "My Application"
+    # Optional: Override shared from/from_name for SMTP only
+    # from: "noreply@example.com"
+    # from_name: "My Application"
     tls: false        # Direct TLS (port 465)
     starttls: true    # STARTTLS (port 587)
 ```
@@ -464,10 +513,15 @@ email_auth:
 ```yaml
 email_auth:
   sender_type: "sendgrid"
+
+  # Shared sender configuration (supports RFC 5322 format)
+  from: "My Application <noreply@example.com>"
+
   sendgrid:
     api_key: "SG.xxxxxxxxxxxxxxxxxxxx"
-    from: "noreply@example.com"
-    from_name: "My Application"
+    # Optional: Override shared from/from_name for SendGrid only
+    # from: "noreply@example.com"
+    # from_name: "My Application"
 
     # Optional: Custom endpoint (for proxies)
     endpoint_url: "https://sendgrid-proxy.example.com"
@@ -487,6 +541,10 @@ Use the local sendmail command to send emails via your system's MTA (Mail Transf
 ```yaml
 email_auth:
   sender_type: "sendmail"
+
+  # Shared sender configuration (supports RFC 5322 format)
+  from: "My Application <noreply@example.com>"
+
   sendmail:
     # Path to sendmail binary (default: /usr/sbin/sendmail)
     # Common locations:
@@ -494,8 +552,9 @@ email_auth:
     # - macOS: /usr/sbin/sendmail
     # - Some systems: /usr/bin/sendmail
     path: "/usr/sbin/sendmail"
-    from: "noreply@example.com"
-    from_name: "My Application"
+    # Optional: Override shared from/from_name for Sendmail only
+    # from: "noreply@example.com"
+    # from_name: "My Application"
 ```
 
 **Sendmail Setup:**
@@ -899,16 +958,71 @@ logging:
 
 ```bash
 # With config file
-./chatbotgate -config config.yaml
+./chatbotgate --config config.yaml
+# Or use short flag
+./chatbotgate -c config.yaml
 
 # Override host/port
-./chatbotgate -config config.yaml --host 127.0.0.1 -p 8080
+./chatbotgate --config config.yaml --host 127.0.0.1 -p 8080
 
 # Show version
 ./chatbotgate --version
 
 # Show help
 ./chatbotgate --help
+```
+
+### Configuration Validation
+
+Before starting the server, validate your configuration file:
+
+```bash
+# Test configuration without starting server
+./chatbotgate test-config -c config.yaml
+```
+
+This command validates:
+- YAML syntax correctness
+- Required fields (service name, cookie secret)
+- Cookie secret length (minimum 32 characters)
+- At least one authentication method enabled (OAuth2 or email)
+- Forwarding encryption configuration (if encrypt filter used)
+- Access control rules validity
+
+**Example output:**
+```bash
+$ ./chatbotgate test-config -c config.yaml
+✓ Configuration is valid
+
+$ ./chatbotgate test-config -c invalid.yaml
+✗ Configuration errors:
+  - session.cookie.secret must be at least 32 characters
+  - at least one OAuth2 provider or email auth must be enabled
+```
+
+### Shell Completion
+
+Generate shell completion scripts for easier CLI usage:
+
+```bash
+# Bash
+./chatbotgate completion bash > /etc/bash_completion.d/chatbotgate
+source /etc/bash_completion.d/chatbotgate
+
+# Zsh
+./chatbotgate completion zsh > ~/.zsh/completion/_chatbotgate
+
+# Fish
+./chatbotgate completion fish > ~/.config/fish/completions/chatbotgate.fish
+
+# PowerShell
+./chatbotgate completion powershell > chatbotgate.ps1
+```
+
+After installing, you can use tab completion for commands and flags:
+```bash
+./chatbotgate [TAB]        # Shows available commands
+./chatbotgate --[TAB]      # Shows available flags
 ```
 
 ### With Docker
@@ -973,7 +1087,7 @@ Type=simple
 User=chatbotgate
 Group=chatbotgate
 WorkingDirectory=/opt/chatbotgate
-ExecStart=/opt/chatbotgate/chatbotgate -config /etc/chatbotgate/config.yaml
+ExecStart=/opt/chatbotgate/chatbotgate --config /etc/chatbotgate/config.yaml
 Restart=on-failure
 RestartSec=5
 
@@ -1021,10 +1135,12 @@ Update `config.yaml`:
 ```yaml
 server:
   base_url: "https://auth.example.com"
-  callback_url: "https://auth.example.com/_auth/oauth2/callback"
+  # OAuth2 callback URL is auto-generated from base_url and auth_path_prefix
+  # In this case: https://auth.example.com/_auth/oauth2/callback
 
 session:
-  cookie_secure: true
+  cookie:
+    secure: true
 ```
 
 ## Authentication Flow
@@ -1079,7 +1195,7 @@ session:
 
 ### Session Lifetime
 
-- Sessions expire after `cookie_expire` duration (default: 7 days)
+- Sessions expire after `session.cookie.expire` duration (default: 7 days)
 - Sliding expiration: Each request refreshes the expiration
 - Logout: Clears session and redirects to login
 
@@ -1166,9 +1282,10 @@ networks:
 3. **Enable HTTPS with Secure Cookies**
    ```yaml
    session:
-     cookie_secure: true
-     cookie_httponly: true
-     cookie_samesite: "strict"
+     cookie:
+       secure: true
+       httponly: true
+       samesite: "strict"
    ```
 
 4. **Use Strong Secrets**
@@ -1783,7 +1900,7 @@ ChatbotGate supports any OIDC-compliant provider:
 ```yaml
 oauth2:
   providers:
-    - name: "keycloak"
+    - id: "keycloak"
       type: "custom"
       display_name: "Keycloak"
       client_id: "chatbotgate"
@@ -1802,20 +1919,29 @@ Most OIDC providers have a `.well-known/openid-configuration` endpoint. Use it t
 curl https://your-idp.com/.well-known/openid-configuration | jq .
 ```
 
-### Rate Limiting
+### Rate Limiting (Internal)
 
-Configure rate limits to prevent abuse:
+ChatbotGate includes built-in rate limiting infrastructure:
+
+**Implementation Details:**
+- Token bucket algorithm for smooth rate control
+- Per-key (typically IP address) rate limiting
+- Backed by KVS (memory/LevelDB/Redis) with `ratelimit` namespace
+- Efficient and scalable
+
+**Current Status:**
+Rate limiting is implemented internally but not yet exposed in user-facing configuration. The infrastructure is in place and can be enabled with custom development or future releases.
+
+**Future Configuration (Planned):**
 
 ```yaml
 ratelimit:
   enabled: true
-
-  # Requests per minute per IP
   requests_per_minute: 60
-
-  # Burst size
   burst: 10
 ```
+
+If you need custom rate limiting for your deployment, please contact the developers or open a GitHub issue.
 
 ### Custom Branding
 
@@ -1831,10 +1957,163 @@ service:
 
 oauth2:
   providers:
-    - name: "google"
+    - id: "google"
+      type: "google"
       display_name: "Company Google"
       icon_url: "https://cdn.example.com/google-icon.svg"
 ```
+
+### Health Check Endpoints
+
+ChatbotGate provides two health check endpoints for monitoring and orchestration:
+
+#### Health Check (`/health`)
+
+Basic health check that returns immediately:
+
+```bash
+curl http://localhost:4180/health
+# Response: OK (200)
+```
+
+**Use cases:**
+- Load balancer health checks
+- Docker/Kubernetes liveness probes
+- Basic uptime monitoring
+- Service discovery
+
+#### Readiness Check (`/ready`)
+
+Readiness check for service availability:
+
+```bash
+curl http://localhost:4180/ready
+# Response: READY (200)
+```
+
+**Use cases:**
+- Kubernetes readiness probes
+- Service mesh health checks
+- Deployment readiness verification
+- Rolling update coordination
+
+**Notes:**
+- Both endpoints are publicly accessible (no authentication required)
+- Return plain text responses with 200 status code
+- Respond immediately (no backend checks)
+
+**Docker Healthcheck Example:**
+
+```yaml
+healthcheck:
+  test: ["CMD", "wget", "--spider", "-q", "http://localhost:4180/health"]
+  interval: 30s
+  timeout: 10s
+  retries: 3
+  start_period: 10s
+```
+
+**Kubernetes Probes Example:**
+
+```yaml
+livenessProbe:
+  httpGet:
+    path: /health
+    port: 4180
+  initialDelaySeconds: 10
+  periodSeconds: 30
+
+readinessProbe:
+  httpGet:
+    path: /ready
+    port: 4180
+  initialDelaySeconds: 5
+  periodSeconds: 10
+```
+
+### Proxy Features
+
+ChatbotGate's reverse proxy includes several advanced features for seamless integration:
+
+#### WebSocket Support
+
+WebSocket connections are automatically detected and proxied:
+
+**How it works:**
+- Detects `Upgrade: websocket` header
+- Preserves WebSocket handshake
+- Proxies bidirectional communication
+- No configuration required
+
+**Example:**
+```javascript
+// Frontend code (no changes needed)
+const ws = new WebSocket('wss://your-domain.com/api/ws');
+ws.onmessage = (event) => {
+  console.log('Received:', event.data);
+};
+// WebSocket connection is transparently proxied to upstream
+```
+
+#### Server-Sent Events (SSE)
+
+Streaming responses work out of the box:
+
+**Features:**
+- FlushInterval: 100ms (automatic)
+- Supports long-lived connections
+- Enables real-time updates
+
+**Example:**
+```javascript
+const eventSource = new EventSource('/api/events');
+eventSource.onmessage = (event) => {
+  console.log('Event:', event.data);
+};
+```
+
+#### X-Forwarded Headers
+
+ChatbotGate automatically adds standard proxy headers to all upstream requests:
+
+| Header | Description | Example |
+|--------|-------------|---------|
+| `X-Real-IP` | Client IP address | `192.168.1.100` |
+| `X-Forwarded-For` | Full proxy chain | `192.168.1.100, 10.0.0.1` |
+| `X-Forwarded-Proto` | Original protocol (HTTP/HTTPS) | `https` |
+| `X-Forwarded-Host` | Original host header | `example.com` |
+
+**Upstream Usage Example (Express.js):**
+
+```javascript
+// Enable trust proxy to read X-Forwarded-* headers
+app.set('trust proxy', true);
+
+// Get real client IP
+app.get('/api/client-info', (req, res) => {
+  res.json({
+    ip: req.ip,              // Uses X-Forwarded-For
+    protocol: req.protocol,  // Uses X-Forwarded-Proto
+    host: req.hostname       // Uses X-Forwarded-Host
+  });
+});
+```
+
+#### Large File Handling
+
+Optimized for streaming large files:
+
+**Features:**
+- 32KB buffer pool for memory efficiency
+- Streaming mode (no buffering entire file)
+- Supports downloads, uploads, video streaming
+- No file size limits
+
+**Use cases:**
+- File downloads/uploads
+- Video/audio streaming
+- Large API responses
+- Binary data transfers
 
 ### Live Configuration Reloading
 
@@ -1873,7 +2152,8 @@ vim config.yaml
 2. **Enable HTTPS**
    ```yaml
    session:
-     cookie_secure: true
+     cookie:
+       secure: true
    ```
 
 3. **Restrict Access**
@@ -1929,7 +2209,7 @@ vim config.yaml
 
 **Solution:**
 1. Check cookie domain and path settings
-2. Verify `cookie_secure` matches protocol (true for HTTPS)
+2. Verify `session.cookie.secure` matches protocol (true for HTTPS)
 3. Check browser cookie settings
 4. Verify session storage is working (check logs)
 
