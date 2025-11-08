@@ -20,7 +20,7 @@ session:
   cookie_name: "_chatbotgate_session"
   cookie_secret: "CHANGE-THIS-TO-RANDOM-32-CHARS-OR-MORE"
   cookie_expire: "168h"  # 7 days
-  cookie_secure: false   # Set to true in production with HTTPS
+  cookie_secure: true    # HTTPS required
   cookie_httponly: true
   cookie_samesite: "lax"
 
@@ -51,11 +51,13 @@ logging:
   level: "info"
   color: true
 
-# KVS configuration (using memory for simplicity)
+# KVS configuration (using LevelDB for persistence)
 kvs:
   default:
-    type: "memory"
-    memory:
+    type: "leveldb"
+    leveldb:
+      path: "/var/lib/chatbotgate/kvs"
+      sync_writes: false  # Set to true for safer writes (slower)
       cleanup_interval: "5m"
 
   namespaces:
