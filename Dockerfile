@@ -25,8 +25,12 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
 # Runtime stage
 FROM alpine:3.19
 
-# Install ca-certificates for HTTPS
-RUN apk add --no-cache ca-certificates tzdata
+# Install runtime dependencies
+# - ca-certificates: for HTTPS
+# - tzdata: timezone support
+# - ssmtp: lightweight sendmail replacement for email authentication
+RUN apk add --no-cache ca-certificates tzdata ssmtp && \
+    ln -sf /usr/sbin/ssmtp /usr/sbin/sendmail
 
 # Create non-root user
 RUN addgroup -g 1000 app && \

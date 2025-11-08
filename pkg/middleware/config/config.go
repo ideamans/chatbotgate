@@ -244,9 +244,19 @@ type AuthorizationConfig struct {
 
 // LoggingConfig contains logging settings
 type LoggingConfig struct {
-	Level       string `yaml:"level" json:"level"`
-	ModuleLevel string `yaml:"module_level" json:"module_level"`
-	Color       bool   `yaml:"color" json:"color"`
+	Level       string             `yaml:"level" json:"level"`
+	ModuleLevel string             `yaml:"module_level" json:"module_level"`
+	Color       bool               `yaml:"color" json:"color"`
+	File        *FileLoggingConfig `yaml:"file,omitempty" json:"file,omitempty"` // Optional file logging configuration
+}
+
+// FileLoggingConfig contains file logging and rotation settings
+type FileLoggingConfig struct {
+	Path       string `yaml:"path" json:"path"`                                   // Log file path (required)
+	MaxSizeMB  int    `yaml:"max_size_mb,omitempty" json:"max_size_mb,omitempty"` // Maximum size in megabytes before rotation (default: 100)
+	MaxBackups int    `yaml:"max_backups,omitempty" json:"max_backups,omitempty"` // Maximum number of old log files to retain (default: 3)
+	MaxAge     int    `yaml:"max_age,omitempty" json:"max_age,omitempty"`         // Maximum number of days to retain old log files (default: 28)
+	Compress   bool   `yaml:"compress,omitempty" json:"compress,omitempty"`       // Whether to compress rotated log files (default: false)
 }
 
 // KVSConfig contains the unified KVS configuration with optional overrides.

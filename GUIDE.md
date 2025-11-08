@@ -1369,6 +1369,390 @@ Example CI/CD pipeline (GitHub Actions):
     docker-compose exec chatbotgate chatbotgate version
 ```
 
+## Logging
+
+ChatbotGate provides flexible logging options for different deployment scenarios. Modern systemd-based deployments should use journald, while legacy and containerized environments may need file-based logging.
+
+### Modern Approach: systemd + journald (Recommended)
+
+For production deployments on Linux with systemd, the recommended approach is to log to stdout and let journald handle all log management.
+
+#### Configuration
+
+```yaml
+logging:
+  level: "info"
+  module_level: "debug"
+  color: false  # journalctl provides its own formatting
+  # No file configuration needed
+```
+
+#### Advantages
+
+- **Automatic rotation**: No manual rotation configuration needed
+- **Structured logging**: Metadata automatically attached (timestamp, service name, priority)
+- **Powerful querying**: Built-in filtering and search
+- **System integration**: Unified with other system logs
+- **No disk space issues**: Automatic cleanup based on retention policies
+
+#### Viewing Logs
+
+**Real-time monitoring:**
+```bash
+# Follow logs (like tail -f)
+journalctl -u chatbotgate -f
+
+# Follow with specific log level
+journalctl -u chatbotgate -f -p info
+```
+
+**Historical logs:**
+```bash
+# Show all logs
+journalctl -u chatbotgate
+
+# Show logs from last hour
+journalctl -u chatbotgate --since "1 hour ago"
+
+# Show logs from today
+journalctl -u chatbotgate --since today
+
+# Show logs between dates
+journalctl -u chatbotgate --since "2024-01-01" --until "2024-01-31"
+
+# Show last 100 lines
+journalctl -u chatbotgate -n 100
+
+# Show logs in reverse order (newest first)
+journalctl -u chatbotgate -r
+```
+
+**Filtering by log level:**
+```bash
+# Only errors
+journalctl -u chatbotgate -p err
+
+# Warnings and above
+journalctl -u chatbotgate -p warning
+
+# Priority levels: debug, info, notice, warning, err, crit, alert, emerg
+```
+
+**Searching logs:**
+```bash
+# Search for specific text
+journalctl -u chatbotgate -g "oauth2"
+
+# Case-insensitive search
+journalctl -u chatbotgate -g "(?i)error"
+
+# Multiple patterns
+journalctl -u chatbotgate -g "oauth2|email"
+```
+
+**Exporting logs:**
+```bash
+# Export to file
+journalctl -u chatbotgate --since today > chatbotgate-$(date +%Y%m%d).log
+
+# Export with specific format
+journalctl -u chatbotgate -o json-pretty > logs.json
+journalctl -u chatbotgate -o short-iso > logs.txt
+
+# Export specific time range
+journalctl -u chatbotgate --since "2024-01-01" --until "2024-01-31" -o export > january.journal
+```
+
+#### Configuring Retention
+
+Edit `/etc/systemd/journald.conf`:
+
+```ini
+[Journal]
+# Store logs on disk (default: auto)
+Storage=persistent
+
+# Maximum disk space for all journals
+SystemMaxUse=500M
+
+# Maximum size of a single journal file
+SystemMaxFileSize=100M
+
+# Keep logs for 1 month
+MaxRetentionSec=1month
+
+# Alternative: Keep logs for specific number of files
+#MaxFileSec=1day
+#SystemMaxFiles=30
+```
+
+After changing configuration:
+```bash
+sudo systemctl restart systemd-journald
+```
+
+#### Monitoring Log Size
+
+```bash
+# Check journal disk usage
+journalctl --disk-usage
+
+# Manually clean old logs (keep last 3 days)
+journalctl --vacuum-time=3d
+
+# Clean by size (keep last 500M)
+journalctl --vacuum-size=500M
+
+# Verify journal files
+journalctl --verify
+```
+
+### File-Based Logging (Legacy/Special Cases)
+
+File-based logging is recommended only for specific scenarios.
+
+#### When to Use File Logging
+
+1. **Non-systemd environments:**
+   - Docker containers without systemd
+   - FreeBSD, macOS (development)
+   - Older Linux distributions
+
+2. **Compliance/Audit requirements:**
+   - Tamper-proof logs with checksums
+   - Long-term archival (10+ years)
+   - Separate audit trails
+
+3. **External log collectors:**
+   - Fluentd watching log files
+   - Logstash file input
+   - Third-party SIEM systems
+
+4. **Development/debugging:**
+   - Detailed debug logs separate from system logs
+   - Local development on macOS/Windows
+
+#### Configuration
+
+```yaml
+logging:
+  level: "info"
+  module_level: "debug"
+  color: false
+  file:
+    path: "/var/log/chatbotgate/chatbotgate.log"
+    max_size_mb: 100      # Rotate after 100MB
+    max_backups: 3        # Keep 3 old files
+    max_age: 28           # Delete files older than 28 days
+    compress: true        # Compress rotated files
+```
+
+#### Log Rotation Behavior
+
+ChatbotGate uses lumberjack for automatic rotation:
+
+1. **Size-based rotation**: When log file reaches `max_size_mb`
+2. **Automatic naming**: Rotated files named `chatbotgate-2024-01-15T10-30-00.000.log`
+3. **Compression**: Old files compressed to `.gz` if `compress: true`
+4. **Cleanup**: Files older than `max_age` days automatically deleted
+5. **Backup limit**: Only keeps `max_backups` old files
+
+#### Directory Setup
+
+```bash
+# Create log directory
+sudo mkdir -p /var/log/chatbotgate
+
+# Set ownership (if running as chatbotgate user)
+sudo chown chatbotgate:chatbotgate /var/log/chatbotgate
+
+# Set permissions
+sudo chmod 755 /var/log/chatbotgate
+```
+
+#### Log File Permissions
+
+For security, configure restrictive permissions:
+
+```bash
+# Log file readable only by owner and group
+sudo chmod 640 /var/log/chatbotgate/chatbotgate.log
+
+# Ensure only chatbotgate can write
+sudo chown chatbotgate:chatbotgate /var/log/chatbotgate/chatbotgate.log
+```
+
+#### Manual Rotation with logrotate
+
+For additional control, you can use logrotate:
+
+```bash
+# /etc/logrotate.d/chatbotgate
+/var/log/chatbotgate/*.log {
+    daily
+    rotate 30
+    compress
+    delaycompress
+    missingok
+    notifempty
+    create 0640 chatbotgate chatbotgate
+    sharedscripts
+    postrotate
+        # No need to send signal - lumberjack handles rotation
+    endscript
+}
+```
+
+### Docker Logging
+
+For Docker deployments, use Docker's logging drivers:
+
+#### View Docker Logs
+
+```bash
+# Follow logs
+docker logs -f chatbotgate
+
+# View last 100 lines
+docker logs --tail 100 chatbotgate
+
+# View logs with timestamps
+docker logs -t chatbotgate
+
+# View logs since specific time
+docker logs --since 2024-01-01T00:00:00 chatbotgate
+docker logs --since 1h chatbotgate
+```
+
+#### Docker Logging Drivers
+
+**JSON File (default):**
+```yaml
+# docker-compose.yml
+services:
+  chatbotgate:
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "3"
+```
+
+**Forward to syslog:**
+```yaml
+services:
+  chatbotgate:
+    logging:
+      driver: "syslog"
+      options:
+        syslog-address: "tcp://192.168.0.42:514"
+        tag: "chatbotgate"
+```
+
+**Forward to journald:**
+```yaml
+services:
+  chatbotgate:
+    logging:
+      driver: "journald"
+      options:
+        tag: "chatbotgate"
+```
+
+### Log Levels
+
+ChatbotGate supports multiple log levels:
+
+- **`debug`**: Detailed debugging information
+  - Use during development or troubleshooting
+  - Logs all requests, responses, and internal state
+  - **Warning**: Very verbose, not recommended for production
+
+- **`info`**: General informational messages (default)
+  - Server start/stop
+  - Configuration changes
+  - Authentication success/failure
+  - Suitable for production
+
+- **`warn`**: Warning messages
+  - Deprecated features
+  - Recoverable errors
+  - Configuration issues
+
+- **`error`**: Error messages
+  - Failed requests
+  - Database errors
+  - Authentication failures
+
+#### Module-Level Logging
+
+Set different log levels for different components:
+
+```yaml
+logging:
+  level: "info"         # Default level for all modules
+  module_level: "debug" # Level for sub-modules
+```
+
+**Module hierarchy:**
+- `main` - Main server
+- `main/middleware` - Middleware manager
+- `main/middleware/auth` - Authentication
+- `main/middleware/auth/oauth2` - OAuth2 provider
+- `main/middleware/session` - Session management
+- `main/proxy` - Reverse proxy
+
+### Log Format
+
+ChatbotGate uses a consistent log format:
+
+```
+LEVEL  @path [module] message key=value
+```
+
+**Example:**
+```
+INFO  @/_auth/login [main/middleware/auth] User logged in provider=google email=user@example.com
+WARN  @/api/data [main/proxy] Upstream timeout upstream=http://localhost:8080 duration=30s
+ERROR [main/middleware/session] Session expired session_id=abc123
+```
+
+**Components:**
+- `LEVEL`: Log level (DEBUG, INFO, WARN, ERROR)
+- `@path`: Request path (if applicable)
+- `[module]`: Component hierarchy
+- `message`: Human-readable message
+- `key=value`: Structured metadata
+
+### Best Practices
+
+1. **Production deployments:**
+   - Use systemd + journald
+   - Set `level: "info"`
+   - Disable color: `color: false`
+   - Configure journald retention policies
+
+2. **Development:**
+   - Use file logging or stdout
+   - Set `level: "debug"`
+   - Enable color: `color: true`
+
+3. **Monitoring:**
+   - Use journalctl for real-time monitoring
+   - Set up alerts for ERROR level logs
+   - Monitor disk usage with `journalctl --disk-usage`
+
+4. **Troubleshooting:**
+   - Temporarily increase log level to `debug`
+   - Use journalctl filtering for specific time ranges
+   - Export logs for analysis
+
+5. **Security:**
+   - Logs may contain sensitive information (emails, IPs)
+   - Configure appropriate file permissions (640)
+   - Consider encrypting archived logs
+   - Comply with data retention policies
+
 ## Advanced Topics
 
 ### Multi-Tenancy with Host-Based Routing

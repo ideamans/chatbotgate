@@ -1,0 +1,92 @@
+# ChatbotGate configuration for Docker deployment
+# This example configuration is optimized for Docker containers
+#
+# IMPORTANT: Change these settings before deploying:
+#   1. proxy.upstream.url - Your upstream application URL
+#   2. session.cookie_secret - Generate a random 32+ character string
+#   3. email_auth.from - Your sender email address
+#
+# IMPORTANT: Before deploying to production with HTTPS:
+#   4. Set server.base_url to your public HTTPS URL (e.g., "https://auth.example.com")
+#   5. Set session.cookie_secure to true
+#
+# Example for production:
+#   server:
+#     base_url: "https://auth.example.com"
+#   session:
+#     cookie_secure: true
+
+service:
+  name: "ChatbotGate"
+  description: "Authentication gateway for your applications"
+
+server:
+  host: "0.0.0.0"
+  port: 4180
+  auth_path_prefix: "/_auth"
+  # Default for local development - CHANGE FOR PRODUCTION
+  base_url: "http://localhost:4180"
+
+# Proxy configuration
+# CHANGE THIS: Replace with your actual upstream service URL
+proxy:
+  upstream:
+    url: "http://localhost:8080/"  # <-- CHANGE THIS
+
+# Session configuration
+session:
+  cookie_name: "_chatbotgate_session"
+  cookie_secret: "CHANGE-THIS-TO-RANDOM-32-CHARS-OR-MORE"  # <-- CHANGE THIS: openssl rand -base64 32
+  cookie_expire: "168h"  # 7 days
+  cookie_secure: false   # Set to true when using HTTPS in production
+  cookie_httponly: true
+  cookie_samesite: "lax"
+
+# OAuth2 disabled for simple setup
+# To enable OAuth2, add providers here (see config.example.yaml)
+oauth2:
+  providers: []
+
+# Email authentication with sendmail
+# Note: sendmail is pre-installed in the Docker image
+email_auth:
+  enabled: true
+  sender_type: "sendmail"
+
+  # Shared sender configuration (RFC 5322 format supported)
+  from: "ChatbotGate <noreply@chatbotgate.com>"  # <-- CHANGE THIS: Your sender email
+
+  sendmail:
+    # sendmail is pre-installed at /usr/sbin/sendmail
+    path: "/usr/sbin/sendmail"
+
+  token:
+    expire: "15m"
+
+# No authorization whitelist - all authenticated users allowed
+# To restrict access, add email addresses or domains here
+authorization:
+  allowed: []
+
+# Logging - optimized for Docker
+logging:
+  level: "info"
+  module_level: "debug"
+  color: false  # Docker logs work better without ANSI colors
+  # No file logging needed - use 'docker logs' to view logs
+
+# KVS configuration (using LevelDB for persistence)
+# Data persists in /var/lib/chatbotgate/kvs
+# Mount this as a volume for data persistence across container restarts
+kvs:
+  default:
+    type: "leveldb"
+    leveldb:
+      path: "/var/lib/chatbotgate/kvs"
+      sync_writes: false  # Set to true for safer writes (slower)
+      cleanup_interval: "5m"
+
+  namespaces:
+    session: "session"
+    token: "token"
+    ratelimit: "ratelimit"
