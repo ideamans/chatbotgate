@@ -52,13 +52,14 @@ proxy:
 
 # Session configuration
 session:
-  cookie_name: "_oauth2_proxy"
-  # Generate a random secret: openssl rand -base64 32
-  cookie_secret: "CHANGE-THIS-TO-A-RANDOM-SECRET-AT-LEAST-32-CHARACTERS-LONG"
-  cookie_expire: "168h"  # 7 days
-  cookie_secure: false   # Set to true when using HTTPS
-  cookie_httponly: true
-  cookie_samesite: "lax"
+  cookie:
+    name: "_oauth2_proxy"
+    # Generate a random secret: openssl rand -base64 32
+    secret: "CHANGE-THIS-TO-A-RANDOM-SECRET-AT-LEAST-32-CHARACTERS-LONG"
+    expire: "168h"  # 7 days
+    secure: false   # Set to true when using HTTPS
+    httponly: true
+    samesite: "lax"
 
 # OAuth2 providers configuration
 oauth2:

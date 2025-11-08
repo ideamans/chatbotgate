@@ -95,7 +95,9 @@ func TestConfig_Validate(t *testing.T) {
 					AuthPathPrefix: "/_auth",
 				},
 				Session: SessionConfig{
-					CookieSecret: "this-is-a-secret-key-with-32-characters",
+					Cookie: CookieConfig{
+						Secret: "this-is-a-secret-key-with-32-characters",
+					},
 				},
 				OAuth2: OAuth2Config{
 					Providers: []OAuth2Provider{
@@ -118,7 +120,9 @@ func TestConfig_Validate(t *testing.T) {
 				},
 				Server: ServerConfig{},
 				Session: SessionConfig{
-					CookieSecret: "this-is-a-secret-key-with-32-characters",
+					Cookie: CookieConfig{
+						Secret: "this-is-a-secret-key-with-32-characters",
+					},
 				},
 				OAuth2: OAuth2Config{
 					Providers: []OAuth2Provider{
@@ -136,7 +140,9 @@ func TestConfig_Validate(t *testing.T) {
 				},
 				Server: ServerConfig{},
 				Session: SessionConfig{
-					CookieSecret: "short",
+					Cookie: CookieConfig{
+						Secret: "short",
+					},
 				},
 				OAuth2: OAuth2Config{
 					Providers: []OAuth2Provider{
@@ -154,7 +160,9 @@ func TestConfig_Validate(t *testing.T) {
 				},
 				Server: ServerConfig{},
 				Session: SessionConfig{
-					CookieSecret: "this-is-a-secret-key-with-32-characters",
+					Cookie: CookieConfig{
+						Secret: "this-is-a-secret-key-with-32-characters",
+					},
 				},
 				OAuth2: OAuth2Config{
 					Providers: []OAuth2Provider{
@@ -178,7 +186,9 @@ func TestConfig_Validate(t *testing.T) {
 					AuthPathPrefix: "/_auth",
 				},
 				Session: SessionConfig{
-					CookieSecret: "this-is-a-secret-key-with-32-characters",
+					Cookie: CookieConfig{
+						Secret: "this-is-a-secret-key-with-32-characters",
+					},
 				},
 				OAuth2: OAuth2Config{
 					Providers: []OAuth2Provider{
@@ -202,7 +212,9 @@ func TestConfig_Validate(t *testing.T) {
 					AuthPathPrefix: "/_auth",
 				},
 				Session: SessionConfig{
-					CookieSecret: "this-is-a-secret-key-with-32-characters",
+					Cookie: CookieConfig{
+						Secret: "this-is-a-secret-key-with-32-characters",
+					},
 				},
 				OAuth2: OAuth2Config{
 					Providers: []OAuth2Provider{
@@ -237,7 +249,7 @@ func TestConfig_ValidateForwarding(t *testing.T) {
 	baseConfig := func() *Config {
 		return &Config{
 			Service: ServiceConfig{Name: "Test Service"},
-			Session: SessionConfig{CookieSecret: "this-is-a-secret-key-with-32-characters"},
+			Session: SessionConfig{Cookie: CookieConfig{Secret: "this-is-a-secret-key-with-32-characters"}},
 			OAuth2: OAuth2Config{
 				Providers: []OAuth2Provider{{Name: "google", ClientID: "test", ClientSecret: "test"}},
 			},
@@ -433,7 +445,7 @@ func TestEncryptionConfig_GetAlgorithm(t *testing.T) {
 	}
 }
 
-func TestSessionConfig_GetCookieExpireDuration(t *testing.T) {
+func TestCookieConfig_GetExpireDuration(t *testing.T) {
 	tests := []struct {
 		name    string
 		expire  string
@@ -456,16 +468,16 @@ func TestSessionConfig_GetCookieExpireDuration(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cfg := SessionConfig{
-				CookieExpire: tt.expire,
+			cfg := CookieConfig{
+				Expire: tt.expire,
 			}
-			got, err := cfg.GetCookieExpireDuration()
+			got, err := cfg.GetExpireDuration()
 			if (err != nil) != tt.wantErr {
-				t.Errorf("GetCookieExpireDuration() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("GetExpireDuration() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if got != tt.want {
-				t.Errorf("GetCookieExpireDuration() = %v, want %v", got, tt.want)
+				t.Errorf("GetExpireDuration() = %v, want %v", got, tt.want)
 			}
 		})
 	}

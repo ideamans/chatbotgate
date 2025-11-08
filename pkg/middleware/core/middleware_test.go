@@ -100,8 +100,10 @@ func TestMiddleware_RequiresEmail(t *testing.T) {
 					AuthPathPrefix: "/_auth",
 				},
 				Session: config.SessionConfig{
-					CookieName:   "_test",
-					CookieSecure: false,
+					Cookie: config.CookieConfig{
+						Name:   "_test",
+						Secure: false,
+					},
 				},
 				Authorization: tt.authzConfig,
 			}
@@ -147,10 +149,12 @@ func TestMiddleware_Authorization_NoWhitelist(t *testing.T) {
 			AuthPathPrefix: "/_auth",
 		},
 		Session: config.SessionConfig{
-			CookieName:     "_test",
-			CookieExpire:   "24h",
-			CookieSecure:   false,
-			CookieHTTPOnly: true,
+			Cookie: config.CookieConfig{
+				Name:     "_test",
+				Expire:   "24h",
+				Secure:   false,
+				HTTPOnly: true,
+			},
 		},
 		Authorization: config.AuthorizationConfig{
 			Allowed: []string{}, // No whitelist
@@ -247,9 +251,11 @@ func TestMiddleware_Authorization_WithWhitelist(t *testing.T) {
 			AuthPathPrefix: "/_auth",
 		},
 		Session: config.SessionConfig{
-			CookieName:   "_test",
-			CookieExpire: "24h",
-			CookieSecure: false,
+			Cookie: config.CookieConfig{
+				Name:   "_test",
+				Expire: "24h",
+				Secure: false,
+			},
 		},
 		Authorization: config.AuthorizationConfig{
 			Allowed: []string{"authorized@example.com"}, // Whitelist configured
@@ -385,7 +391,9 @@ func TestHandleLogin_DividerDisplay(t *testing.T) {
 					AuthPathPrefix: "/_auth",
 				},
 				Session: config.SessionConfig{
-					CookieName: "_test",
+					Cookie: config.CookieConfig{
+						Name: "_test",
+					},
 				},
 				EmailAuth: config.EmailAuthConfig{
 					Enabled: tt.hasEmailAuth,

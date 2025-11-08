@@ -69,35 +69,35 @@ func ValidateConfig(cfg *config.Config) ValidationErrors {
 	}
 
 	// Validate Session
-	if cfg.Session.CookieName == "" {
+	if cfg.Session.Cookie.Name == "" {
 		errs = append(errs, ValidationError{
-			Field:   "session.cookie_name",
+			Field:   "session.cookie.name",
 			Message: "cookie name is required",
 		})
 	}
 
-	if cfg.Session.CookieSecret == "" {
+	if cfg.Session.Cookie.Secret == "" {
 		errs = append(errs, ValidationError{
-			Field:   "session.cookie_secret",
+			Field:   "session.cookie.secret",
 			Message: "cookie secret is required",
 		})
-	} else if len(cfg.Session.CookieSecret) < 32 {
+	} else if len(cfg.Session.Cookie.Secret) < 32 {
 		errs = append(errs, ValidationError{
-			Field:   "session.cookie_secret",
-			Message: fmt.Sprintf("cookie secret must be at least 32 characters (current: %d)", len(cfg.Session.CookieSecret)),
+			Field:   "session.cookie.secret",
+			Message: fmt.Sprintf("cookie secret must be at least 32 characters (current: %d)", len(cfg.Session.Cookie.Secret)),
 		})
 	}
 
-	if cfg.Session.CookieExpire == "" {
+	if cfg.Session.Cookie.Expire == "" {
 		errs = append(errs, ValidationError{
-			Field:   "session.cookie_expire",
+			Field:   "session.cookie.expire",
 			Message: "cookie expiration is required",
 		})
 	} else {
 		// Validate duration format
-		if _, err := cfg.Session.GetCookieExpireDuration(); err != nil {
+		if _, err := cfg.Session.Cookie.GetExpireDuration(); err != nil {
 			errs = append(errs, ValidationError{
-				Field:   "session.cookie_expire",
+				Field:   "session.cookie.expire",
 				Message: fmt.Sprintf("invalid duration format: %v", err),
 			})
 		}

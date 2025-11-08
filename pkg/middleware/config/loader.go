@@ -64,16 +64,16 @@ func (l *FileLoader) Load() (*Config, error) {
 
 // applyDefaults sets default values for optional fields
 func applyDefaults(cfg *Config) {
-	if cfg.Session.CookieName == "" {
-		cfg.Session.CookieName = "_oauth2_proxy"
+	if cfg.Session.Cookie.Name == "" {
+		cfg.Session.Cookie.Name = "_oauth2_proxy"
 	}
 
-	if cfg.Session.CookieExpire == "" {
-		cfg.Session.CookieExpire = "168h" // 7 days
+	if cfg.Session.Cookie.Expire == "" {
+		cfg.Session.Cookie.Expire = "168h" // 7 days
 	}
 
-	if cfg.Session.CookieSameSite == "" {
-		cfg.Session.CookieSameSite = "lax"
+	if cfg.Session.Cookie.SameSite == "" {
+		cfg.Session.Cookie.SameSite = "lax"
 	}
 
 	if cfg.Logging.Level == "" {
@@ -85,5 +85,5 @@ func applyDefaults(cfg *Config) {
 	}
 
 	// Set default cookie_httponly to true
-	cfg.Session.CookieHTTPOnly = true
+	cfg.Session.Cookie.HTTPOnly = true
 }

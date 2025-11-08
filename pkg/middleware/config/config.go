@@ -72,22 +72,27 @@ func (s ServerConfig) GetCallbackURL(host string, port int) string {
 // SessionConfig contains session management settings
 // Note: Session storage backend is configured via kvs.default or kvs.session
 type SessionConfig struct {
-	CookieName     string `yaml:"cookie_name" json:"cookie_name"`
-	CookieSecret   string `yaml:"cookie_secret" json:"cookie_secret"`
-	CookieExpire   string `yaml:"cookie_expire" json:"cookie_expire"`
-	CookieSecure   bool   `yaml:"cookie_secure" json:"cookie_secure"`
-	CookieHTTPOnly bool   `yaml:"cookie_httponly" json:"cookie_httponly"`
-	CookieSameSite string `yaml:"cookie_samesite" json:"cookie_samesite"`
+	Cookie CookieConfig `yaml:"cookie" json:"cookie"`
 }
 
-// GetCookieExpireDuration returns the cookie expiration as a time.Duration
-func (s SessionConfig) GetCookieExpireDuration() (time.Duration, error) {
-	return time.ParseDuration(s.CookieExpire)
+// CookieConfig contains session cookie settings
+type CookieConfig struct {
+	Name     string `yaml:"name" json:"name"`
+	Secret   string `yaml:"secret" json:"secret"`
+	Expire   string `yaml:"expire" json:"expire"`
+	Secure   bool   `yaml:"secure" json:"secure"`
+	HTTPOnly bool   `yaml:"httponly" json:"httponly"`
+	SameSite string `yaml:"samesite" json:"samesite"`
 }
 
-// GetCookieSameSite returns the SameSite cookie attribute based on configuration
-func (s SessionConfig) GetCookieSameSite() http.SameSite {
-	switch strings.ToLower(s.CookieSameSite) {
+// GetExpireDuration returns the cookie expiration as a time.Duration
+func (c CookieConfig) GetExpireDuration() (time.Duration, error) {
+	return time.ParseDuration(c.Expire)
+}
+
+// GetSameSite returns the SameSite cookie attribute based on configuration
+func (c CookieConfig) GetSameSite() http.SameSite {
+	switch strings.ToLower(c.SameSite) {
 	case "strict":
 		return http.SameSiteStrictMode
 	case "none":
@@ -313,9 +318,9 @@ func (c *Config) Validate() error {
 	}
 
 	// Validate session cookie secret
-	if c.Session.CookieSecret == "" {
+	if c.Session.Cookie.Secret == "" {
 		verr.Add(ErrCookieSecretRequired)
-	} else if len(c.Session.CookieSecret) < 32 {
+	} else if len(c.Session.Cookie.Secret) < 32 {
 		verr.Add(ErrCookieSecretTooShort)
 	}
 

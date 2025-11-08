@@ -1,0 +1,412 @@
+# ChatbotGate - Full Configuration Example
+# This file demonstrates nearly all available configuration options with detailed comments.
+# Options that cannot be used simultaneously are commented out with explanations.
+
+# Service information
+service:
+  name: "ChatbotGate Production"
+  description: "Enterprise Authentication Gateway with Multi-Provider Support"
+  # Icon URL for auth header (48px recommended, appears left of title)
+  icon_url: "https://example.com/assets/icon-48.png"
+  # Logo URL for auth header (larger logo image, appears above title)
+  logo_url: "https://example.com/assets/logo.svg"
+  # Logo width (default: "200px")
+  logo_width: "250px"
+
+# HTTP server configuration
+server:
+  # Server host (can be overridden with --host flag)
+  host: "0.0.0.0"
+  # Server port (can be overridden with --port or -p flag)
+  port: 4180
+  # Authentication path prefix (all auth endpoints use this prefix)
+  auth_path_prefix: "/_auth"
+  # Base URL for email links and OAuth2 callbacks (set when behind reverse proxy)
+  base_url: "https://auth.example.com"
+  # Development mode (relaxes CSP for inline scripts, default: false)
+  development: false
+
+# Proxy configuration
+proxy:
+  # Main upstream backend
+  upstream:
+    url: "http://localhost:8080"
+    # Secret header for upstream authentication (protects upstream from direct access)
+    secret:
+      header: "X-Chatbotgate-Secret"
+      value: "super-secret-token-change-me-in-production-abc123xyz456"
+
+# Session configuration
+session:
+  cookie:
+    name: "_oauth2_proxy"
+    # Generate with: openssl rand -base64 32
+    secret: "CHANGE-THIS-TO-A-RANDOM-SECRET-AT-LEAST-32-CHARACTERS-LONG-abc123xyz456"
+    expire: "168h"  # 7 days
+    secure: true    # Set to true for HTTPS (production)
+    httponly: true  # Prevent JavaScript access
+    samesite: "lax" # "strict", "lax", or "none"
+
+# OAuth2 providers configuration
+oauth2:
+  providers:
+    # Google OAuth2 (enabled)
+    - name: "google"
+      display_name: "Google Workspace"
+      client_id: "123456789-abcdefghijklmnop.apps.googleusercontent.com"
+      client_secret: "GOCSPX-abc123xyz456_secret"
+      disabled: false
+      # Optional: Custom icon URL (overrides default Google icon)
+      icon_url: "https://example.com/icons/google-workspace.svg"
+      # Optional: Custom scopes (if empty, uses defaults: openid, userinfo.email, userinfo.profile)
+      # IMPORTANT: When specified, ONLY these scopes are used (defaults NOT added)
+      scopes:
+        - "openid"
+        - "https://www.googleapis.com/auth/userinfo.email"
+        - "https://www.googleapis.com/auth/userinfo.profile"
+        - "https://www.googleapis.com/auth/calendar.readonly"
+
+    # GitHub OAuth2 (enabled)
+    - name: "github"
+      display_name: "GitHub Enterprise"
+      client_id: "Iv1.abc123xyz456"
+      client_secret: "github_client_secret_abc123xyz456"
+      disabled: false
+      icon_url: "https://example.com/icons/github-enterprise.svg"
+      # Custom scopes (defaults: user:email, read:user)
+      scopes:
+        - "user:email"
+        - "read:user"
+        - "repo"
+        - "read:org"
+
+    # Microsoft OAuth2 / Azure AD (enabled)
+    - name: "microsoft"
+      display_name: "Microsoft 365"
+      client_id: "abc12345-1234-5678-90ab-cdef12345678"
+      client_secret: "microsoft_client_secret_abc~123.xyz-456"
+      disabled: false
+      icon_url: "https://example.com/icons/microsoft-365.svg"
+      # Custom scopes (defaults: openid, profile, email, User.Read)
+      scopes:
+        - "openid"
+        - "profile"
+        - "email"
+        - "User.Read"
+        - "Calendars.Read"
+        - "Mail.Read"
+
+    # Custom OIDC Provider (e.g., Keycloak, Auth0, Okta)
+    - name: "custom-oidc"
+      type: "custom"
+      display_name: "Corporate SSO"
+      client_id: "chatbotgate-client"
+      client_secret: "custom-oidc-secret-abc123xyz456"
+      disabled: false
+      # Custom icon is especially useful for custom OIDC providers
+      icon_url: "https://sso.example.com/logo.svg"
+      # OIDC endpoints
+      auth_url: "https://sso.example.com/auth/realms/master/protocol/openid-connect/auth"
+      token_url: "https://sso.example.com/auth/realms/master/protocol/openid-connect/token"
+      userinfo_url: "https://sso.example.com/auth/realms/master/protocol/openid-connect/userinfo"
+      # Optional: JWKS URL for token validation
+      jwks_url: "https://sso.example.com/auth/realms/master/protocol/openid-connect/certs"
+      # Allow HTTP for local testing (default: false, use only for development)
+      insecure_skip_verify: false
+      # Custom scopes
+      scopes:
+        - "openid"
+        - "email"
+        - "profile"
+        - "roles"
+
+# Email authentication configuration
+email_auth:
+  enabled: true
+
+  # Sender type: "smtp", "sendgrid", or "sendmail"
+  # NOTE: Only one sender type can be active at a time
+  sender_type: "smtp"
+
+  # Shared sender configuration (used by all sender types)
+  # Supports RFC 5322 format: "Display Name <email@example.com>" or just "email@example.com"
+  from: "ChatbotGate Authentication <noreply@example.com>"
+
+  # SMTP configuration (active when sender_type: "smtp")
+  smtp:
+    host: "smtp.gmail.com"
+    port: 587
+    username: "chatbotgate@example.com"
+    password: "smtp-app-password-abc123xyz456"
+    # Optional: Override shared from/from_name for SMTP only
+    # from: "noreply@example.com"
+    # from_name: "ChatbotGate SMTP"
+    tls: false       # Use TLS from the start (port 465)
+    starttls: true   # Upgrade to TLS after connection (port 587)
+
+  # SendGrid configuration (use when sender_type: "sendgrid")
+  # NOTE: Cannot be used simultaneously with SMTP or Sendmail
+  # sendgrid:
+  #   api_key: "SG.abc123xyz456-sendgrid-api-key"
+  #   # Optional: Override shared from/from_name
+  #   # from: "noreply@example.com"
+  #   # from_name: "ChatbotGate SendGrid"
+  #   # Optional: Custom endpoint URL (default: https://api.sendgrid.com)
+  #   # Useful for proxies, testing, or internal infrastructure
+  #   endpoint_url: "https://sendgrid-proxy.internal.example.com"
+
+  # Sendmail configuration (use when sender_type: "sendmail")
+  # NOTE: Cannot be used simultaneously with SMTP or SendGrid
+  # sendmail:
+  #   # Path to sendmail binary (default: /usr/sbin/sendmail)
+  #   path: "/usr/sbin/sendmail"
+  #   # Optional: Override shared from/from_name
+  #   # from: "noreply@example.com"
+  #   # from_name: "ChatbotGate Sendmail"
+
+  # Token expiration
+  token:
+    expire: "15m"  # 15 minutes (valid duration format: "5m", "1h", "30m")
+
+# Authorization configuration
+authorization:
+  # Allowed email addresses and domains
+  # Entries starting with @ are domains, others are email addresses
+  # Empty array [] allows all authenticated users (no whitelist)
+  allowed:
+    # Specific email addresses
+    - "admin@example.com"
+    - "user1@company.com"
+    - "user2@company.com"
+    # Domain-based (all emails from these domains)
+    - "@example.com"
+    - "@partner.org"
+    - "@trusted-client.net"
+
+# Logging configuration
+logging:
+  level: "info"         # Options: "debug", "info", "warn", "error"
+  module_level: "debug" # Log level for sub-modules (can be different from main level)
+
+  # Color output (recommended: false for systemd, true for development)
+  # systemd's journalctl provides its own formatting and colors
+  color: false
+
+  # File logging (optional)
+  # RECOMMENDED: Leave commented out for systemd-based deployments
+  # systemd's journald handles log rotation, retention, and querying automatically
+  #
+  # Use file logging only for:
+  #   - Non-systemd environments (Docker without systemd, legacy systems)
+  #   - Audit/compliance requirements (tamper-proof logs, long-term retention)
+  #   - External log collectors (Fluentd, Logstash, etc.)
+  #
+  # When enabled, ANSI color codes are automatically disabled for file output
+  file:
+    path: "/var/log/chatbotgate/chatbotgate.log"
+    max_size_mb: 100   # Maximum size in MB before rotation (default: 100)
+    max_backups: 3     # Maximum number of old log files to retain (default: 3)
+    max_age: 28        # Maximum number of days to retain old log files (default: 28)
+    compress: true     # Compress rotated log files with gzip (default: false)
+
+# KVS (Key-Value Store) configuration
+# Design: Single shared KVS backend with namespace isolation (recommended)
+# Alternative: Dedicated backends per use case (override default)
+kvs:
+  # Default KVS configuration (shared by all use cases: sessions, tokens, rate limits)
+  default:
+    # Store type: "memory", "leveldb", or "redis"
+    # NOTE: Only one type can be active at a time
+    type: "redis"
+
+    # Memory-specific config (use when type: "memory")
+    # NOTE: Not used when type is "leveldb" or "redis"
+    # memory:
+    #   cleanup_interval: "5m"  # How often to clean up expired keys
+
+    # LevelDB-specific config (use when type: "leveldb")
+    # NOTE: Not used when type is "memory" or "redis"
+    # leveldb:
+    #   path: "/var/lib/chatbotgate/kvs"  # Storage path (empty = OS temp dir)
+    #   sync_writes: false   # Enable for safer writes (slower performance)
+    #   cleanup_interval: "5m"  # Background cleanup for expired keys
+
+    # Redis-specific config (active when type: "redis")
+    redis:
+      addr: "redis.internal.example.com:6379"
+      password: "redis-password-abc123xyz456"
+      db: 0
+      pool_size: 50  # 0 = default (10 * CPU cores)
+
+  # Namespace names for logical isolation (optional, defaults shown)
+  # Each namespace gets isolated storage:
+  # - Memory: separate instance per namespace
+  # - LevelDB: separate directory per namespace
+  # - Redis: key prefix (namespace:key format)
+  namespaces:
+    session: "chatbotgate_session"
+    token: "chatbotgate_token"
+    ratelimit: "chatbotgate_ratelimit"
+
+  # Optional: Override session storage with dedicated Redis instance
+  # NOTE: Cannot be used simultaneously with default shared backend for sessions
+  # session:
+  #   type: "redis"
+  #   redis:
+  #     addr: "redis-sessions.internal.example.com:6379"
+  #     password: "redis-sessions-password"
+  #     db: 1
+  #     pool_size: 100
+
+  # Optional: Override token storage with dedicated backend
+  # NOTE: Tokens are short-lived, memory backend may be sufficient
+  # token:
+  #   type: "memory"
+  #   memory:
+  #     cleanup_interval: "1m"
+
+  # Optional: Override rate limit storage with dedicated LevelDB
+  # NOTE: LevelDB is persistent and fast for counters
+  # ratelimit:
+  #   type: "leveldb"
+  #   leveldb:
+  #     path: "/var/lib/chatbotgate/ratelimit"
+  #     sync_writes: true
+  #     cleanup_interval: "10m"
+
+# User information forwarding configuration
+forwarding:
+  # Encryption settings (required if any field uses 'encrypt' filter)
+  encryption:
+    key: "CHANGE-THIS-TO-A-RANDOM-ENCRYPTION-KEY-AT-LEAST-32-CHARS-abc123xyz456"
+    algorithm: "aes-256-gcm"  # Default: "aes-256-gcm" (only supported algorithm)
+
+  # Field forwarding definitions
+  # Each field specifies:
+  # - path: Dot-separated path to the field (e.g., "email", "extra._avatar_url", "." for entire object)
+  # - query: Query parameter name for login redirect (optional)
+  # - header: HTTP header name for all requests (optional)
+  # - filters: Processing filters (optional, e.g., "encrypt,zip" or ["encrypt", "zip"])
+  #
+  # At least one of 'query' or 'header' must be specified for each field.
+  #
+  # Available standard fields:
+  # - email: User's email address
+  # - username: User's display name (empty for email auth)
+  # - provider: Authentication provider name (e.g., "google", "github", "microsoft", "email")
+  #
+  # Common OAuth2 fields (standardized across all providers):
+  # - _email: User's email address (same as "email")
+  # - _username: User's name (GitHub fallback: name → login, Microsoft: displayName, Google: name)
+  # - _avatar_url: User's profile picture URL (empty for Microsoft and email auth)
+  #
+  # Available filters:
+  # - encrypt: AES-256-GCM encryption (requires encryption config)
+  # - zip: gzip compression
+  # - base64: base64 encoding (auto-added if final output is binary)
+  #
+  # Filter processing order: left to right (e.g., "encrypt,zip" → encrypt first, then zip)
+  fields:
+    # Example 1: Forward email as plain text (both query and header)
+    - path: email
+      query: email
+      header: X-Auth-Email
+
+    # Example 2: Forward username with encryption (header only)
+    - path: username
+      header: X-Auth-User
+      filters: encrypt
+
+    # Example 3: Forward provider name (query only)
+    - path: provider
+      query: auth_provider
+
+    # Example 4: Forward standardized avatar URL (OAuth2 only)
+    - path: _avatar_url
+      header: X-Avatar-URL
+
+    # Example 5: Forward entire user object as JSON with encryption and compression
+    - path: .
+      query: userinfo
+      filters:
+        - encrypt
+        - zip
+
+    # Example 6: Forward OAuth2 access token (encrypted and compressed)
+    - path: extra.secrets.access_token
+      header: X-Access-Token
+      filters:
+        - encrypt
+        - zip
+
+    # Example 7: Forward standardized fields (common across all OAuth2 providers)
+    - path: _email
+      header: X-User-Email
+
+    - path: _username
+      header: X-User-Name
+
+    # Example 8: Forward Google-specific field (only available for Google OAuth2)
+    - path: extra.picture
+      header: X-Google-Picture
+
+# Access control rules configuration
+# Rules are evaluated in order, first match wins
+# Actions: allow (no auth), auth (require auth), deny (403)
+rules:
+  rules:
+    # Allow public static files without authentication
+    - prefix: "/static/"
+      action: allow
+      description: "Public static assets (CSS, JS, images)"
+
+    - prefix: "/assets/"
+      action: allow
+      description: "Public assets directory"
+
+    # Allow health check endpoint
+    - exact: "/health"
+      action: allow
+      description: "Health check endpoint for load balancer"
+
+    - exact: "/metrics"
+      action: allow
+      description: "Prometheus metrics endpoint"
+
+    # Allow public API endpoints (regex pattern)
+    - regex: "^/api/v1/public/"
+      action: allow
+      description: "Public API v1 endpoints"
+
+    # Allow specific file types (glob/minimatch patterns)
+    - minimatch: "**/*.{js,css,png,jpg,jpeg,gif,svg,ico,woff,woff2,ttf,eot}"
+      action: allow
+      description: "All static file types"
+
+    # Deny access to admin paths (403 forbidden)
+    - prefix: "/admin/"
+      action: deny
+      description: "Admin interface - access denied"
+
+    - prefix: "/_internal/"
+      action: deny
+      description: "Internal endpoints - access denied"
+
+    # Require authentication for API endpoints
+    - prefix: "/api/"
+      action: auth
+      description: "Authenticated API access"
+
+    # Default: require authentication for all other paths
+    - all: true
+      action: auth
+      description: "Default - require authentication for everything else"
+
+# Assets configuration
+# Controls CSS and JavaScript assets loading for authentication pages
+assets:
+  optimization:
+    # Load dify.css for iframe optimizations (default: false)
+    # When true, adds dify.css for chatbot widget and embedded iframe optimizations
+    # Includes: transparent backgrounds, bottom-aligned layout, responsive settings toggle
+    dify: true

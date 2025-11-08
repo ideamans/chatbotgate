@@ -213,7 +213,7 @@ func (f *DefaultFactory) CreateEmailHandler(
 		authPrefix,
 		authzChecker,
 		translator,
-		sessionCfg.CookieSecret,
+		sessionCfg.Cookie.Secret,
 		tokenKVS,
 		rateLimitKVS,
 	)
