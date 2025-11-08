@@ -130,10 +130,38 @@ type OAuth2Provider struct {
 type EmailAuthConfig struct {
 	Enabled    bool             `yaml:"enabled" json:"enabled"`
 	SenderType string           `yaml:"sender_type" json:"sender_type"` // "smtp", "sendgrid", or "sendmail"
+	From       string           `yaml:"from" json:"from"`               // From email address (can be RFC 5322 format: "Name <email@example.com>" or just "email@example.com")
+	FromName   string           `yaml:"from_name" json:"from_name"`     // From display name (optional, used if From doesn't contain name)
 	SMTP       SMTPConfig       `yaml:"smtp" json:"smtp"`
 	SendGrid   SendGridConfig   `yaml:"sendgrid" json:"sendgrid"`
 	Sendmail   SendmailConfig   `yaml:"sendmail" json:"sendmail"`
 	Token      EmailTokenConfig `yaml:"token" json:"token"`
+}
+
+// GetFromAddress parses the From field and returns the email address and display name
+// Supports RFC 5322 format: "Display Name <email@example.com>" or just "email@example.com"
+// Returns (email, displayName)
+func (e EmailAuthConfig) GetFromAddress() (string, string) {
+	from := strings.TrimSpace(e.From)
+	if from == "" {
+		return "", ""
+	}
+
+	// Check for RFC 5322 format: "Name <email@example.com>"
+	if strings.Contains(from, "<") && strings.Contains(from, ">") {
+		startIdx := strings.Index(from, "<")
+		endIdx := strings.Index(from, ">")
+		if startIdx < endIdx {
+			email := strings.TrimSpace(from[startIdx+1 : endIdx])
+			name := strings.TrimSpace(from[:startIdx])
+			// Remove surrounding quotes from name if present
+			name = strings.Trim(name, `"`)
+			return email, name
+		}
+	}
+
+	// Plain email format: use FromName if specified
+	return from, e.FromName
 }
 
 // SMTPConfig contains SMTP server settings
@@ -142,25 +170,58 @@ type SMTPConfig struct {
 	Port     int    `yaml:"port" json:"port"`
 	Username string `yaml:"username" json:"username"`
 	Password string `yaml:"password" json:"password"`
-	From     string `yaml:"from" json:"from"`
-	FromName string `yaml:"from_name" json:"from_name"`
+	From     string `yaml:"from,omitempty" json:"from,omitempty"`           // Optional: Override email_auth.from
+	FromName string `yaml:"from_name,omitempty" json:"from_name,omitempty"` // Optional: Override email_auth.from_name
 	TLS      bool   `yaml:"tls" json:"tls"`
 	StartTLS bool   `yaml:"starttls" json:"starttls"`
+}
+
+// GetFromAddress returns the From address and name, with fallback to parent config
+// Returns (email, displayName)
+func (s SMTPConfig) GetFromAddress(parentEmail, parentName string) (string, string) {
+	// Use SMTP-specific config if set (backward compatibility)
+	if s.From != "" {
+		return s.From, s.FromName
+	}
+	// Fall back to parent EmailAuthConfig
+	return parentEmail, parentName
 }
 
 // SendGridConfig contains SendGrid API settings
 type SendGridConfig struct {
 	APIKey      string `yaml:"api_key" json:"api_key"`
-	From        string `yaml:"from" json:"from"`
-	FromName    string `yaml:"from_name" json:"from_name"`
-	EndpointURL string `yaml:"endpoint_url" json:"endpoint_url"` // Optional custom endpoint URL (default: https://api.sendgrid.com)
+	From        string `yaml:"from,omitempty" json:"from,omitempty"`           // Optional: Override email_auth.from
+	FromName    string `yaml:"from_name,omitempty" json:"from_name,omitempty"` // Optional: Override email_auth.from_name
+	EndpointURL string `yaml:"endpoint_url" json:"endpoint_url"`               // Optional custom endpoint URL (default: https://api.sendgrid.com)
+}
+
+// GetFromAddress returns the From address and name, with fallback to parent config
+// Returns (email, displayName)
+func (s SendGridConfig) GetFromAddress(parentEmail, parentName string) (string, string) {
+	// Use SendGrid-specific config if set (backward compatibility)
+	if s.From != "" {
+		return s.From, s.FromName
+	}
+	// Fall back to parent EmailAuthConfig
+	return parentEmail, parentName
 }
 
 // SendmailConfig contains sendmail command settings
 type SendmailConfig struct {
-	Path     string `yaml:"path" json:"path"`           // Path to sendmail binary (default: /usr/sbin/sendmail)
-	From     string `yaml:"from" json:"from"`           // From email address
-	FromName string `yaml:"from_name" json:"from_name"` // From display name
+	Path     string `yaml:"path" json:"path"`                               // Path to sendmail binary (default: /usr/sbin/sendmail)
+	From     string `yaml:"from,omitempty" json:"from,omitempty"`           // Optional: Override email_auth.from
+	FromName string `yaml:"from_name,omitempty" json:"from_name,omitempty"` // Optional: Override email_auth.from_name
+}
+
+// GetFromAddress returns the From address and name, with fallback to parent config
+// Returns (email, displayName)
+func (s SendmailConfig) GetFromAddress(parentEmail, parentName string) (string, string) {
+	// Use Sendmail-specific config if set (backward compatibility)
+	if s.From != "" {
+		return s.From, s.FromName
+	}
+	// Fall back to parent EmailAuthConfig
+	return parentEmail, parentName
 }
 
 // EmailTokenConfig contains token expiration settings

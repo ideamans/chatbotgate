@@ -43,15 +43,18 @@ func NewHandler(
 	// Create token store with KVS backend
 	tokenStore := NewTokenStore(cookieSecret, tokenKVS)
 
+	// Parse EmailAuthConfig.From for shared sender config
+	parentEmail, parentName := cfg.GetFromAddress()
+
 	// Create sender based on configuration
 	var sender Sender
 	switch cfg.SenderType {
 	case "smtp":
-		sender = NewSMTPSender(cfg.SMTP)
+		sender = NewSMTPSender(cfg.SMTP, parentEmail, parentName)
 	case "sendgrid":
-		sender = NewSendGridSender(cfg.SendGrid)
+		sender = NewSendGridSender(cfg.SendGrid, parentEmail, parentName)
 	case "sendmail":
-		sender = NewSendmailSender(cfg.Sendmail)
+		sender = NewSendmailSender(cfg.Sendmail, parentEmail, parentName)
 	default:
 		return nil, fmt.Errorf("unsupported sender type: %s", cfg.SenderType)
 	}

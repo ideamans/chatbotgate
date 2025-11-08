@@ -69,4 +69,3 @@ func (f *TestingFactory) CreateKVSStores(cfg *config.Config) (session kvs.Store,
 
 	return session, token, rateLimit, nil
 }
-

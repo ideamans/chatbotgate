@@ -6,6 +6,78 @@ import (
 	"time"
 )
 
+func TestEmailAuthConfig_GetFromAddress(t *testing.T) {
+	tests := []struct {
+		name         string
+		from         string
+		fromName     string
+		wantEmail    string
+		wantFromName string
+	}{
+		{
+			name:         "RFC 5322 format with name",
+			from:         "ChatbotGate <noreply@example.com>",
+			fromName:     "",
+			wantEmail:    "noreply@example.com",
+			wantFromName: "ChatbotGate",
+		},
+		{
+			name:         "RFC 5322 format with quoted name",
+			from:         `"Chat Bot Gate" <noreply@example.com>`,
+			fromName:     "",
+			wantEmail:    "noreply@example.com",
+			wantFromName: "Chat Bot Gate",
+		},
+		{
+			name:         "Plain email with separate from_name",
+			from:         "noreply@example.com",
+			fromName:     "ChatbotGate",
+			wantEmail:    "noreply@example.com",
+			wantFromName: "ChatbotGate",
+		},
+		{
+			name:         "Plain email without from_name",
+			from:         "noreply@example.com",
+			fromName:     "",
+			wantEmail:    "noreply@example.com",
+			wantFromName: "",
+		},
+		{
+			name:         "Empty from",
+			from:         "",
+			fromName:     "ChatbotGate",
+			wantEmail:    "",
+			wantFromName: "",
+		},
+		{
+			name:         "RFC 5322 with spaces",
+			from:         "  ChatbotGate  <  noreply@example.com  >  ",
+			fromName:     "",
+			wantEmail:    "noreply@example.com",
+			wantFromName: "ChatbotGate",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := EmailAuthConfig{
+				From:     tt.from,
+				FromName: tt.fromName,
+			}
+
+			gotEmail, gotName := cfg.GetFromAddress()
+
+			if gotEmail != tt.wantEmail {
+				t.Errorf("GetFromAddress() email = %q, want %q", gotEmail, tt.wantEmail)
+			}
+
+			if gotName != tt.wantFromName {
+				t.Errorf("GetFromAddress() name = %q, want %q", gotName, tt.wantFromName)
+			}
+		})
+	}
+}
+
 func TestConfig_Validate(t *testing.T) {
 	tests := []struct {
 		name    string
