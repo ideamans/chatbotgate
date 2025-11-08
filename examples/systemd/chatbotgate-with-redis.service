@@ -1,0 +1,61 @@
+# ChatbotGate systemd service unit file (with Redis dependency)
+#
+# Use this service file when ChatbotGate depends on Redis for session storage.
+# This ensures Redis starts before ChatbotGate.
+#
+# Installation:
+#   1. Copy this file to /etc/systemd/system/chatbotgate.service
+#   2. Edit paths and user as needed
+#   3. Reload systemd: sudo systemctl daemon-reload
+#   4. Enable service: sudo systemctl enable chatbotgate
+#   5. Start service: sudo systemctl start chatbotgate
+
+[Unit]
+Description=ChatbotGate Authentication Proxy (with Redis)
+Documentation=https://github.com/ideamans/chatbotgate
+After=network-online.target redis.service
+Wants=network-online.target
+Requires=redis.service
+
+[Service]
+Type=simple
+
+# User and group
+User=chatbotgate
+Group=chatbotgate
+
+# Working directory
+WorkingDirectory=/opt/chatbotgate
+
+# Binary and configuration
+ExecStart=/usr/local/bin/chatbotgate serve --config /etc/chatbotgate/config.yaml
+
+# Restart policy (wait for Redis to be available)
+Restart=always
+RestartSec=5s
+
+# Resource limits
+LimitNOFILE=65536
+MemoryLimit=512M
+CPUQuota=100%
+
+# Security hardening
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/log/chatbotgate
+ReadOnlyPaths=/etc/chatbotgate
+
+# Logging to journald
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=chatbotgate
+
+# Health check (optional, requires systemd 240+)
+# Restart if health check fails
+# ExecStartPost=/bin/sleep 5
+# ExecStartPost=/usr/bin/curl -f http://localhost:4180/health || exit 1
+
+[Install]
+WantedBy=multi-user.target

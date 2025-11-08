@@ -206,7 +206,7 @@ func (m *Middleware) handleLogin(w http.ResponseWriter, r *http.Request) {
 			// Find icon URL from config
 			var iconPath string
 			for _, providerCfg := range m.config.OAuth2.Providers {
-				if providerCfg.Name == providerName && providerCfg.IconURL != "" {
+				if providerCfg.Type == providerName && providerCfg.IconURL != "" {
 					// Use custom icon URL from config
 					iconPath = providerCfg.IconURL
 					break
@@ -385,7 +385,7 @@ func (m *Middleware) handleLogout(w http.ResponseWriter, r *http.Request) {
 	t := func(key string) string { return m.translator.T(lang, key) }
 
 	// Get session cookie
-	cookie, err := r.Cookie(m.config.Session.CookieName)
+	cookie, err := r.Cookie(m.config.Session.Cookie.Name)
 	if err == nil {
 		// Delete session (ignore error, proceed with logout anyway)
 		_ = session.Delete(m.sessionStore, cookie.Value)
@@ -393,7 +393,7 @@ func (m *Middleware) handleLogout(w http.ResponseWriter, r *http.Request) {
 
 	// Clear cookie
 	http.SetCookie(w, &http.Cookie{
-		Name:     m.config.Session.CookieName,
+		Name:     m.config.Session.Cookie.Name,
 		Value:    "",
 		Path:     "/",
 		MaxAge:   -1,
@@ -492,8 +492,8 @@ func (m *Middleware) handleOAuth2Start(w http.ResponseWriter, r *http.Request) {
 		Path:     "/",
 		MaxAge:   600, // 10 minutes
 		HttpOnly: true,
-		Secure:   m.config.Session.CookieSecure,
-		SameSite: m.config.Session.GetCookieSameSite(),
+		Secure:   m.config.Session.Cookie.Secure,
+		SameSite: m.config.Session.Cookie.GetSameSite(),
 	})
 
 	// Store provider in cookie
@@ -503,8 +503,8 @@ func (m *Middleware) handleOAuth2Start(w http.ResponseWriter, r *http.Request) {
 		Path:     "/",
 		MaxAge:   600,
 		HttpOnly: true,
-		Secure:   m.config.Session.CookieSecure,
-		SameSite: m.config.Session.GetCookieSameSite(),
+		Secure:   m.config.Session.Cookie.Secure,
+		SameSite: m.config.Session.Cookie.GetSameSite(),
 	})
 
 	// Store redirect URL in cookie for token exchange
@@ -514,8 +514,8 @@ func (m *Middleware) handleOAuth2Start(w http.ResponseWriter, r *http.Request) {
 		Path:     "/",
 		MaxAge:   600,
 		HttpOnly: true,
-		Secure:   m.config.Session.CookieSecure,
-		SameSite: m.config.Session.GetCookieSameSite(),
+		Secure:   m.config.Session.Cookie.Secure,
+		SameSite: m.config.Session.Cookie.GetSameSite(),
 	})
 
 	// Redirect to OAuth2 provider
@@ -621,7 +621,7 @@ func (m *Middleware) handleOAuth2Callback(w http.ResponseWriter, r *http.Request
 	}
 
 	// Delete any existing session to prevent session fixation attacks
-	if oldCookie, err := r.Cookie(m.config.Session.CookieName); err == nil {
+	if oldCookie, err := r.Cookie(m.config.Session.Cookie.Name); err == nil {
 		_ = session.Delete(m.sessionStore, oldCookie.Value)
 	}
 
@@ -633,7 +633,7 @@ func (m *Middleware) handleOAuth2Callback(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	duration, err := m.config.Session.GetCookieExpireDuration()
+	duration, err := m.config.Session.Cookie.GetExpireDuration()
 	if err != nil {
 		duration = 168 * time.Hour // Default 7 days
 	}
@@ -667,13 +667,13 @@ func (m *Middleware) handleOAuth2Callback(w http.ResponseWriter, r *http.Request
 
 	// Set session cookie
 	http.SetCookie(w, &http.Cookie{
-		Name:     m.config.Session.CookieName,
+		Name:     m.config.Session.Cookie.Name,
 		Value:    sessionID,
 		Path:     "/",
 		MaxAge:   int(duration.Seconds()),
-		HttpOnly: m.config.Session.CookieHTTPOnly,
-		Secure:   m.config.Session.CookieSecure,
-		SameSite: m.config.Session.GetCookieSameSite(),
+		HttpOnly: m.config.Session.Cookie.HTTPOnly,
+		Secure:   m.config.Session.Cookie.Secure,
+		SameSite: m.config.Session.Cookie.GetSameSite(),
 	})
 
 	// Clear OAuth cookies
@@ -976,7 +976,7 @@ func (m *Middleware) handleEmailVerify(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Delete any existing session to prevent session fixation attacks
-	if oldCookie, err := r.Cookie(m.config.Session.CookieName); err == nil {
+	if oldCookie, err := r.Cookie(m.config.Session.Cookie.Name); err == nil {
 		_ = session.Delete(m.sessionStore, oldCookie.Value)
 	}
 
@@ -988,7 +988,7 @@ func (m *Middleware) handleEmailVerify(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	duration, err := m.config.Session.GetCookieExpireDuration()
+	duration, err := m.config.Session.Cookie.GetExpireDuration()
 	if err != nil {
 		duration = 168 * time.Hour // Default 7 days
 	}
@@ -1022,13 +1022,13 @@ func (m *Middleware) handleEmailVerify(w http.ResponseWriter, r *http.Request) {
 
 	// Set session cookie
 	http.SetCookie(w, &http.Cookie{
-		Name:     m.config.Session.CookieName,
+		Name:     m.config.Session.Cookie.Name,
 		Value:    sessionID,
 		Path:     "/",
 		MaxAge:   int(duration.Seconds()),
-		HttpOnly: m.config.Session.CookieHTTPOnly,
-		Secure:   m.config.Session.CookieSecure,
-		SameSite: m.config.Session.GetCookieSameSite(),
+		HttpOnly: m.config.Session.Cookie.HTTPOnly,
+		Secure:   m.config.Session.Cookie.Secure,
+		SameSite: m.config.Session.Cookie.GetSameSite(),
 	})
 
 	m.logger.Info("Email authentication successful", "email", maskEmail(email))
@@ -1103,7 +1103,7 @@ func (m *Middleware) handleEmailVerifyOTP(w http.ResponseWriter, r *http.Request
 	}
 
 	// Delete any existing session to prevent session fixation attacks
-	if oldCookie, err := r.Cookie(m.config.Session.CookieName); err == nil {
+	if oldCookie, err := r.Cookie(m.config.Session.Cookie.Name); err == nil {
 		_ = session.Delete(m.sessionStore, oldCookie.Value)
 	}
 
@@ -1115,7 +1115,7 @@ func (m *Middleware) handleEmailVerifyOTP(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	duration, err := m.config.Session.GetCookieExpireDuration()
+	duration, err := m.config.Session.Cookie.GetExpireDuration()
 	if err != nil {
 		duration = 168 * time.Hour // Default 7 days
 	}
@@ -1148,13 +1148,13 @@ func (m *Middleware) handleEmailVerifyOTP(w http.ResponseWriter, r *http.Request
 
 	// Set session cookie
 	http.SetCookie(w, &http.Cookie{
-		Name:     m.config.Session.CookieName,
+		Name:     m.config.Session.Cookie.Name,
 		Value:    sessionID,
 		Path:     "/",
 		MaxAge:   int(duration.Seconds()),
-		HttpOnly: m.config.Session.CookieHTTPOnly,
-		Secure:   m.config.Session.CookieSecure,
-		SameSite: m.config.Session.GetCookieSameSite(),
+		HttpOnly: m.config.Session.Cookie.HTTPOnly,
+		Secure:   m.config.Session.Cookie.Secure,
+		SameSite: m.config.Session.Cookie.GetSameSite(),
 	})
 
 	m.logger.Info("Email authentication successful via OTP", "email", maskEmail(email))

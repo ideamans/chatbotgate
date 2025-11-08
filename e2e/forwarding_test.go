@@ -135,7 +135,7 @@ func TestForwarding_E2E(t *testing.T) {
 		// Make a request with session cookie
 		req, _ := http.NewRequest("GET", server.URL+"/oauth2-test", nil)
 		req.AddCookie(&http.Cookie{
-			Name:  cfg.Session.CookieName,
+			Name:  cfg.Session.Cookie.Name,
 			Value: sess.ID,
 		})
 
@@ -292,7 +292,7 @@ func TestForwarding_E2E(t *testing.T) {
 		// Make a request with email session cookie
 		req, _ := http.NewRequest("GET", server.URL+"/email-test", nil)
 		req.AddCookie(&http.Cookie{
-			Name:  cfg.Session.CookieName,
+			Name:  cfg.Session.Cookie.Name,
 			Value: emailSess.ID,
 		})
 
@@ -439,7 +439,7 @@ func TestCustomFieldsForwarding_E2E_Encrypted(t *testing.T) {
 		// Make a request with session cookie
 		req, _ := http.NewRequest("GET", server.URL+"/custom-test", nil)
 		req.AddCookie(&http.Cookie{
-			Name:  cfg.Session.CookieName,
+			Name:  cfg.Session.Cookie.Name,
 			Value: sess.ID,
 		})
 

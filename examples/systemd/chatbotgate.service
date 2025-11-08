@@ -1,0 +1,62 @@
+# ChatbotGate systemd service unit file
+#
+# Installation:
+#   1. Copy this file to /etc/systemd/system/chatbotgate.service
+#   2. Edit paths and user as needed
+#   3. Reload systemd: sudo systemctl daemon-reload
+#   4. Enable service: sudo systemctl enable chatbotgate
+#   5. Start service: sudo systemctl start chatbotgate
+#
+# Usage:
+#   sudo systemctl status chatbotgate   # Check status
+#   sudo systemctl start chatbotgate    # Start service
+#   sudo systemctl stop chatbotgate     # Stop service
+#   sudo systemctl restart chatbotgate  # Restart service
+#   journalctl -u chatbotgate -f        # Follow logs
+
+[Unit]
+Description=ChatbotGate Authentication Proxy
+Documentation=https://github.com/ideamans/chatbotgate
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+
+# User and group (create with: sudo useradd -r -s /bin/false chatbotgate)
+User=chatbotgate
+Group=chatbotgate
+
+# Working directory
+WorkingDirectory=/opt/chatbotgate
+
+# Binary and configuration
+ExecStart=/usr/local/bin/chatbotgate serve --config /etc/chatbotgate/config.yaml
+
+# Restart policy
+Restart=always
+RestartSec=5s
+
+# Resource limits
+LimitNOFILE=65536
+MemoryLimit=512M
+CPUQuota=100%
+
+# Security hardening
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/log/chatbotgate
+ReadOnlyPaths=/etc/chatbotgate
+
+# Logging to journald
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=chatbotgate
+
+# Environment variables (optional)
+# Environment="CHATBOTGATE_LOG_LEVEL=info"
+
+[Install]
+WantedBy=multi-user.target

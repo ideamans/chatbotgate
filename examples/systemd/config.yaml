@@ -1,0 +1,76 @@
+# ChatbotGate configuration for systemd deployment
+# This example configuration is optimized for production deployment with systemd
+#
+# IMPORTANT: Change these settings before deploying:
+#   1. proxy.upstream.url - Your upstream application URL
+#   2. session.cookie.secret - Generate a random 32+ character string
+#   3. email_auth.from - Your sender email address
+
+service:
+  name: "ChatbotGate"
+  description: "Authentication gateway for your applications"
+
+server:
+  host: "0.0.0.0"
+  port: 4180
+  auth_path_prefix: "/_auth"
+
+# Proxy configuration
+# CHANGE THIS: Replace with your actual upstream service URL
+proxy:
+  upstream:
+    url: "http://localhost:8080/"  # <-- CHANGE THIS
+
+# Session configuration
+session:
+  cookie:
+    name: "_chatbotgate_session"
+    secret: "CHANGE-THIS-TO-RANDOM-32-CHARS-OR-MORE"  # <-- CHANGE THIS: openssl rand -base64 32
+    expire: "168h"  # 7 days
+    secure: true    # HTTPS required
+    httponly: true
+    samesite: "lax"
+
+# OAuth2 disabled for simple setup
+oauth2:
+  providers: []
+
+# Email authentication with sendmail
+email_auth:
+  enabled: true
+  sender_type: "sendmail"
+
+  # Shared sender configuration (RFC 5322 format supported)
+  from: "ChatbotGate <noreply@chatbotgate.com>"  # <-- CHANGE THIS: Your sender email
+
+  sendmail:
+    # Default path, automatically used if not specified
+    path: "/usr/sbin/sendmail"
+
+  token:
+    expire: "15m"
+
+# No authorization whitelist - all authenticated users allowed
+authorization:
+  allowed: []
+
+# Logging - optimized for systemd/journald
+logging:
+  level: "info"
+  module_level: "debug"
+  color: false  # journalctl provides its own formatting
+  # No file logging needed - journald handles everything
+
+# KVS configuration (using LevelDB for persistence)
+kvs:
+  default:
+    type: "leveldb"
+    leveldb:
+      path: "/var/lib/chatbotgate/kvs"
+      sync_writes: false  # Set to true for safer writes (slower)
+      cleanup_interval: "5m"
+
+  namespaces:
+    session: "session"
+    token: "token"
+    ratelimit: "ratelimit"

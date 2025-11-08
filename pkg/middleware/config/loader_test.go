@@ -25,16 +25,17 @@ server:
 
 
 session:
-  cookie_name: "_test_cookie"
-  cookie_secret: "this-is-a-very-long-secret-key-for-testing-purposes"
-  cookie_expire: "24h"
-  cookie_secure: true
-  cookie_httponly: true
-  cookie_samesite: "strict"
+  cookie:
+    name: "_test_cookie"
+    secret: "this-is-a-very-long-secret-key-for-testing-purposes"
+    expire: "24h"
+    secure: true
+    httponly: true
+    samesite: "strict"
 
 oauth2:
   providers:
-    - name: "google"
+    - type: "google"
       display_name: "Google"
       client_id: "test-client-id"
       client_secret: "test-client-secret"
@@ -56,8 +57,8 @@ logging:
 				if cfg.Service.Name != "Test Service" {
 					t.Errorf("Service.Name = %s, want Test Service", cfg.Service.Name)
 				}
-				if cfg.Session.CookieName != "_test_cookie" {
-					t.Errorf("Session.CookieName = %s, want _test_cookie", cfg.Session.CookieName)
+				if cfg.Session.Cookie.Name != "_test_cookie" {
+					t.Errorf("Session.CookieName = %s, want _test_cookie", cfg.Session.Cookie.Name)
 				}
 				if len(cfg.OAuth2.Providers) != 1 {
 					t.Errorf("len(OAuth2.Providers) = %d, want 1", len(cfg.OAuth2.Providers))
@@ -75,11 +76,12 @@ server:
 
 
 session:
-  cookie_secret: "this-is-a-very-long-secret-key-for-testing-purposes"
+  cookie:
+    secret: "this-is-a-very-long-secret-key-for-testing-purposes"
 
 oauth2:
   providers:
-    - name: "google"
+    - type: "google"
       enabled: true
 
 authorization:
@@ -88,11 +90,11 @@ authorization:
 `,
 			wantErr: false,
 			validate: func(t *testing.T, cfg *Config) {
-				if cfg.Session.CookieName != "_oauth2_proxy" {
-					t.Errorf("Session.CookieName = %s, want _oauth2_proxy (default)", cfg.Session.CookieName)
+				if cfg.Session.Cookie.Name != "_oauth2_proxy" {
+					t.Errorf("Session.CookieName = %s, want _oauth2_proxy (default)", cfg.Session.Cookie.Name)
 				}
-				if cfg.Session.CookieExpire != "168h" {
-					t.Errorf("Session.CookieExpire = %s, want 168h (default)", cfg.Session.CookieExpire)
+				if cfg.Session.Cookie.Expire != "168h" {
+					t.Errorf("Session.CookieExpire = %s, want 168h (default)", cfg.Session.Cookie.Expire)
 				}
 				if cfg.Logging.Level != "info" {
 					t.Errorf("Logging.Level = %s, want info (default)", cfg.Logging.Level)
@@ -114,11 +116,12 @@ server:
 
 
 session:
-  cookie_secret: "this-is-a-very-long-secret-key-for-testing-purposes"
+  cookie:
+    secret: "this-is-a-very-long-secret-key-for-testing-purposes"
 
 oauth2:
   providers:
-    - name: "google"
+    - type: "google"
       enabled: true
 `,
 			wantErr: false,
@@ -187,17 +190,19 @@ func TestFileLoader_Load_JSON(t *testing.T) {
     "upstream": {"url": "http://localhost:9090"}
   },
   "session": {
-    "cookie_name": "_test_cookie",
-    "cookie_secret": "this-is-a-very-long-secret-key-for-testing-purposes",
-    "cookie_expire": "24h",
-    "cookie_secure": true,
-    "cookie_httponly": true,
-    "cookie_samesite": "strict"
+    "cookie": {
+      "name": "_test_cookie",
+      "secret": "this-is-a-very-long-secret-key-for-testing-purposes",
+      "expire": "24h",
+      "secure": true,
+      "httponly": true,
+      "samesite": "strict"
+    }
   },
   "oauth2": {
     "providers": [
       {
-        "name": "google",
+        "type": "google",
         "display_name": "Google",
         "client_id": "test-client-id",
         "client_secret": "test-client-secret",
@@ -220,8 +225,8 @@ func TestFileLoader_Load_JSON(t *testing.T) {
 				if cfg.Service.Name != "Test Service" {
 					t.Errorf("Service.Name = %s, want Test Service", cfg.Service.Name)
 				}
-				if cfg.Session.CookieName != "_test_cookie" {
-					t.Errorf("Session.CookieName = %s, want _test_cookie", cfg.Session.CookieName)
+				if cfg.Session.Cookie.Name != "_test_cookie" {
+					t.Errorf("Session.CookieName = %s, want _test_cookie", cfg.Session.Cookie.Name)
 				}
 				if len(cfg.OAuth2.Providers) != 1 {
 					t.Errorf("len(OAuth2.Providers) = %d, want 1", len(cfg.OAuth2.Providers))
@@ -235,10 +240,12 @@ func TestFileLoader_Load_JSON(t *testing.T) {
   "server": {"auth_path_prefix": "/_auth"},
   "proxy": {"upstream": {"url": "http://localhost:8080"}},
   "session": {
-    "cookie_secret": "this-is-a-very-long-secret-key-for-testing-purposes"
+    "cookie": {
+      "secret": "this-is-a-very-long-secret-key-for-testing-purposes"
+    }
   },
   "oauth2": {
-    "providers": [{"name": "google", "enabled": true}]
+    "providers": [{"type": "google", "enabled": true}]
   },
   "authorization": {
     "allowed_emails": ["user@example.com"]
@@ -246,8 +253,8 @@ func TestFileLoader_Load_JSON(t *testing.T) {
 }`,
 			wantErr: false,
 			validate: func(t *testing.T, cfg *Config) {
-				if cfg.Session.CookieName != "_oauth2_proxy" {
-					t.Errorf("Session.CookieName = %s, want _oauth2_proxy (default)", cfg.Session.CookieName)
+				if cfg.Session.Cookie.Name != "_oauth2_proxy" {
+					t.Errorf("Session.CookieName = %s, want _oauth2_proxy (default)", cfg.Session.Cookie.Name)
 				}
 			},
 		},

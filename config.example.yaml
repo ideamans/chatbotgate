@@ -52,19 +52,21 @@ proxy:
 
 # Session configuration
 session:
-  cookie_name: "_oauth2_proxy"
-  # Generate a random secret: openssl rand -base64 32
-  cookie_secret: "CHANGE-THIS-TO-A-RANDOM-SECRET-AT-LEAST-32-CHARACTERS-LONG"
-  cookie_expire: "168h"  # 7 days
-  cookie_secure: false   # Set to true when using HTTPS
-  cookie_httponly: true
-  cookie_samesite: "lax"
+  cookie:
+    name: "_oauth2_proxy"
+    # Generate a random secret: openssl rand -base64 32
+    secret: "CHANGE-THIS-TO-A-RANDOM-SECRET-AT-LEAST-32-CHARACTERS-LONG"
+    expire: "168h"  # 7 days
+    secure: false   # Set to true when using HTTPS
+    httponly: true
+    samesite: "lax"
 
 # OAuth2 providers configuration
 oauth2:
   providers:
     # Google OAuth2
-    - name: "google"
+    - id: "google"
+      type: "google"
       display_name: "Google"
       client_id: "YOUR-GOOGLE-CLIENT-ID"
       client_secret: "YOUR-GOOGLE-CLIENT-SECRET"
@@ -83,7 +85,8 @@ oauth2:
       #   - "https://www.googleapis.com/auth/analytics.readonly"
 
     # GitHub OAuth2
-    - name: "github"
+    - id: "github"
+      type: "github"
       display_name: "GitHub"
       client_id: "YOUR-GITHUB-CLIENT-ID"
       client_secret: "YOUR-GITHUB-CLIENT-SECRET"
@@ -100,7 +103,8 @@ oauth2:
       #   - "repo"
 
     # Microsoft OAuth2 (Azure AD)
-    - name: "microsoft"
+    - id: "microsoft"
+      type: "microsoft"
       display_name: "Microsoft"
       client_id: "YOUR-MICROSOFT-CLIENT-ID"
       client_secret: "YOUR-MICROSOFT-CLIENT-SECRET"
@@ -119,7 +123,7 @@ oauth2:
       #   - "Calendars.Read"
 
     # Custom OIDC Provider Example
-    # - name: "custom-oidc"
+    # - id: "my-oidc"
     #   type: "custom"
     #   display_name: "My OIDC Provider"
     #   client_id: "YOUR-CLIENT-ID"
@@ -200,7 +204,27 @@ authorization:
 logging:
   level: "info"         # debug, info, warn, error
   module_level: "debug" # Log level for sub-modules
-  color: true           # Enable colored output (auto-detects TTY)
+
+  # Color output (recommended: false for systemd, true for development)
+  # systemd's journalctl provides its own formatting and colors
+  color: false
+
+  # File logging (optional)
+  # RECOMMENDED: Leave commented out for systemd-based deployments
+  # systemd's journald handles log rotation, retention, and querying automatically
+  #
+  # Use file logging only for:
+  #   - Non-systemd environments (Docker without systemd, legacy systems)
+  #   - Audit/compliance requirements (tamper-proof logs, long-term retention)
+  #   - External log collectors (Fluentd, Logstash, etc.)
+  #
+  # When file logging is enabled, ANSI color codes are automatically disabled for file output
+  # file:
+  #   path: "/var/log/chatbotgate/chatbotgate.log"  # Log file path (required)
+  #   max_size_mb: 100   # Maximum size in MB before rotation (default: 100)
+  #   max_backups: 3     # Maximum number of old log files to retain (default: 3)
+  #   max_age: 28        # Maximum number of days to retain old log files (default: 28)
+  #   compress: false    # Whether to compress rotated log files with gzip (default: false)
 
 # KVS (Key-Value Store) configuration
 # Used for session storage, OTP tokens, and rate limiting

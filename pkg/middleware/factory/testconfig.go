@@ -17,12 +17,14 @@ func CreateTestConfig() *config.Config {
 			AuthPathPrefix: "/_auth",
 		},
 		Session: config.SessionConfig{
-			CookieName:     "_test_session",
-			CookieSecret:   "test-secret-key-with-32-characters",
-			CookieExpire:   "1h",
-			CookieSecure:   false,
-			CookieHTTPOnly: true,
-			CookieSameSite: "lax",
+			Cookie: config.CookieConfig{
+				Name:     "_test_session",
+				Secret:   "test-secret-key-with-32-characters",
+				Expire:   "1h",
+				Secure:   false,
+				HTTPOnly: true,
+				SameSite: "lax",
+			},
 		},
 		OAuth2: config.OAuth2Config{
 			Providers: []config.OAuth2Provider{},
@@ -58,7 +60,7 @@ func CreateTestConfigWithOAuth2() *config.Config {
 	cfg := CreateTestConfig()
 	cfg.OAuth2.Providers = []config.OAuth2Provider{
 		{
-			Name:         "google",
+			ID:           "google",
 			Type:         "google",
 			DisplayName:  "Google",
 			ClientID:     "test-client-id",
