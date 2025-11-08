@@ -24,7 +24,9 @@ func TestBuildStyleLinks_DifyDisabled(t *testing.T) {
 			AuthPathPrefix: "/_auth",
 		},
 		Session: config.SessionConfig{
-			CookieName: "_test",
+			Cookie: config.CookieConfig{
+				Name: "_test",
+			},
 		},
 		Assets: config.AssetsConfig{
 			Optimization: config.OptimizationConfig{
@@ -74,7 +76,9 @@ func TestBuildStyleLinks_DifyEnabled(t *testing.T) {
 			AuthPathPrefix: "/_auth",
 		},
 		Session: config.SessionConfig{
-			CookieName: "_test",
+			Cookie: config.CookieConfig{
+				Name: "_test",
+			},
 		},
 		Assets: config.AssetsConfig{
 			Optimization: config.OptimizationConfig{
@@ -123,7 +127,9 @@ func TestBuildStyleLinks_CustomPrefix(t *testing.T) {
 			AuthPathPrefix: "/_custom_auth", // Custom prefix
 		},
 		Session: config.SessionConfig{
-			CookieName: "_test",
+			Cookie: config.CookieConfig{
+				Name: "_test",
+			},
 		},
 		Assets: config.AssetsConfig{
 			Optimization: config.OptimizationConfig{
@@ -172,7 +178,9 @@ func TestHandleDifyCSS(t *testing.T) {
 			AuthPathPrefix: "/_auth",
 		},
 		Session: config.SessionConfig{
-			CookieName: "_test",
+			Cookie: config.CookieConfig{
+				Name: "_test",
+			},
 		},
 	}
 
@@ -233,7 +241,9 @@ func TestMiddleware_DifyCSSRoute(t *testing.T) {
 			AuthPathPrefix: "/_auth",
 		},
 		Session: config.SessionConfig{
-			CookieName: "_test",
+			Cookie: config.CookieConfig{
+				Name: "_test",
+			},
 		},
 	}
 
@@ -282,7 +292,9 @@ func TestMiddleware_DifyCSSRoute_CustomPrefix(t *testing.T) {
 			AuthPathPrefix: "/_custom", // Custom prefix
 		},
 		Session: config.SessionConfig{
-			CookieName: "_test",
+			Cookie: config.CookieConfig{
+				Name: "_test",
+			},
 		},
 	}
 
@@ -403,7 +415,9 @@ func TestBuildAuthHeader(t *testing.T) {
 					AuthPathPrefix: "/_auth",
 				},
 				Session: config.SessionConfig{
-					CookieName: "_test",
+					Cookie: config.CookieConfig{
+						Name: "_test",
+					},
 				},
 			}
 

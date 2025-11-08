@@ -19,7 +19,6 @@ import (
 	"github.com/ideamans/chatbotgate/pkg/middleware/forwarding"
 	"github.com/ideamans/chatbotgate/pkg/middleware/session"
 	"github.com/ideamans/chatbotgate/pkg/proxy/core"
-	"github.com/ideamans/chatbotgate/pkg/shared/kvs"
 	"github.com/ideamans/chatbotgate/pkg/shared/logging"
 )
 
@@ -76,17 +75,19 @@ func TestForwarding_E2E(t *testing.T) {
 		cfg.KVS.Default.Type = "memory"
 	}
 
-	// Create session KVS
-	sessionCfg := cfg.KVS.Default
-	sessionCfg.Namespace = cfg.KVS.Namespaces.Session
-	sessionKVS, err := kvs.New(sessionCfg)
-	if err != nil {
-		t.Fatalf("Failed to create session KVS: %v", err)
-	}
-	defer func() { _ = sessionKVS.Close() }()
+	// Create factory
+	mwFactory := factory.NewDefaultFactory("localhost", chatbotgatePort, logger)
 
-	// Create session store
-	sessionStore := sessionKVS
+	// Create KVS stores using factory
+	sessionStore, tokenKVS, rateLimitKVS, err := mwFactory.CreateKVSStores(cfg)
+	if err != nil {
+		t.Fatalf("Failed to create KVS stores: %v", err)
+	}
+	defer func() {
+		_ = sessionStore.Close()
+		_ = tokenKVS.Close()
+		_ = rateLimitKVS.Close()
+	}()
 
 	// Create proxy handler
 	proxyHandler, err := proxy.NewHandler(backendURL)
@@ -94,11 +95,8 @@ func TestForwarding_E2E(t *testing.T) {
 		t.Fatalf("Failed to create proxy handler: %v", err)
 	}
 
-	// Create factory
-	mwFactory := factory.NewDefaultFactory("localhost", chatbotgatePort, logger)
-
 	// Create middleware directly using factory
-	middleware, err := mwFactory.CreateMiddleware(cfg, sessionStore, proxyHandler, logger)
+	middleware, err := mwFactory.CreateMiddleware(cfg, sessionStore, tokenKVS, rateLimitKVS, proxyHandler, logger)
 	if err != nil {
 		t.Fatalf("Failed to create middleware: %v", err)
 	}
@@ -137,7 +135,7 @@ func TestForwarding_E2E(t *testing.T) {
 		// Make a request with session cookie
 		req, _ := http.NewRequest("GET", server.URL+"/oauth2-test", nil)
 		req.AddCookie(&http.Cookie{
-			Name:  cfg.Session.CookieName,
+			Name:  cfg.Session.Cookie.Name,
 			Value: sess.ID,
 		})
 
@@ -294,7 +292,7 @@ func TestForwarding_E2E(t *testing.T) {
 		// Make a request with email session cookie
 		req, _ := http.NewRequest("GET", server.URL+"/email-test", nil)
 		req.AddCookie(&http.Cookie{
-			Name:  cfg.Session.CookieName,
+			Name:  cfg.Session.Cookie.Name,
 			Value: emailSess.ID,
 		})
 
@@ -370,17 +368,19 @@ func TestCustomFieldsForwarding_E2E_Encrypted(t *testing.T) {
 		cfg.KVS.Default.Type = "memory"
 	}
 
-	// Create session KVS
-	sessionCfg := cfg.KVS.Default
-	sessionCfg.Namespace = cfg.KVS.Namespaces.Session
-	sessionKVS, err := kvs.New(sessionCfg)
-	if err != nil {
-		t.Fatalf("Failed to create session KVS: %v", err)
-	}
-	defer func() { _ = sessionKVS.Close() }()
+	// Create factory
+	mwFactory := factory.NewDefaultFactory("localhost", chatbotgatePort, logger)
 
-	// Create session store
-	sessionStore := sessionKVS
+	// Create KVS stores using factory
+	sessionStore, tokenKVS, rateLimitKVS, err := mwFactory.CreateKVSStores(cfg)
+	if err != nil {
+		t.Fatalf("Failed to create KVS stores: %v", err)
+	}
+	defer func() {
+		_ = sessionStore.Close()
+		_ = tokenKVS.Close()
+		_ = rateLimitKVS.Close()
+	}()
 
 	// Create proxy handler
 	proxyHandler, err := proxy.NewHandler(backendURL)
@@ -388,11 +388,8 @@ func TestCustomFieldsForwarding_E2E_Encrypted(t *testing.T) {
 		t.Fatalf("Failed to create proxy handler: %v", err)
 	}
 
-	// Create factory
-	mwFactory := factory.NewDefaultFactory("localhost", chatbotgatePort, logger)
-
 	// Create middleware directly using factory
-	middleware, err := mwFactory.CreateMiddleware(cfg, sessionStore, proxyHandler, logger)
+	middleware, err := mwFactory.CreateMiddleware(cfg, sessionStore, tokenKVS, rateLimitKVS, proxyHandler, logger)
 	if err != nil {
 		t.Fatalf("Failed to create middleware: %v", err)
 	}
@@ -442,7 +439,7 @@ func TestCustomFieldsForwarding_E2E_Encrypted(t *testing.T) {
 		// Make a request with session cookie
 		req, _ := http.NewRequest("GET", server.URL+"/custom-test", nil)
 		req.AddCookie(&http.Cookie{
-			Name:  cfg.Session.CookieName,
+			Name:  cfg.Session.Cookie.Name,
 			Value: sess.ID,
 		})
 

@@ -18,19 +18,26 @@ type Sender interface {
 
 // SMTPSender sends emails via SMTP
 type SMTPSender struct {
-	config config.SMTPConfig
+	config   config.SMTPConfig
+	from     string // Email address
+	fromName string // Display name
 }
 
 // NewSMTPSender creates a new SMTP email sender
-func NewSMTPSender(cfg config.SMTPConfig) *SMTPSender {
-	return &SMTPSender{config: cfg}
+func NewSMTPSender(cfg config.SMTPConfig, parentEmail, parentName string) *SMTPSender {
+	email, name := cfg.GetFromAddress(parentEmail, parentName)
+	return &SMTPSender{
+		config:   cfg,
+		from:     email,
+		fromName: name,
+	}
 }
 
 // Send sends an email via SMTP
 func (s *SMTPSender) Send(to, subject, body string) error {
-	from := s.config.From
-	if s.config.FromName != "" {
-		from = fmt.Sprintf("%s <%s>", s.config.FromName, s.config.From)
+	fromHeader := s.from
+	if s.fromName != "" {
+		fromHeader = fmt.Sprintf("%s <%s>", s.fromName, s.from)
 	}
 
 	// Compose message
@@ -39,7 +46,7 @@ func (s *SMTPSender) Send(to, subject, body string) error {
 		"Subject: %s\r\n"+
 		"Content-Type: text/plain; charset=UTF-8\r\n"+
 		"\r\n"+
-		"%s", from, to, subject, body)
+		"%s", fromHeader, to, subject, body)
 
 	addr := fmt.Sprintf("%s:%d", s.config.Host, s.config.Port)
 
@@ -52,11 +59,11 @@ func (s *SMTPSender) Send(to, subject, body string) error {
 	// Send based on TLS/STARTTLS configuration
 	if s.config.TLS {
 		// Use TLS from the start
-		return s.sendWithTLS(addr, auth, from, []string{to}, []byte(message))
+		return s.sendWithTLS(addr, auth, s.from, []string{to}, []byte(message))
 	}
 
 	// Use STARTTLS or plain connection
-	return smtp.SendMail(addr, auth, s.config.From, []string{to}, []byte(message))
+	return smtp.SendMail(addr, auth, s.from, []string{to}, []byte(message))
 }
 
 // sendWithTLS sends email using TLS from the start
@@ -90,7 +97,7 @@ func (s *SMTPSender) sendWithTLS(addr string, auth smtp.Auth, from string, to []
 	}
 
 	// Set sender
-	if err := client.Mail(s.config.From); err != nil {
+	if err := client.Mail(s.from); err != nil {
 		return fmt.Errorf("failed to set sender: %w", err)
 	}
 
@@ -122,10 +129,9 @@ func (s *SMTPSender) sendWithTLS(addr string, auth smtp.Auth, from string, to []
 
 // SendHTML sends an HTML email with plain text fallback via SMTP
 func (s *SMTPSender) SendHTML(to, subject, htmlBody, textBody string) error {
-	from := s.config.From
-	fromHeader := s.config.From
-	if s.config.FromName != "" {
-		fromHeader = fmt.Sprintf("%s <%s>", s.config.FromName, s.config.From)
+	fromHeader := s.from
+	if s.fromName != "" {
+		fromHeader = fmt.Sprintf("%s <%s>", s.fromName, s.from)
 	}
 
 	// Build multipart message
@@ -171,21 +177,28 @@ func (s *SMTPSender) SendHTML(to, subject, htmlBody, textBody string) error {
 	// Send based on TLS/STARTTLS configuration
 	if s.config.TLS {
 		// Use TLS from the start
-		return s.sendWithTLS(addr, auth, from, []string{to}, []byte(message))
+		return s.sendWithTLS(addr, auth, s.from, []string{to}, []byte(message))
 	}
 
 	// Use STARTTLS or plain connection
-	return smtp.SendMail(addr, auth, from, []string{to}, []byte(message))
+	return smtp.SendMail(addr, auth, s.from, []string{to}, []byte(message))
 }
 
 // SendmailSender sends emails via sendmail command
 type SendmailSender struct {
-	config config.SendmailConfig
+	config   config.SendmailConfig
+	from     string // Email address
+	fromName string // Display name
 }
 
 // NewSendmailSender creates a new sendmail sender
-func NewSendmailSender(cfg config.SendmailConfig) *SendmailSender {
-	return &SendmailSender{config: cfg}
+func NewSendmailSender(cfg config.SendmailConfig, parentEmail, parentName string) *SendmailSender {
+	email, name := cfg.GetFromAddress(parentEmail, parentName)
+	return &SendmailSender{
+		config:   cfg,
+		from:     email,
+		fromName: name,
+	}
 }
 
 // getSendmailPath returns the sendmail command path, using default if not configured
@@ -199,10 +212,9 @@ func (s *SendmailSender) getSendmailPath() string {
 
 // Send sends an email via sendmail command
 func (s *SendmailSender) Send(to, subject, body string) error {
-	from := s.config.From
-	fromHeader := s.config.From
-	if s.config.FromName != "" {
-		fromHeader = fmt.Sprintf("%s <%s>", s.config.FromName, s.config.From)
+	fromHeader := s.from
+	if s.fromName != "" {
+		fromHeader = fmt.Sprintf("%s <%s>", s.fromName, s.from)
 	}
 
 	// Compose message
@@ -217,7 +229,7 @@ func (s *SendmailSender) Send(to, subject, body string) error {
 	// -t: Read recipients from message headers
 	// -i: Ignore dots alone on lines (prevent premature message termination)
 	// -f: Set envelope sender address
-	cmd := exec.Command(s.getSendmailPath(), "-t", "-i", "-f", from)
+	cmd := exec.Command(s.getSendmailPath(), "-t", "-i", "-f", s.from)
 	cmd.Stdin = strings.NewReader(message)
 
 	// Capture output for error reporting
@@ -231,10 +243,9 @@ func (s *SendmailSender) Send(to, subject, body string) error {
 
 // SendHTML sends an HTML email with plain text fallback via sendmail command
 func (s *SendmailSender) SendHTML(to, subject, htmlBody, textBody string) error {
-	from := s.config.From
-	fromHeader := s.config.From
-	if s.config.FromName != "" {
-		fromHeader = fmt.Sprintf("%s <%s>", s.config.FromName, s.config.From)
+	fromHeader := s.from
+	if s.fromName != "" {
+		fromHeader = fmt.Sprintf("%s <%s>", s.fromName, s.from)
 	}
 
 	// Build multipart message
@@ -271,7 +282,7 @@ func (s *SendmailSender) SendHTML(to, subject, htmlBody, textBody string) error 
 	message := builder.String()
 
 	// Execute sendmail command
-	cmd := exec.Command(s.getSendmailPath(), "-t", "-i", "-f", from)
+	cmd := exec.Command(s.getSendmailPath(), "-t", "-i", "-f", s.from)
 	cmd.Stdin = strings.NewReader(message)
 
 	// Capture output for error reporting

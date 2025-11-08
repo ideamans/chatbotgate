@@ -25,8 +25,12 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
 # Runtime stage
 FROM alpine:3.19
 
-# Install ca-certificates for HTTPS
-RUN apk add --no-cache ca-certificates tzdata
+# Install runtime dependencies
+# - ca-certificates: for HTTPS
+# - tzdata: timezone support
+# - ssmtp: lightweight sendmail replacement for email authentication
+RUN apk add --no-cache ca-certificates tzdata ssmtp && \
+    ln -sf /usr/sbin/ssmtp /usr/sbin/sendmail
 
 # Create non-root user
 RUN addgroup -g 1000 app && \
@@ -44,9 +48,12 @@ COPY --from=builder /build/examples /app/examples
 # Note: Web assets are embedded in the binary via Go embed
 # No need to copy /build/web directory
 
-# Create config directory
-RUN mkdir -p /app/config && \
-    chown -R app:app /app
+# Create config directories
+RUN mkdir -p /etc/chatbotgate /app/config /var/lib/chatbotgate/kvs && \
+    chown -R app:app /app /etc/chatbotgate /var/lib/chatbotgate
+
+# Copy default configuration from examples
+COPY --from=builder --chown=app:app /build/examples/docker/chatbotgate/config.yaml /etc/chatbotgate/config.yaml
 
 # Switch to non-root user
 USER app
@@ -61,5 +68,6 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
 # Set entrypoint
 ENTRYPOINT ["/app/chatbotgate"]
 
-# Default command (can be overridden)
-CMD ["-config", "/app/config/config.yaml"]
+# Default command: use /etc/chatbotgate/config.yaml
+# Can be overridden with: docker run ... chatbotgate -config /path/to/config.yaml
+CMD ["-config", "/etc/chatbotgate/config.yaml"]

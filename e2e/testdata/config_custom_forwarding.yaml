@@ -13,17 +13,18 @@ proxy:
 
 # Session configuration
 session:
-  cookie_name: "_oauth2_proxy_e2e_custom"
-  cookie_secret: "e2e-test-cookie-secret-key-32-chars-long-12345678"
-  cookie_expire: "1h"
-  cookie_secure: false
-  cookie_httponly: true
-  cookie_samesite: "lax"
+  cookie:
+    name: "_oauth2_proxy_e2e_custom"
+    secret: "e2e-test-cookie-secret-key-32-chars-long-12345678"
+    expire: "1h"
+    secure: false
+    httponly: true
+    samesite: "lax"
 
 # OAuth2 providers (mock for testing)
 oauth2:
   providers:
-    - name: "test-provider-with-analytics"
+    - id: "stub-auth"
       type: "custom"
       display_name: "Test Provider (Analytics Scope)"
       client_id: "test-client-id"

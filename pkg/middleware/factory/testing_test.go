@@ -70,8 +70,6 @@ func TestTestingFactory_CreateKVSStores(t *testing.T) {
 	}
 }
 
-
-
 func TestTestingFactory_Integration(t *testing.T) {
 	// Test full integration: create factory, create all components, verify they work together
 	factory := NewTestingFactory("localhost", 4180)

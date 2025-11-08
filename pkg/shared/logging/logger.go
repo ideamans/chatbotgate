@@ -2,6 +2,7 @@ package logging
 
 import (
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"strings"
@@ -78,13 +79,18 @@ type SimpleLogger struct {
 	useColors bool
 }
 
-// NewSimpleLogger creates a new SimpleLogger
+// NewSimpleLogger creates a new SimpleLogger writing to stdout
 func NewSimpleLogger(module string, level Level, useColors bool) *SimpleLogger {
+	return NewSimpleLoggerWithWriter(module, level, useColors, os.Stdout)
+}
+
+// NewSimpleLoggerWithWriter creates a new SimpleLogger with a custom io.Writer
+func NewSimpleLoggerWithWriter(module string, level Level, useColors bool, writer io.Writer) *SimpleLogger {
 	isTTY := checkTTY()
 	return &SimpleLogger{
 		module:    module,
 		level:     level,
-		logger:    log.New(os.Stdout, "", log.LstdFlags),
+		logger:    log.New(writer, "", log.LstdFlags),
 		isTTY:     isTTY,
 		useColors: useColors && isTTY, // Only use colors if enabled and output is a TTY
 	}

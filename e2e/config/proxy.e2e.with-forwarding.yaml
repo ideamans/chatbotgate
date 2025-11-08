@@ -12,17 +12,17 @@ proxy:
     url: "http://target-app:3000/"
 
 session:
-  cookie_name: "mop-e2e"
-  cookie_secret: "0123456789abcdef0123456789abcdef"
-  cookie_expire: "24h"
-  cookie_secure: false
-  cookie_httponly: true
-  cookie_samesite: "lax"
-  store_type: "memory"
+  cookie:
+    name: "mop-e2e"
+    secret: "0123456789abcdef0123456789abcdef"
+    expire: "24h"
+    secure: false
+    httponly: true
+    samesite: "lax"
 
 oauth2:
   providers:
-    - name: "stub-auth"
+    - id: "stub-auth"
       type: "custom"
       display_name: "Stub Auth"
       client_id: "stub-client-id"

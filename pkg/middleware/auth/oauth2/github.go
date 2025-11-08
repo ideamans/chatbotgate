@@ -11,11 +11,12 @@ import (
 
 // GitHubProvider is the OAuth2 provider for GitHub
 type GitHubProvider struct {
+	id     string
 	config *oauth2.Config
 }
 
 // NewGitHubProvider creates a new GitHub OAuth2 provider
-func NewGitHubProvider(clientID, clientSecret, redirectURL string, scopes []string, resetScopes bool) *GitHubProvider {
+func NewGitHubProvider(id, clientID, clientSecret, redirectURL string, scopes []string, resetScopes bool) *GitHubProvider {
 	// Default scopes (used only when scopes is empty)
 	defaultScopes := []string{
 		"user:email",
@@ -31,6 +32,7 @@ func NewGitHubProvider(clientID, clientSecret, redirectURL string, scopes []stri
 	}
 
 	return &GitHubProvider{
+		id: id,
 		config: &oauth2.Config{
 			ClientID:     clientID,
 			ClientSecret: clientSecret,
@@ -43,7 +45,7 @@ func NewGitHubProvider(clientID, clientSecret, redirectURL string, scopes []stri
 
 // Name returns the provider name
 func (p *GitHubProvider) Name() string {
-	return "github"
+	return p.id
 }
 
 // Config returns the OAuth2 config

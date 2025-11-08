@@ -1,0 +1,74 @@
+# ChatbotGate configuration for Docker Compose example
+# This demonstrates a 3-tier architecture:
+#   nginx (frontend) -> ChatbotGate (auth proxy) -> backend app
+
+service:
+  name: "ChatbotGate Demo"
+  description: "Authentication gateway demonstration"
+
+server:
+  host: "0.0.0.0"
+  port: 4180
+  auth_path_prefix: "/_auth"
+  base_url: "http://localhost"
+
+# Proxy to backend application
+proxy:
+  upstream:
+    url: "http://backend/"
+
+# Session configuration
+session:
+  cookie:
+    name: "_chatbotgate_session"
+    secret: "demo-secret-change-in-production-min-32-chars"
+    expire: "168h"  # 7 days
+    secure: false   # Set to true when using HTTPS
+    httponly: true
+    samesite: "lax"
+
+# OAuth2 providers (disabled for simple email-only demo)
+oauth2:
+  providers: []
+
+# Email authentication
+email_auth:
+  enabled: true
+  sender_type: "sendmail"
+  from: "ChatbotGate Demo <noreply@example.com>"
+
+  sendmail:
+    path: "/usr/sbin/sendmail"
+
+  token:
+    expire: "15m"
+
+# Authorization: allow all authenticated users
+authorization:
+  allowed: []
+
+# Forward user information to backend
+forwarding:
+  headers:
+    - path: "email"
+      header: "X-Forwarded-Email"
+    - path: "username"
+      header: "X-Forwarded-User"
+    - path: "provider"
+      header: "X-Forwarded-Provider"
+
+# Logging
+logging:
+  level: "info"
+  module_level: "debug"
+  color: false
+
+# KVS using memory (for demo - use LevelDB or Redis in production)
+kvs:
+  default:
+    type: "memory"
+
+  namespaces:
+    session: "session"
+    token: "token"
+    ratelimit: "ratelimit"

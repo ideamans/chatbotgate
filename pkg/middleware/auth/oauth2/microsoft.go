@@ -11,11 +11,12 @@ import (
 
 // MicrosoftProvider is the OAuth2 provider for Microsoft (Azure AD)
 type MicrosoftProvider struct {
+	id     string
 	config *oauth2.Config
 }
 
 // NewMicrosoftProvider creates a new Microsoft OAuth2 provider
-func NewMicrosoftProvider(clientID, clientSecret, redirectURL string, scopes []string, resetScopes bool) *MicrosoftProvider {
+func NewMicrosoftProvider(id, clientID, clientSecret, redirectURL string, scopes []string, resetScopes bool) *MicrosoftProvider {
 	// Default scopes (used only when scopes is empty)
 	defaultScopes := []string{
 		"openid",
@@ -33,6 +34,7 @@ func NewMicrosoftProvider(clientID, clientSecret, redirectURL string, scopes []s
 	}
 
 	return &MicrosoftProvider{
+		id: id,
 		config: &oauth2.Config{
 			ClientID:     clientID,
 			ClientSecret: clientSecret,
@@ -43,9 +45,9 @@ func NewMicrosoftProvider(clientID, clientSecret, redirectURL string, scopes []s
 	}
 }
 
-// Name returns the provider name
+// Name returns the provider name (ID)
 func (p *MicrosoftProvider) Name() string {
-	return "microsoft"
+	return p.id
 }
 
 // Config returns the OAuth2 config

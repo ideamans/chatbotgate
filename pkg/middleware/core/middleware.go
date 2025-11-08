@@ -154,7 +154,7 @@ func (m *Middleware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // If no, redirects to login
 func (m *Middleware) requireAuth(w http.ResponseWriter, r *http.Request) {
 	// Get session cookie
-	cookie, err := r.Cookie(m.config.Session.CookieName)
+	cookie, err := r.Cookie(m.config.Session.Cookie.Name)
 	if err != nil {
 		// No session cookie, redirect to login
 		m.redirectToLogin(w, r)
@@ -208,8 +208,8 @@ func (m *Middleware) redirectToLogin(w http.ResponseWriter, r *http.Request) {
 					Path:     "/",
 					MaxAge:   600, // 10 minutes - enough time to complete authentication
 					HttpOnly: true,
-					Secure:   m.config.Session.CookieSecure,
-					SameSite: m.config.Session.GetCookieSameSite(),
+					Secure:   m.config.Session.Cookie.Secure,
+					SameSite: m.config.Session.Cookie.GetSameSite(),
 				})
 			}
 		}

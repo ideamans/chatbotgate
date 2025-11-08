@@ -69,35 +69,35 @@ func ValidateConfig(cfg *config.Config) ValidationErrors {
 	}
 
 	// Validate Session
-	if cfg.Session.CookieName == "" {
+	if cfg.Session.Cookie.Name == "" {
 		errs = append(errs, ValidationError{
-			Field:   "session.cookie_name",
+			Field:   "session.cookie.name",
 			Message: "cookie name is required",
 		})
 	}
 
-	if cfg.Session.CookieSecret == "" {
+	if cfg.Session.Cookie.Secret == "" {
 		errs = append(errs, ValidationError{
-			Field:   "session.cookie_secret",
+			Field:   "session.cookie.secret",
 			Message: "cookie secret is required",
 		})
-	} else if len(cfg.Session.CookieSecret) < 32 {
+	} else if len(cfg.Session.Cookie.Secret) < 32 {
 		errs = append(errs, ValidationError{
-			Field:   "session.cookie_secret",
-			Message: fmt.Sprintf("cookie secret must be at least 32 characters (current: %d)", len(cfg.Session.CookieSecret)),
+			Field:   "session.cookie.secret",
+			Message: fmt.Sprintf("cookie secret must be at least 32 characters (current: %d)", len(cfg.Session.Cookie.Secret)),
 		})
 	}
 
-	if cfg.Session.CookieExpire == "" {
+	if cfg.Session.Cookie.Expire == "" {
 		errs = append(errs, ValidationError{
-			Field:   "session.cookie_expire",
+			Field:   "session.cookie.expire",
 			Message: "cookie expiration is required",
 		})
 	} else {
 		// Validate duration format
-		if _, err := cfg.Session.GetCookieExpireDuration(); err != nil {
+		if _, err := cfg.Session.Cookie.GetExpireDuration(); err != nil {
 			errs = append(errs, ValidationError{
-				Field:   "session.cookie_expire",
+				Field:   "session.cookie.expire",
 				Message: fmt.Sprintf("invalid duration format: %v", err),
 			})
 		}
@@ -108,51 +108,67 @@ func ValidateConfig(cfg *config.Config) ValidationErrors {
 
 	// Validate OAuth2 - at least one provider must be available (not disabled)
 	hasAvailableOAuth2Provider := false
+	providerIDs := make(map[string]int) // Track provider IDs for uniqueness check
+
 	for i, provider := range cfg.OAuth2.Providers {
+		// Validate provider ID
+		if provider.ID == "" {
+			errs = append(errs, ValidationError{
+				Field:   fmt.Sprintf("oauth2.providers[%d].id", i),
+				Message: "provider ID is required",
+			})
+		} else {
+			// Check ID uniqueness
+			if existingIdx, exists := providerIDs[provider.ID]; exists {
+				errs = append(errs, ValidationError{
+					Field:   fmt.Sprintf("oauth2.providers[%d].id", i),
+					Message: fmt.Sprintf("provider ID '%s' is not unique (also used by providers[%d])", provider.ID, existingIdx),
+				})
+			} else {
+				providerIDs[provider.ID] = i
+			}
+		}
+
 		if !provider.Disabled {
 			hasAvailableOAuth2Provider = true
 			// Validate available provider configuration
-			if provider.Name == "" {
+			if provider.Type == "" {
 				errs = append(errs, ValidationError{
-					Field:   fmt.Sprintf("oauth2.providers[%d].name", i),
-					Message: "provider name is required",
+					Field:   fmt.Sprintf("oauth2.providers[%d].type", i),
+					Message: "provider type is required",
 				})
 			}
 			if provider.ClientID == "" {
 				errs = append(errs, ValidationError{
 					Field:   fmt.Sprintf("oauth2.providers[%d].client_id", i),
-					Message: fmt.Sprintf("client ID is required for provider '%s'", provider.Name),
+					Message: fmt.Sprintf("client ID is required for provider '%s'", provider.Type),
 				})
 			}
 			if provider.ClientSecret == "" {
 				errs = append(errs, ValidationError{
 					Field:   fmt.Sprintf("oauth2.providers[%d].client_secret", i),
-					Message: fmt.Sprintf("client secret is required for provider '%s'", provider.Name),
+					Message: fmt.Sprintf("client secret is required for provider '%s'", provider.Type),
 				})
 			}
 
 			// Validate custom provider
-			providerType := provider.Type
-			if providerType == "" {
-				providerType = provider.Name
-			}
-			if providerType == "custom" {
+			if provider.Type == "custom" {
 				if provider.AuthURL == "" {
 					errs = append(errs, ValidationError{
 						Field:   fmt.Sprintf("oauth2.providers[%d].auth_url", i),
-						Message: fmt.Sprintf("auth URL is required for custom provider '%s'", provider.Name),
+						Message: fmt.Sprintf("auth URL is required for custom provider '%s'", provider.Type),
 					})
 				}
 				if provider.TokenURL == "" {
 					errs = append(errs, ValidationError{
 						Field:   fmt.Sprintf("oauth2.providers[%d].token_url", i),
-						Message: fmt.Sprintf("token URL is required for custom provider '%s'", provider.Name),
+						Message: fmt.Sprintf("token URL is required for custom provider '%s'", provider.Type),
 					})
 				}
 				if provider.UserInfoURL == "" {
 					errs = append(errs, ValidationError{
 						Field:   fmt.Sprintf("oauth2.providers[%d].userinfo_url", i),
-						Message: fmt.Sprintf("user info URL is required for custom provider '%s'", provider.Name),
+						Message: fmt.Sprintf("user info URL is required for custom provider '%s'", provider.Type),
 					})
 				}
 			}

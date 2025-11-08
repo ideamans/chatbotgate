@@ -17,14 +17,16 @@ func validConfig() *config.Config {
 			AuthPathPrefix: "/_auth",
 		},
 		Session: config.SessionConfig{
-			CookieName:   "_oauth2_proxy",
-			CookieSecret: "this-is-a-very-long-secret-key-with-at-least-32-characters",
-			CookieExpire: "168h",
+			Cookie: config.CookieConfig{
+				Name:   "_oauth2_proxy",
+				Secret: "this-is-a-very-long-secret-key-with-at-least-32-characters",
+				Expire: "168h",
+			},
 		},
 		OAuth2: config.OAuth2Config{
 			Providers: []config.OAuth2Provider{
 				{
-					Name:         "google",
+					ID:           "google",
 					Type:         "google",
 					ClientID:     "test-client-id",
 					ClientSecret: "test-client-secret",
@@ -125,41 +127,41 @@ func TestValidateConfig_SessionValidation(t *testing.T) {
 		{
 			name: "Missing cookie name",
 			modifyConfig: func(cfg *config.Config) {
-				cfg.Session.CookieName = ""
+				cfg.Session.Cookie.Name = ""
 			},
-			expectedField: "session.cookie_name",
+			expectedField: "session.cookie.name",
 			expectedError: "required",
 		},
 		{
 			name: "Missing cookie secret",
 			modifyConfig: func(cfg *config.Config) {
-				cfg.Session.CookieSecret = ""
+				cfg.Session.Cookie.Secret = ""
 			},
-			expectedField: "session.cookie_secret",
+			expectedField: "session.cookie.secret",
 			expectedError: "required",
 		},
 		{
 			name: "Cookie secret too short",
 			modifyConfig: func(cfg *config.Config) {
-				cfg.Session.CookieSecret = "short"
+				cfg.Session.Cookie.Secret = "short"
 			},
-			expectedField: "session.cookie_secret",
+			expectedField: "session.cookie.secret",
 			expectedError: "at least 32 characters",
 		},
 		{
 			name: "Missing cookie expire",
 			modifyConfig: func(cfg *config.Config) {
-				cfg.Session.CookieExpire = ""
+				cfg.Session.Cookie.Expire = ""
 			},
-			expectedField: "session.cookie_expire",
+			expectedField: "session.cookie.expire",
 			expectedError: "required",
 		},
 		{
 			name: "Invalid cookie expire format",
 			modifyConfig: func(cfg *config.Config) {
-				cfg.Session.CookieExpire = "invalid"
+				cfg.Session.Cookie.Expire = "invalid"
 			},
-			expectedField: "session.cookie_expire",
+			expectedField: "session.cookie.expire",
 			expectedError: "invalid duration format",
 		},
 	}
@@ -206,11 +208,11 @@ func TestValidateConfig_OAuth2Validation(t *testing.T) {
 			expectedError: "at least one authentication method must be enabled",
 		},
 		{
-			name: "Missing provider name",
+			name: "Missing provider type",
 			modifyConfig: func(cfg *config.Config) {
-				cfg.OAuth2.Providers[0].Name = ""
+				cfg.OAuth2.Providers[0].Type = ""
 			},
-			expectedField: "oauth2.providers[0].name",
+			expectedField: "oauth2.providers[0].type",
 			expectedError: "required",
 		},
 		{
@@ -261,7 +263,7 @@ func TestValidateConfig_CustomOAuth2Provider(t *testing.T) {
 	cfg := validConfig()
 	cfg.OAuth2.Providers = []config.OAuth2Provider{
 		{
-			Name:         "custom",
+			ID:           "custom",
 			Type:         "custom",
 			ClientID:     "test-client-id",
 			ClientSecret: "test-client-secret",
@@ -450,9 +452,11 @@ func TestValidateConfig_MultipleErrors(t *testing.T) {
 			Name: "", // Missing
 		},
 		Session: config.SessionConfig{
-			CookieName:   "_oauth2_proxy",
-			CookieSecret: "short",   // Too short
-			CookieExpire: "invalid", // Invalid format
+			Cookie: config.CookieConfig{
+				Name:   "_oauth2_proxy",
+				Secret: "short",   // Too short
+				Expire: "invalid", // Invalid format
+			},
 		},
 		OAuth2: config.OAuth2Config{
 			Providers: []config.OAuth2Provider{}, // No providers
@@ -472,8 +476,8 @@ func TestValidateConfig_MultipleErrors(t *testing.T) {
 	// Check that all expected errors are present
 	expectedFields := []string{
 		"service.name",
-		"session.cookie_secret",
-		"session.cookie_expire",
+		"session.cookie.secret",
+		"session.cookie.expire",
 	}
 
 	for _, expectedField := range expectedFields {

@@ -43,6 +43,7 @@ bin/
 # Config files with secrets (example files are OK)
 config.yaml
 !config.example.yaml
+!examples/**/config.yaml
 
 # Temporary files
 tmp/

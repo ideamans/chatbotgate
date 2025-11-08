@@ -11,7 +11,7 @@ import (
 )
 
 func TestNewGitHubProvider(t *testing.T) {
-	provider := NewGitHubProvider("test-client-id", "test-client-secret", "http://localhost/callback", nil, false)
+	provider := NewGitHubProvider("github", "test-client-id", "test-client-secret", "http://localhost/callback", nil, false)
 
 	if provider == nil {
 		t.Fatal("NewGitHubProvider() returned nil")
@@ -45,7 +45,7 @@ func TestNewGitHubProvider(t *testing.T) {
 func TestGitHubProvider_CustomScopes(t *testing.T) {
 	// Test with custom scopes - should use only custom scopes (no defaults added)
 	customScopes := []string{"repo", "read:org"}
-	provider := NewGitHubProvider("test-client-id", "test-client-secret", "http://localhost/callback", customScopes, false)
+	provider := NewGitHubProvider("github", "test-client-id", "test-client-secret", "http://localhost/callback", customScopes, false)
 
 	config := provider.Config()
 
@@ -70,7 +70,7 @@ func TestGitHubProvider_CustomScopesWithResetFlag(t *testing.T) {
 	// Test with custom scopes and reset_scopes: true
 	// Behavior is same as reset_scopes: false (only custom scopes are used)
 	customScopes := []string{"repo", "read:org"}
-	provider := NewGitHubProvider("test-client-id", "test-client-secret", "http://localhost/callback", customScopes, true)
+	provider := NewGitHubProvider("github", "test-client-id", "test-client-secret", "http://localhost/callback", customScopes, true)
 
 	config := provider.Config()
 
@@ -93,7 +93,7 @@ func TestGitHubProvider_CustomScopesWithResetFlag(t *testing.T) {
 
 func TestGitHubProvider_EmptyScopes(t *testing.T) {
 	// Test with empty scopes - should use default scopes
-	provider := NewGitHubProvider("test-client-id", "test-client-secret", "http://localhost/callback", nil, true)
+	provider := NewGitHubProvider("github", "test-client-id", "test-client-secret", "http://localhost/callback", nil, true)
 
 	config := provider.Config()
 
@@ -222,7 +222,7 @@ func TestGitHubProvider_GetUserEmail(t *testing.T) {
 			}))
 			defer server.Close()
 
-			provider := NewGitHubProvider("test-client-id", "test-client-secret", "http://localhost/callback", nil, false)
+			provider := NewGitHubProvider("github", "test-client-id", "test-client-secret", "http://localhost/callback", nil, false)
 
 			// Create test token
 			token := &oauth2lib.Token{

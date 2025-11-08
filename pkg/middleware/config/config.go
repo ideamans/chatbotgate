@@ -72,22 +72,27 @@ func (s ServerConfig) GetCallbackURL(host string, port int) string {
 // SessionConfig contains session management settings
 // Note: Session storage backend is configured via kvs.default or kvs.session
 type SessionConfig struct {
-	CookieName     string `yaml:"cookie_name" json:"cookie_name"`
-	CookieSecret   string `yaml:"cookie_secret" json:"cookie_secret"`
-	CookieExpire   string `yaml:"cookie_expire" json:"cookie_expire"`
-	CookieSecure   bool   `yaml:"cookie_secure" json:"cookie_secure"`
-	CookieHTTPOnly bool   `yaml:"cookie_httponly" json:"cookie_httponly"`
-	CookieSameSite string `yaml:"cookie_samesite" json:"cookie_samesite"`
+	Cookie CookieConfig `yaml:"cookie" json:"cookie"`
 }
 
-// GetCookieExpireDuration returns the cookie expiration as a time.Duration
-func (s SessionConfig) GetCookieExpireDuration() (time.Duration, error) {
-	return time.ParseDuration(s.CookieExpire)
+// CookieConfig contains session cookie settings
+type CookieConfig struct {
+	Name     string `yaml:"name" json:"name"`
+	Secret   string `yaml:"secret" json:"secret"`
+	Expire   string `yaml:"expire" json:"expire"`
+	Secure   bool   `yaml:"secure" json:"secure"`
+	HTTPOnly bool   `yaml:"httponly" json:"httponly"`
+	SameSite string `yaml:"samesite" json:"samesite"`
 }
 
-// GetCookieSameSite returns the SameSite cookie attribute based on configuration
-func (s SessionConfig) GetCookieSameSite() http.SameSite {
-	switch strings.ToLower(s.CookieSameSite) {
+// GetExpireDuration returns the cookie expiration as a time.Duration
+func (c CookieConfig) GetExpireDuration() (time.Duration, error) {
+	return time.ParseDuration(c.Expire)
+}
+
+// GetSameSite returns the SameSite cookie attribute based on configuration
+func (c CookieConfig) GetSameSite() http.SameSite {
+	switch strings.ToLower(c.SameSite) {
 	case "strict":
 		return http.SameSiteStrictMode
 	case "none":
@@ -106,9 +111,9 @@ type OAuth2Config struct {
 
 // OAuth2Provider represents a single OAuth2 provider configuration
 type OAuth2Provider struct {
-	Name         string `yaml:"name" json:"name"`
-	Type         string `yaml:"type" json:"type"` // "google", "github", "microsoft", "custom" (optional, defaults to name)
-	DisplayName  string `yaml:"display_name" json:"display_name"`
+	ID           string `yaml:"id" json:"id"`                     // Unique identifier for this provider (required, must be unique)
+	Type         string `yaml:"type" json:"type"`                 // Provider type: "google", "github", "microsoft", "custom"
+	DisplayName  string `yaml:"display_name" json:"display_name"` // Display name shown in UI
 	ClientID     string `yaml:"client_id" json:"client_id"`
 	ClientSecret string `yaml:"client_secret" json:"client_secret"`
 	Disabled     bool   `yaml:"disabled" json:"disabled"` // If true, provider is hidden from login page
@@ -130,10 +135,38 @@ type OAuth2Provider struct {
 type EmailAuthConfig struct {
 	Enabled    bool             `yaml:"enabled" json:"enabled"`
 	SenderType string           `yaml:"sender_type" json:"sender_type"` // "smtp", "sendgrid", or "sendmail"
+	From       string           `yaml:"from" json:"from"`               // From email address (can be RFC 5322 format: "Name <email@example.com>" or just "email@example.com")
+	FromName   string           `yaml:"from_name" json:"from_name"`     // From display name (optional, used if From doesn't contain name)
 	SMTP       SMTPConfig       `yaml:"smtp" json:"smtp"`
 	SendGrid   SendGridConfig   `yaml:"sendgrid" json:"sendgrid"`
 	Sendmail   SendmailConfig   `yaml:"sendmail" json:"sendmail"`
 	Token      EmailTokenConfig `yaml:"token" json:"token"`
+}
+
+// GetFromAddress parses the From field and returns the email address and display name
+// Supports RFC 5322 format: "Display Name <email@example.com>" or just "email@example.com"
+// Returns (email, displayName)
+func (e EmailAuthConfig) GetFromAddress() (string, string) {
+	from := strings.TrimSpace(e.From)
+	if from == "" {
+		return "", ""
+	}
+
+	// Check for RFC 5322 format: "Name <email@example.com>"
+	if strings.Contains(from, "<") && strings.Contains(from, ">") {
+		startIdx := strings.Index(from, "<")
+		endIdx := strings.Index(from, ">")
+		if startIdx < endIdx {
+			email := strings.TrimSpace(from[startIdx+1 : endIdx])
+			name := strings.TrimSpace(from[:startIdx])
+			// Remove surrounding quotes from name if present
+			name = strings.Trim(name, `"`)
+			return email, name
+		}
+	}
+
+	// Plain email format: use FromName if specified
+	return from, e.FromName
 }
 
 // SMTPConfig contains SMTP server settings
@@ -142,25 +175,58 @@ type SMTPConfig struct {
 	Port     int    `yaml:"port" json:"port"`
 	Username string `yaml:"username" json:"username"`
 	Password string `yaml:"password" json:"password"`
-	From     string `yaml:"from" json:"from"`
-	FromName string `yaml:"from_name" json:"from_name"`
+	From     string `yaml:"from,omitempty" json:"from,omitempty"`           // Optional: Override email_auth.from
+	FromName string `yaml:"from_name,omitempty" json:"from_name,omitempty"` // Optional: Override email_auth.from_name
 	TLS      bool   `yaml:"tls" json:"tls"`
 	StartTLS bool   `yaml:"starttls" json:"starttls"`
+}
+
+// GetFromAddress returns the From address and name, with fallback to parent config
+// Returns (email, displayName)
+func (s SMTPConfig) GetFromAddress(parentEmail, parentName string) (string, string) {
+	// Use SMTP-specific config if set (backward compatibility)
+	if s.From != "" {
+		return s.From, s.FromName
+	}
+	// Fall back to parent EmailAuthConfig
+	return parentEmail, parentName
 }
 
 // SendGridConfig contains SendGrid API settings
 type SendGridConfig struct {
 	APIKey      string `yaml:"api_key" json:"api_key"`
-	From        string `yaml:"from" json:"from"`
-	FromName    string `yaml:"from_name" json:"from_name"`
-	EndpointURL string `yaml:"endpoint_url" json:"endpoint_url"` // Optional custom endpoint URL (default: https://api.sendgrid.com)
+	From        string `yaml:"from,omitempty" json:"from,omitempty"`           // Optional: Override email_auth.from
+	FromName    string `yaml:"from_name,omitempty" json:"from_name,omitempty"` // Optional: Override email_auth.from_name
+	EndpointURL string `yaml:"endpoint_url" json:"endpoint_url"`               // Optional custom endpoint URL (default: https://api.sendgrid.com)
+}
+
+// GetFromAddress returns the From address and name, with fallback to parent config
+// Returns (email, displayName)
+func (s SendGridConfig) GetFromAddress(parentEmail, parentName string) (string, string) {
+	// Use SendGrid-specific config if set (backward compatibility)
+	if s.From != "" {
+		return s.From, s.FromName
+	}
+	// Fall back to parent EmailAuthConfig
+	return parentEmail, parentName
 }
 
 // SendmailConfig contains sendmail command settings
 type SendmailConfig struct {
-	Path     string `yaml:"path" json:"path"`           // Path to sendmail binary (default: /usr/sbin/sendmail)
-	From     string `yaml:"from" json:"from"`           // From email address
-	FromName string `yaml:"from_name" json:"from_name"` // From display name
+	Path     string `yaml:"path" json:"path"`                               // Path to sendmail binary (default: /usr/sbin/sendmail)
+	From     string `yaml:"from,omitempty" json:"from,omitempty"`           // Optional: Override email_auth.from
+	FromName string `yaml:"from_name,omitempty" json:"from_name,omitempty"` // Optional: Override email_auth.from_name
+}
+
+// GetFromAddress returns the From address and name, with fallback to parent config
+// Returns (email, displayName)
+func (s SendmailConfig) GetFromAddress(parentEmail, parentName string) (string, string) {
+	// Use Sendmail-specific config if set (backward compatibility)
+	if s.From != "" {
+		return s.From, s.FromName
+	}
+	// Fall back to parent EmailAuthConfig
+	return parentEmail, parentName
 }
 
 // EmailTokenConfig contains token expiration settings
@@ -183,9 +249,19 @@ type AuthorizationConfig struct {
 
 // LoggingConfig contains logging settings
 type LoggingConfig struct {
-	Level       string `yaml:"level" json:"level"`
-	ModuleLevel string `yaml:"module_level" json:"module_level"`
-	Color       bool   `yaml:"color" json:"color"`
+	Level       string             `yaml:"level" json:"level"`
+	ModuleLevel string             `yaml:"module_level" json:"module_level"`
+	Color       bool               `yaml:"color" json:"color"`
+	File        *FileLoggingConfig `yaml:"file,omitempty" json:"file,omitempty"` // Optional file logging configuration
+}
+
+// FileLoggingConfig contains file logging and rotation settings
+type FileLoggingConfig struct {
+	Path       string `yaml:"path" json:"path"`                                   // Log file path (required)
+	MaxSizeMB  int    `yaml:"max_size_mb,omitempty" json:"max_size_mb,omitempty"` // Maximum size in megabytes before rotation (default: 100)
+	MaxBackups int    `yaml:"max_backups,omitempty" json:"max_backups,omitempty"` // Maximum number of old log files to retain (default: 3)
+	MaxAge     int    `yaml:"max_age,omitempty" json:"max_age,omitempty"`         // Maximum number of days to retain old log files (default: 28)
+	Compress   bool   `yaml:"compress,omitempty" json:"compress,omitempty"`       // Whether to compress rotated log files (default: false)
 }
 
 // KVSConfig contains the unified KVS configuration with optional overrides.
@@ -242,9 +318,9 @@ func (c *Config) Validate() error {
 	}
 
 	// Validate session cookie secret
-	if c.Session.CookieSecret == "" {
+	if c.Session.Cookie.Secret == "" {
 		verr.Add(ErrCookieSecretRequired)
-	} else if len(c.Session.CookieSecret) < 32 {
+	} else if len(c.Session.Cookie.Secret) < 32 {
 		verr.Add(ErrCookieSecretTooShort)
 	}
 

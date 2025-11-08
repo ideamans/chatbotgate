@@ -10,12 +10,14 @@ import (
 
 // SendGridSender sends emails via SendGrid API
 type SendGridSender struct {
-	config config.SendGridConfig
-	client *sendgrid.Client
+	config   config.SendGridConfig
+	client   *sendgrid.Client
+	from     string // Email address
+	fromName string // Display name
 }
 
 // NewSendGridSender creates a new SendGrid email sender
-func NewSendGridSender(cfg config.SendGridConfig) *SendGridSender {
+func NewSendGridSender(cfg config.SendGridConfig, parentEmail, parentName string) *SendGridSender {
 	client := sendgrid.NewSendClient(cfg.APIKey)
 
 	// Set custom endpoint URL if configured
@@ -23,15 +25,19 @@ func NewSendGridSender(cfg config.SendGridConfig) *SendGridSender {
 		client.BaseURL = cfg.EndpointURL
 	}
 
+	email, name := cfg.GetFromAddress(parentEmail, parentName)
+
 	return &SendGridSender{
-		config: cfg,
-		client: client,
+		config:   cfg,
+		client:   client,
+		from:     email,
+		fromName: name,
 	}
 }
 
 // Send sends an email via SendGrid API
 func (s *SendGridSender) Send(to, subject, body string) error {
-	from := mail.NewEmail(s.config.FromName, s.config.From)
+	from := mail.NewEmail(s.fromName, s.from)
 	toEmail := mail.NewEmail("", to)
 	message := mail.NewSingleEmail(from, subject, toEmail, body, body)
 
@@ -50,7 +56,7 @@ func (s *SendGridSender) Send(to, subject, body string) error {
 
 // SendHTML sends an HTML email with plain text fallback via SendGrid API
 func (s *SendGridSender) SendHTML(to, subject, htmlBody, textBody string) error {
-	from := mail.NewEmail(s.config.FromName, s.config.From)
+	from := mail.NewEmail(s.fromName, s.from)
 	toEmail := mail.NewEmail("", to)
 	message := mail.NewSingleEmail(from, subject, toEmail, textBody, htmlBody)
 

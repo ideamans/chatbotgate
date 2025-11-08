@@ -249,6 +249,89 @@ Key configuration sections:
 - **Rules**: Path-based access control
 - **Logging**: Log levels and output
 
+## Logging
+
+ChatbotGate supports multiple logging backends depending on your deployment environment.
+
+### systemd (Recommended for Production)
+
+For modern Linux systems with systemd, simply log to stdout. systemd's journald handles all log management:
+
+```yaml
+logging:
+  level: "info"
+  color: false  # journalctl provides its own formatting
+```
+
+**View logs:**
+```bash
+# Follow logs in real-time
+journalctl -u chatbotgate -f
+
+# Show logs since 1 hour ago
+journalctl -u chatbotgate --since "1 hour ago"
+
+# Show only error level and above
+journalctl -u chatbotgate -p err
+
+# Export logs to file
+journalctl -u chatbotgate --since today > chatbotgate.log
+```
+
+**Configure retention** in `/etc/systemd/journald.conf`:
+```ini
+[Journal]
+Storage=persistent
+SystemMaxUse=500M        # Max disk space
+SystemMaxFileSize=100M   # Max single journal file size
+MaxRetentionSec=1month   # Keep logs for 1 month
+```
+
+See `examples/systemd/` for complete service unit files.
+
+### File Logging (Non-systemd Environments)
+
+Enable file logging when running without systemd or for specific requirements:
+
+```yaml
+logging:
+  level: "info"
+  file:
+    path: "/var/log/chatbotgate/chatbotgate.log"
+    max_size_mb: 100
+    max_backups: 3
+    max_age: 28
+    compress: false
+```
+
+**Use cases:**
+- Docker containers without systemd
+- Legacy systems (FreeBSD, older Linux)
+- Audit/compliance requirements
+- External log collectors (Fluentd, Logstash)
+
+### Docker
+
+Use `docker logs` for containerized deployments:
+
+```bash
+# Follow logs
+docker logs -f chatbotgate
+
+# View last 100 lines
+docker logs --tail 100 chatbotgate
+
+# View logs since timestamp
+docker logs --since 2024-01-01T00:00:00 chatbotgate
+```
+
+### Log Levels
+
+- `debug`: Detailed debugging information
+- `info`: General informational messages (default)
+- `warn`: Warning messages
+- `error`: Error messages
+
 ## Use Cases
 
 ### Chatbot Widget Authentication
