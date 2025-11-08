@@ -13,12 +13,15 @@ builds:
       - linux
       - darwin
       - windows
+      - freebsd
     goarch:
       - amd64
       - arm64
-    # Ignore arm64 on Windows (not commonly used)
+    # Ignore arm64 on Windows and FreeBSD (not commonly used)
     ignore:
       - goos: windows
+        goarch: arm64
+      - goos: freebsd
         goarch: arm64
     ldflags:
       - -s -w
