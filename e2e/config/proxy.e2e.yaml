@@ -23,7 +23,6 @@ session:
 oauth2:
   providers:
     - type: "custom"
-      type: "custom"
       display_name: "Stub Auth"
       client_id: "stub-client-id"
       client_secret: "stub-client-secret"
