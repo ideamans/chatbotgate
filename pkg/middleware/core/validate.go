@@ -108,7 +108,27 @@ func ValidateConfig(cfg *config.Config) ValidationErrors {
 
 	// Validate OAuth2 - at least one provider must be available (not disabled)
 	hasAvailableOAuth2Provider := false
+	providerIDs := make(map[string]int) // Track provider IDs for uniqueness check
+
 	for i, provider := range cfg.OAuth2.Providers {
+		// Validate provider ID
+		if provider.ID == "" {
+			errs = append(errs, ValidationError{
+				Field:   fmt.Sprintf("oauth2.providers[%d].id", i),
+				Message: "provider ID is required",
+			})
+		} else {
+			// Check ID uniqueness
+			if existingIdx, exists := providerIDs[provider.ID]; exists {
+				errs = append(errs, ValidationError{
+					Field:   fmt.Sprintf("oauth2.providers[%d].id", i),
+					Message: fmt.Sprintf("provider ID '%s' is not unique (also used by providers[%d])", provider.ID, existingIdx),
+				})
+			} else {
+				providerIDs[provider.ID] = i
+			}
+		}
+
 		if !provider.Disabled {
 			hasAvailableOAuth2Provider = true
 			// Validate available provider configuration

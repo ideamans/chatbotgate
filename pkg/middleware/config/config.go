@@ -111,6 +111,7 @@ type OAuth2Config struct {
 
 // OAuth2Provider represents a single OAuth2 provider configuration
 type OAuth2Provider struct {
+	ID           string `yaml:"id" json:"id"`                     // Unique identifier for this provider (required, must be unique)
 	Type         string `yaml:"type" json:"type"`                 // Provider type: "google", "github", "microsoft", "custom"
 	DisplayName  string `yaml:"display_name" json:"display_name"` // Display name shown in UI
 	ClientID     string `yaml:"client_id" json:"client_id"`

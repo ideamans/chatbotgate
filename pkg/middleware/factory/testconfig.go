@@ -60,6 +60,7 @@ func CreateTestConfigWithOAuth2() *config.Config {
 	cfg := CreateTestConfig()
 	cfg.OAuth2.Providers = []config.OAuth2Provider{
 		{
+			ID:           "google",
 			Type:         "google",
 			DisplayName:  "Google",
 			ClientID:     "test-client-id",

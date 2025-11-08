@@ -11,11 +11,12 @@ import (
 
 // GoogleProvider is the OAuth2 provider for Google
 type GoogleProvider struct {
+	id     string
 	config *oauth2.Config
 }
 
 // NewGoogleProvider creates a new Google OAuth2 provider
-func NewGoogleProvider(clientID, clientSecret, redirectURL string, scopes []string, resetScopes bool) *GoogleProvider {
+func NewGoogleProvider(id, clientID, clientSecret, redirectURL string, scopes []string, resetScopes bool) *GoogleProvider {
 	// Default scopes (used only when scopes is empty)
 	defaultScopes := []string{
 		"openid",
@@ -32,6 +33,7 @@ func NewGoogleProvider(clientID, clientSecret, redirectURL string, scopes []stri
 	}
 
 	return &GoogleProvider{
+		id: id,
 		config: &oauth2.Config{
 			ClientID:     clientID,
 			ClientSecret: clientSecret,
@@ -42,9 +44,9 @@ func NewGoogleProvider(clientID, clientSecret, redirectURL string, scopes []stri
 	}
 }
 
-// Name returns the provider name
+// Name returns the provider name (ID)
 func (p *GoogleProvider) Name() string {
-	return "google"
+	return p.id
 }
 
 // Config returns the OAuth2 config

@@ -65,7 +65,8 @@ session:
 oauth2:
   providers:
     # Google OAuth2
-    - type: "google"
+    - id: "google"
+      type: "google"
       display_name: "Google"
       client_id: "YOUR-GOOGLE-CLIENT-ID"
       client_secret: "YOUR-GOOGLE-CLIENT-SECRET"
@@ -84,7 +85,8 @@ oauth2:
       #   - "https://www.googleapis.com/auth/analytics.readonly"
 
     # GitHub OAuth2
-    - type: "github"
+    - id: "github"
+      type: "github"
       display_name: "GitHub"
       client_id: "YOUR-GITHUB-CLIENT-ID"
       client_secret: "YOUR-GITHUB-CLIENT-SECRET"
@@ -101,7 +103,8 @@ oauth2:
       #   - "repo"
 
     # Microsoft OAuth2 (Azure AD)
-    - type: "microsoft"
+    - id: "microsoft"
+      type: "microsoft"
       display_name: "Microsoft"
       client_id: "YOUR-MICROSOFT-CLIENT-ID"
       client_secret: "YOUR-MICROSOFT-CLIENT-SECRET"
@@ -120,7 +123,8 @@ oauth2:
       #   - "Calendars.Read"
 
     # Custom OIDC Provider Example
-    # - type: "custom"
+    # - id: "my-oidc"
+    #   type: "custom"
     #   display_name: "My OIDC Provider"
     #   client_id: "YOUR-CLIENT-ID"
     #   client_secret: "YOUR-CLIENT-SECRET"

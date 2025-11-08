@@ -5,7 +5,7 @@ import (
 )
 
 func TestNewGoogleProvider(t *testing.T) {
-	provider := NewGoogleProvider("test-client-id", "test-client-secret", "http://localhost/callback", nil, false)
+	provider := NewGoogleProvider("google", "test-client-id", "test-client-secret", "http://localhost/callback", nil, false)
 
 	if provider == nil {
 		t.Fatal("NewGoogleProvider() returned nil")
@@ -44,7 +44,7 @@ func TestNewGoogleProvider(t *testing.T) {
 func TestGoogleProvider_CustomScopes(t *testing.T) {
 	// Test with custom scopes - should use only custom scopes (no defaults added)
 	customScopes := []string{"https://www.googleapis.com/auth/analytics.readonly"}
-	provider := NewGoogleProvider("test-client-id", "test-client-secret", "http://localhost/callback", customScopes, false)
+	provider := NewGoogleProvider("google", "test-client-id", "test-client-secret", "http://localhost/callback", customScopes, false)
 
 	config := provider.Config()
 
@@ -68,7 +68,7 @@ func TestGoogleProvider_CustomScopesWithResetFlag(t *testing.T) {
 	// Test with custom scopes and reset_scopes: true
 	// Behavior is same as reset_scopes: false (only custom scopes are used)
 	customScopes := []string{"https://www.googleapis.com/auth/analytics.readonly"}
-	provider := NewGoogleProvider("test-client-id", "test-client-secret", "http://localhost/callback", customScopes, true)
+	provider := NewGoogleProvider("google", "test-client-id", "test-client-secret", "http://localhost/callback", customScopes, true)
 
 	config := provider.Config()
 
@@ -90,7 +90,7 @@ func TestGoogleProvider_CustomScopesWithResetFlag(t *testing.T) {
 
 func TestGoogleProvider_EmptyScopes(t *testing.T) {
 	// Test with empty scopes - should use default scopes
-	provider := NewGoogleProvider("test-client-id", "test-client-secret", "http://localhost/callback", nil, true)
+	provider := NewGoogleProvider("google", "test-client-id", "test-client-secret", "http://localhost/callback", nil, true)
 
 	config := provider.Config()
 

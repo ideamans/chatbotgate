@@ -11,7 +11,7 @@ import (
 )
 
 func TestNewMicrosoftProvider(t *testing.T) {
-	provider := NewMicrosoftProvider("test-client-id", "test-client-secret", "http://localhost/callback", nil, false)
+	provider := NewMicrosoftProvider("microsoft", "test-client-id", "test-client-secret", "http://localhost/callback", nil, false)
 
 	if provider == nil {
 		t.Fatal("NewMicrosoftProvider() returned nil")
@@ -46,7 +46,7 @@ func TestNewMicrosoftProvider(t *testing.T) {
 func TestMicrosoftProvider_CustomScopes(t *testing.T) {
 	// Test with custom scopes - should use only custom scopes (no defaults added)
 	customScopes := []string{"Calendars.Read", "Mail.Read"}
-	provider := NewMicrosoftProvider("test-client-id", "test-client-secret", "http://localhost/callback", customScopes, false)
+	provider := NewMicrosoftProvider("microsoft", "test-client-id", "test-client-secret", "http://localhost/callback", customScopes, false)
 
 	config := provider.Config()
 
@@ -71,7 +71,7 @@ func TestMicrosoftProvider_CustomScopesWithResetFlag(t *testing.T) {
 	// Test with custom scopes and reset_scopes: true
 	// Behavior is same as reset_scopes: false (only custom scopes are used)
 	customScopes := []string{"Calendars.Read", "Mail.Read"}
-	provider := NewMicrosoftProvider("test-client-id", "test-client-secret", "http://localhost/callback", customScopes, true)
+	provider := NewMicrosoftProvider("microsoft", "test-client-id", "test-client-secret", "http://localhost/callback", customScopes, true)
 
 	config := provider.Config()
 
@@ -94,7 +94,7 @@ func TestMicrosoftProvider_CustomScopesWithResetFlag(t *testing.T) {
 
 func TestMicrosoftProvider_EmptyScopes(t *testing.T) {
 	// Test with empty scopes - should use default scopes
-	provider := NewMicrosoftProvider("test-client-id", "test-client-secret", "http://localhost/callback", nil, true)
+	provider := NewMicrosoftProvider("microsoft", "test-client-id", "test-client-secret", "http://localhost/callback", nil, true)
 
 	config := provider.Config()
 
@@ -190,7 +190,7 @@ func TestMicrosoftProvider_GetUserEmail(t *testing.T) {
 			}))
 			defer server.Close()
 
-			provider := NewMicrosoftProvider("test-client-id", "test-client-secret", "http://localhost/callback", nil, false)
+			provider := NewMicrosoftProvider("microsoft", "test-client-id", "test-client-secret", "http://localhost/callback", nil, false)
 
 			// Create test token
 			token := &oauth2lib.Token{

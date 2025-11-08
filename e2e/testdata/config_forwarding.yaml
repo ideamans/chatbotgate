@@ -24,7 +24,8 @@ session:
 # OAuth2 providers (mock for testing)
 oauth2:
   providers:
-    - type: "custom"
+    - id: "stub-auth"
+      type: "custom"
       display_name: "Test Provider"
       client_id: "test-client-id"
       client_secret: "test-client-secret"

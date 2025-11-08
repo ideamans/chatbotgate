@@ -26,6 +26,7 @@ func validConfig() *config.Config {
 		OAuth2: config.OAuth2Config{
 			Providers: []config.OAuth2Provider{
 				{
+					ID:           "google",
 					Type:         "google",
 					ClientID:     "test-client-id",
 					ClientSecret: "test-client-secret",
@@ -262,6 +263,7 @@ func TestValidateConfig_CustomOAuth2Provider(t *testing.T) {
 	cfg := validConfig()
 	cfg.OAuth2.Providers = []config.OAuth2Provider{
 		{
+			ID:           "custom",
 			Type:         "custom",
 			ClientID:     "test-client-id",
 			ClientSecret: "test-client-secret",
