@@ -3,7 +3,6 @@ package factory
 import (
 	"fmt"
 	"net/http"
-	"time"
 
 	"github.com/ideamans/chatbotgate/pkg/middleware/auth/email"
 	"github.com/ideamans/chatbotgate/pkg/middleware/auth/oauth2"
@@ -36,9 +35,12 @@ func NewDefaultFactory(host string, port int, logger logging.Logger) *DefaultFac
 }
 
 // CreateMiddleware creates a complete Middleware instance with all components
+// tokenKVS and rateLimitKVS should be created via CreateKVSStores() and passed in.
 func (f *DefaultFactory) CreateMiddleware(
 	cfg *config.Config,
 	sessionStore session.Store,
+	tokenKVS kvs.Store,
+	rateLimitKVS kvs.Store,
 	proxyHandler http.Handler,
 	logger logging.Logger,
 ) (*middleware.Middleware, error) {
@@ -49,13 +51,6 @@ func (f *DefaultFactory) CreateMiddleware(
 	rulesEvaluator, err := f.CreateRulesEvaluator(&cfg.Rules)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create rules evaluator: %w", err)
-	}
-
-	// Create KVS stores for email auth (if needed)
-	var tokenKVS, rateLimitKVS kvs.Store
-	if cfg.EmailAuth.Enabled {
-		tokenKVS = f.CreateTokenKVS()
-		rateLimitKVS = f.CreateRateLimitKVS()
 	}
 
 	// Create OAuth2 manager with factory's host/port
@@ -268,26 +263,6 @@ func (f *DefaultFactory) CreateRulesEvaluator(rulesCfg *rules.Config) (*rules.Ev
 // CreateTranslator creates an i18n translator
 func (f *DefaultFactory) CreateTranslator() *i18n.Translator {
 	return i18n.NewTranslator()
-}
-
-// CreateTokenKVS creates a KVS store for email authentication tokens
-func (f *DefaultFactory) CreateTokenKVS() kvs.Store {
-	// Tokens expire after configured duration (default 15 minutes)
-	// Cleanup every 5 minutes
-	store, _ := kvs.NewMemoryStore("tokens", kvs.MemoryConfig{
-		CleanupInterval: 5 * time.Minute,
-	})
-	return store
-}
-
-// CreateRateLimitKVS creates a KVS store for rate limiting
-func (f *DefaultFactory) CreateRateLimitKVS() kvs.Store {
-	// Rate limit entries expire after 1 hour
-	// Cleanup every 15 minutes
-	store, _ := kvs.NewMemoryStore("ratelimit", kvs.MemoryConfig{
-		CleanupInterval: 15 * time.Minute,
-	})
-	return store
 }
 
 // CreateKVSStores creates all required KVS stores from configuration.

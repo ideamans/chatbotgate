@@ -21,9 +21,12 @@ import (
 type Factory interface {
 	// CreateMiddleware is the main factory method that creates a complete Middleware instance.
 	// It uses other factory methods internally to build all required components.
+	// tokenKVS and rateLimitKVS should be created via CreateKVSStores().
 	CreateMiddleware(
 		cfg *config.Config,
 		sessionStore session.Store,
+		tokenKVS kvs.Store,
+		rateLimitKVS kvs.Store,
 		proxyHandler http.Handler,
 		logger logging.Logger,
 	) (*middleware.Middleware, error)
@@ -59,13 +62,9 @@ type Factory interface {
 	// CreateTranslator creates an i18n translator
 	CreateTranslator() *i18n.Translator
 
-	// CreateTokenKVS creates a KVS store for email authentication tokens
-	CreateTokenKVS() kvs.Store
-
-	// CreateRateLimitKVS creates a KVS store for rate limiting
-	CreateRateLimitKVS() kvs.Store
-
 	// CreateKVSStores creates all required KVS stores from configuration.
+	// This is the primary method for creating KVS stores. It should be called once
+	// at startup, and the returned stores should be passed to CreateMiddleware().
 	// Returns stores in order: sessionKVS, tokenKVS, rateLimitKVS, error
 	CreateKVSStores(cfg *config.Config) (session kvs.Store, token kvs.Store, rateLimit kvs.Store, err error)
 

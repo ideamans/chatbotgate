@@ -70,55 +70,7 @@ func TestTestingFactory_CreateKVSStores(t *testing.T) {
 	}
 }
 
-func TestTestingFactory_CreateTokenKVS(t *testing.T) {
-	factory := NewTestingFactory("localhost", 4180)
 
-	kvs := factory.CreateTokenKVS()
-	if kvs == nil {
-		t.Fatal("CreateTokenKVS returned nil")
-	}
-	defer func() { _ = kvs.Close() }()
-
-	// Test that it's a functional memory store
-	ctx := context.Background()
-	err := kvs.Set(ctx, "token", []byte("abc123"), 3600*time.Second)
-	if err != nil {
-		t.Errorf("Failed to set token: %v", err)
-	}
-
-	value, err := kvs.Get(ctx, "token")
-	if err != nil {
-		t.Errorf("Failed to get token: %v", err)
-	}
-	if string(value) != "abc123" {
-		t.Errorf("Expected 'abc123', got '%s'", string(value))
-	}
-}
-
-func TestTestingFactory_CreateRateLimitKVS(t *testing.T) {
-	factory := NewTestingFactory("localhost", 4180)
-
-	kvs := factory.CreateRateLimitKVS()
-	if kvs == nil {
-		t.Fatal("CreateRateLimitKVS returned nil")
-	}
-	defer func() { _ = kvs.Close() }()
-
-	// Test that it's a functional memory store
-	ctx := context.Background()
-	err := kvs.Set(ctx, "rate", []byte("5"), 3600*time.Second)
-	if err != nil {
-		t.Errorf("Failed to set rate: %v", err)
-	}
-
-	value, err := kvs.Get(ctx, "rate")
-	if err != nil {
-		t.Errorf("Failed to get rate: %v", err)
-	}
-	if string(value) != "5" {
-		t.Errorf("Expected '5', got '%s'", string(value))
-	}
-}
 
 func TestTestingFactory_Integration(t *testing.T) {
 	// Test full integration: create factory, create all components, verify they work together

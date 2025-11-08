@@ -1,8 +1,6 @@
 package factory
 
 import (
-	"time"
-
 	"github.com/ideamans/chatbotgate/pkg/middleware/config"
 	"github.com/ideamans/chatbotgate/pkg/shared/kvs"
 	"github.com/ideamans/chatbotgate/pkg/shared/logging"
@@ -72,18 +70,3 @@ func (f *TestingFactory) CreateKVSStores(cfg *config.Config) (session kvs.Store,
 	return session, token, rateLimit, nil
 }
 
-// CreateTokenKVS creates an in-memory KVS for email tokens with short cleanup interval
-func (f *TestingFactory) CreateTokenKVS() kvs.Store {
-	store, _ := kvs.NewMemoryStore("test-tokens", kvs.MemoryConfig{
-		CleanupInterval: 1 * time.Second, // Faster cleanup for tests
-	})
-	return store
-}
-
-// CreateRateLimitKVS creates an in-memory KVS for rate limiting with short cleanup interval
-func (f *TestingFactory) CreateRateLimitKVS() kvs.Store {
-	store, _ := kvs.NewMemoryStore("test-ratelimit", kvs.MemoryConfig{
-		CleanupInterval: 1 * time.Second, // Faster cleanup for tests
-	})
-	return store
-}

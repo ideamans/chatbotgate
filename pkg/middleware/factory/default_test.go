@@ -157,57 +157,7 @@ func TestDefaultFactory_CreateRulesEvaluator(t *testing.T) {
 	}
 }
 
-func TestDefaultFactory_CreateTokenKVS(t *testing.T) {
-	logger := logging.NewSimpleLogger("test", logging.LevelInfo, false)
-	factory := NewDefaultFactory("localhost", 4180, logger)
 
-	kvsStore := factory.CreateTokenKVS()
-	if kvsStore == nil {
-		t.Fatal("CreateTokenKVS returned nil")
-	}
-	defer func() { _ = kvsStore.Close() }()
-
-	// Test basic KVS operations with context
-	ctx := context.Background()
-	err := kvsStore.Set(ctx, "test-key", []byte("test-value"), 3600*time.Second)
-	if err != nil {
-		t.Errorf("Failed to set value: %v", err)
-	}
-
-	value, err := kvsStore.Get(ctx, "test-key")
-	if err != nil {
-		t.Errorf("Failed to get value: %v", err)
-	}
-	if string(value) != "test-value" {
-		t.Errorf("Expected value 'test-value', got '%s'", string(value))
-	}
-}
-
-func TestDefaultFactory_CreateRateLimitKVS(t *testing.T) {
-	logger := logging.NewSimpleLogger("test", logging.LevelInfo, false)
-	factory := NewDefaultFactory("localhost", 4180, logger)
-
-	kvsStore := factory.CreateRateLimitKVS()
-	if kvsStore == nil {
-		t.Fatal("CreateRateLimitKVS returned nil")
-	}
-	defer func() { _ = kvsStore.Close() }()
-
-	// Test basic KVS operations
-	ctx := context.Background()
-	err := kvsStore.Set(ctx, "rate-key", []byte("1"), 3600*time.Second)
-	if err != nil {
-		t.Errorf("Failed to set value: %v", err)
-	}
-
-	value, err := kvsStore.Get(ctx, "rate-key")
-	if err != nil {
-		t.Errorf("Failed to get value: %v", err)
-	}
-	if string(value) != "1" {
-		t.Errorf("Expected value '1', got '%s'", string(value))
-	}
-}
 
 func TestDefaultFactory_CreateKVSStores(t *testing.T) {
 	logger := logging.NewSimpleLogger("test", logging.LevelInfo, false)
@@ -287,11 +237,15 @@ func TestDefaultFactory_CreateMiddleware(t *testing.T) {
 	cfg := CreateTestConfigWithOAuth2()
 
 	// Create required dependencies
-	sessionKVS, _, _, err := factory.CreateKVSStores(cfg)
+	sessionKVS, tokenKVS, rateLimitKVS, err := factory.CreateKVSStores(cfg)
 	if err != nil {
 		t.Fatalf("CreateKVSStores failed: %v", err)
 	}
-	defer func() { _ = sessionKVS.Close() }()
+	defer func() {
+		_ = sessionKVS.Close()
+		_ = tokenKVS.Close()
+		_ = rateLimitKVS.Close()
+	}()
 
 	sessionStore := factory.CreateSessionStore(sessionKVS)
 
@@ -306,8 +260,8 @@ func TestDefaultFactory_CreateMiddleware(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	})
 
-	// Create middleware
-	middleware, err := factory.CreateMiddleware(cfg, sessionStore, proxyHandler, logger)
+	// Create middleware with KVS stores
+	middleware, err := factory.CreateMiddleware(cfg, sessionStore, tokenKVS, rateLimitKVS, proxyHandler, logger)
 	if err != nil {
 		t.Fatalf("CreateMiddleware failed: %v", err)
 	}

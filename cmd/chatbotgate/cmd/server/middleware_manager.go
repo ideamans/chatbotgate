@@ -83,15 +83,11 @@ func (m *SimpleMiddlewareManager) buildMiddleware(configPath string) (*middlewar
 	// Create session store
 	sessionStore := f.CreateSessionStore(sessionKVS)
 
-	// Create middleware using factory
-	mw, err := f.CreateMiddleware(cfg, sessionStore, m.next, m.logger)
+	// Create middleware using factory with KVS stores
+	mw, err := f.CreateMiddleware(cfg, sessionStore, tokenKVS, rateLimitKVS, m.next, m.logger)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create middleware: %w", err)
 	}
-
-	// Keep KVS stores alive
-	_ = tokenKVS
-	_ = rateLimitKVS
 
 	return mw, nil
 }
