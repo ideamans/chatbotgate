@@ -12,11 +12,9 @@ func TestNewSMTPSender(t *testing.T) {
 		Port:     587,
 		Username: "user",
 		Password: "pass",
-		From:     "noreply@example.com",
-		FromName: "Test Service",
 	}
 
-	sender := NewSMTPSender(cfg)
+	sender := NewSMTPSender(cfg, "noreply@example.com", "Test Service")
 	if sender == nil {
 		t.Fatal("NewSMTPSender() returned nil")
 	}
@@ -24,22 +22,85 @@ func TestNewSMTPSender(t *testing.T) {
 	if sender.config.Host != "smtp.example.com" {
 		t.Errorf("config.Host = %s, want smtp.example.com", sender.config.Host)
 	}
+
+	if sender.from != "noreply@example.com" {
+		t.Errorf("from = %s, want noreply@example.com", sender.from)
+	}
+
+	if sender.fromName != "Test Service" {
+		t.Errorf("fromName = %s, want Test Service", sender.fromName)
+	}
+}
+
+func TestNewSMTPSender_Override(t *testing.T) {
+	// Test that SMTP-specific config overrides parent config
+	cfg := config.SMTPConfig{
+		Host:     "smtp.example.com",
+		Port:     587,
+		Username: "user",
+		Password: "pass",
+		From:     "smtp-specific@example.com",
+		FromName: "SMTP Service",
+	}
+
+	sender := NewSMTPSender(cfg, "parent@example.com", "Parent Service")
+	if sender == nil {
+		t.Fatal("NewSMTPSender() returned nil")
+	}
+
+	// Should use SMTP-specific config, not parent
+	if sender.from != "smtp-specific@example.com" {
+		t.Errorf("from = %s, want smtp-specific@example.com", sender.from)
+	}
+
+	if sender.fromName != "SMTP Service" {
+		t.Errorf("fromName = %s, want SMTP Service", sender.fromName)
+	}
 }
 
 func TestNewSendGridSender(t *testing.T) {
 	cfg := config.SendGridConfig{
-		APIKey:   "test-api-key",
-		From:     "noreply@example.com",
-		FromName: "Test Service",
+		APIKey: "test-api-key",
 	}
 
-	sender := NewSendGridSender(cfg)
+	sender := NewSendGridSender(cfg, "noreply@example.com", "Test Service")
 	if sender == nil {
 		t.Fatal("NewSendGridSender() returned nil")
 	}
 
 	if sender.config.APIKey != "test-api-key" {
 		t.Errorf("config.APIKey = %s, want test-api-key", sender.config.APIKey)
+	}
+
+	if sender.from != "noreply@example.com" {
+		t.Errorf("from = %s, want noreply@example.com", sender.from)
+	}
+
+	if sender.fromName != "Test Service" {
+		t.Errorf("fromName = %s, want Test Service", sender.fromName)
+	}
+}
+
+func TestNewSendGridSender_Override(t *testing.T) {
+	// Test that SendGrid-specific config overrides parent config
+	cfg := config.SendGridConfig{
+		APIKey:   "test-api-key",
+		From:     "sendgrid-specific@example.com",
+		FromName: "SendGrid Service",
+	}
+
+	sender := NewSendGridSender(cfg, "parent@example.com", "Parent Service")
+	if sender == nil {
+		t.Fatal("NewSendGridSender() returned nil")
+	}
+
+	// Should use SendGrid-specific config, not parent
+	if sender.from != "sendgrid-specific@example.com" {
+		t.Errorf("from = %s, want sendgrid-specific@example.com", sender.from)
+	}
+
+	if sender.fromName != "SendGrid Service" {
+		t.Errorf("fromName = %s, want SendGrid Service", sender.fromName)
 	}
 }
 

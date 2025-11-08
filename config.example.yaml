@@ -142,22 +142,31 @@ email_auth:
   # Sender type: "smtp", "sendgrid", or "sendmail"
   sender_type: "smtp"
 
+  # Shared sender configuration (used by all sender types)
+  # Supports RFC 5322 format: "Display Name <email@example.com>" or just "email@example.com"
+  from: "ChatbotGate <noreply@example.com>"
+  # Alternative: Separate email and name
+  # from: "noreply@example.com"
+  # from_name: "ChatbotGate"
+
   # SMTP configuration (when sender_type: "smtp")
   smtp:
     host: "smtp.gmail.com"
     port: 587
     username: "your-email@gmail.com"
     password: "your-app-password"
-    from: "noreply@example.com"
-    from_name: "ChatbotGate"
+    # Optional: Override shared from/from_name for SMTP only
+    # from: "noreply@example.com"
+    # from_name: "ChatbotGate"
     tls: false
     starttls: true
 
   # SendGrid configuration (when sender_type: "sendgrid")
   # sendgrid:
   #   api_key: "SG.xxxxxxxxxxxxxxxxxxxx"
-  #   from: "noreply@example.com"
-  #   from_name: "ChatbotGate"
+  #   # Optional: Override shared from/from_name for SendGrid only
+  #   # from: "noreply@example.com"
+  #   # from_name: "ChatbotGate"
   #   # Optional: Custom endpoint URL (default: https://api.sendgrid.com)
   #   # Useful for proxies, testing, or internal infrastructure routing
   #   # endpoint_url: "https://custom-sendgrid-proxy.example.com"
@@ -168,8 +177,9 @@ email_auth:
   #   # Path to sendmail binary (default: /usr/sbin/sendmail)
   #   # Common locations: /usr/sbin/sendmail, /usr/bin/sendmail
   #   path: "/usr/sbin/sendmail"
-  #   from: "noreply@example.com"
-  #   from_name: "ChatbotGate"
+  #   # Optional: Override shared from/from_name for Sendmail only
+  #   # from: "noreply@example.com"
+  #   # from_name: "ChatbotGate"
 
   # Token expiration
   token:

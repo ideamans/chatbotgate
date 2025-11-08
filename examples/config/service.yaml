@@ -33,11 +33,12 @@ email_auth:
   enabled: true
   sender_type: "sendmail"
 
+  # Shared sender configuration (RFC 5322 format supported)
+  from: "ChatbotGate <noreply@chatbotgate.com>"
+
   sendmail:
     # Default path, automatically used if not specified
     path: "/usr/sbin/sendmail"
-    from: "noreply@chatbotgate.com"
-    from_name: "ChatbotGate"
 
   token:
     expire: "15m"

@@ -157,8 +157,6 @@ func TestDefaultFactory_CreateRulesEvaluator(t *testing.T) {
 	}
 }
 
-
-
 func TestDefaultFactory_CreateKVSStores(t *testing.T) {
 	logger := logging.NewSimpleLogger("test", logging.LevelInfo, false)
 	factory := NewDefaultFactory("localhost", 4180, logger)
