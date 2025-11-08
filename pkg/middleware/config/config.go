@@ -70,23 +70,14 @@ func (s ServerConfig) GetCallbackURL(host string, port int) string {
 }
 
 // SessionConfig contains session management settings
+// Note: Session storage backend is configured via kvs.default or kvs.session
 type SessionConfig struct {
-	CookieName     string             `yaml:"cookie_name" json:"cookie_name"`
-	CookieSecret   string             `yaml:"cookie_secret" json:"cookie_secret"`
-	CookieExpire   string             `yaml:"cookie_expire" json:"cookie_expire"`
-	CookieSecure   bool               `yaml:"cookie_secure" json:"cookie_secure"`
-	CookieHTTPOnly bool               `yaml:"cookie_httponly" json:"cookie_httponly"`
-	CookieSameSite string             `yaml:"cookie_samesite" json:"cookie_samesite"`
-	StoreType      string             `yaml:"store_type" json:"store_type"` // "memory" or "redis" (default: "memory")
-	Redis          RedisSessionConfig `yaml:"redis" json:"redis"`           // Redis configuration (used when store_type is "redis")
-}
-
-// RedisSessionConfig contains Redis session store settings
-type RedisSessionConfig struct {
-	Addr     string `yaml:"addr" json:"addr"`         // Redis server address (host:port)
-	Password string `yaml:"password" json:"password"` // Redis password (optional)
-	DB       int    `yaml:"db" json:"db"`             // Redis database number
-	Prefix   string `yaml:"prefix" json:"prefix"`     // Key prefix for sessions (default: "session:")
+	CookieName     string `yaml:"cookie_name" json:"cookie_name"`
+	CookieSecret   string `yaml:"cookie_secret" json:"cookie_secret"`
+	CookieExpire   string `yaml:"cookie_expire" json:"cookie_expire"`
+	CookieSecure   bool   `yaml:"cookie_secure" json:"cookie_secure"`
+	CookieHTTPOnly bool   `yaml:"cookie_httponly" json:"cookie_httponly"`
+	CookieSameSite string `yaml:"cookie_samesite" json:"cookie_samesite"`
 }
 
 // GetCookieExpireDuration returns the cookie expiration as a time.Duration

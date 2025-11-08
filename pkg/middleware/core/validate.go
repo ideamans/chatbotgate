@@ -103,23 +103,8 @@ func ValidateConfig(cfg *config.Config) ValidationErrors {
 		}
 	}
 
-	// Validate session store type
-	if cfg.Session.StoreType != "" && cfg.Session.StoreType != "memory" && cfg.Session.StoreType != "redis" {
-		errs = append(errs, ValidationError{
-			Field:   "session.store_type",
-			Message: "store type must be 'memory' or 'redis'",
-		})
-	}
-
-	// Validate Redis configuration if Redis store is used
-	if cfg.Session.StoreType == "redis" {
-		if cfg.Session.Redis.Addr == "" {
-			errs = append(errs, ValidationError{
-				Field:   "session.redis.addr",
-				Message: "redis address is required when using redis store",
-			})
-		}
-	}
+	// Note: Session storage is now managed via kvs configuration
+	// No session-specific store validation needed here
 
 	// Validate OAuth2 - at least one provider must be available (not disabled)
 	hasAvailableOAuth2Provider := false

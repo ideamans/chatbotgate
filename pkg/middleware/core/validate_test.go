@@ -162,23 +162,6 @@ func TestValidateConfig_SessionValidation(t *testing.T) {
 			expectedField: "session.cookie_expire",
 			expectedError: "invalid duration format",
 		},
-		{
-			name: "Invalid store type",
-			modifyConfig: func(cfg *config.Config) {
-				cfg.Session.StoreType = "invalid"
-			},
-			expectedField: "session.store_type",
-			expectedError: "must be 'memory' or 'redis'",
-		},
-		{
-			name: "Redis store without address",
-			modifyConfig: func(cfg *config.Config) {
-				cfg.Session.StoreType = "redis"
-				cfg.Session.Redis.Addr = ""
-			},
-			expectedField: "session.redis.addr",
-			expectedError: "required when using redis store",
-		},
 	}
 
 	for _, tt := range tests {
