@@ -35,7 +35,7 @@ session:
 
 oauth2:
   providers:
-    - name: "google"
+    - type: "google"
       display_name: "Google"
       client_id: "test-client-id"
       client_secret: "test-client-secret"
@@ -81,7 +81,7 @@ session:
 
 oauth2:
   providers:
-    - name: "google"
+    - type: "google"
       enabled: true
 
 authorization:
@@ -121,7 +121,7 @@ session:
 
 oauth2:
   providers:
-    - name: "google"
+    - type: "google"
       enabled: true
 `,
 			wantErr: false,
@@ -202,7 +202,7 @@ func TestFileLoader_Load_JSON(t *testing.T) {
   "oauth2": {
     "providers": [
       {
-        "name": "google",
+        "type": "google",
         "display_name": "Google",
         "client_id": "test-client-id",
         "client_secret": "test-client-secret",
@@ -245,7 +245,7 @@ func TestFileLoader_Load_JSON(t *testing.T) {
     }
   },
   "oauth2": {
-    "providers": [{"name": "google", "enabled": true}]
+    "providers": [{"type": "google", "enabled": true}]
   },
   "authorization": {
     "allowed_emails": ["user@example.com"]

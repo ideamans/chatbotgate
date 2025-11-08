@@ -26,7 +26,6 @@ func validConfig() *config.Config {
 		OAuth2: config.OAuth2Config{
 			Providers: []config.OAuth2Provider{
 				{
-					Name:         "google",
 					Type:         "google",
 					ClientID:     "test-client-id",
 					ClientSecret: "test-client-secret",
@@ -208,11 +207,11 @@ func TestValidateConfig_OAuth2Validation(t *testing.T) {
 			expectedError: "at least one authentication method must be enabled",
 		},
 		{
-			name: "Missing provider name",
+			name: "Missing provider type",
 			modifyConfig: func(cfg *config.Config) {
-				cfg.OAuth2.Providers[0].Name = ""
+				cfg.OAuth2.Providers[0].Type = ""
 			},
-			expectedField: "oauth2.providers[0].name",
+			expectedField: "oauth2.providers[0].type",
 			expectedError: "required",
 		},
 		{
@@ -263,7 +262,6 @@ func TestValidateConfig_CustomOAuth2Provider(t *testing.T) {
 	cfg := validConfig()
 	cfg.OAuth2.Providers = []config.OAuth2Provider{
 		{
-			Name:         "custom",
 			Type:         "custom",
 			ClientID:     "test-client-id",
 			ClientSecret: "test-client-secret",

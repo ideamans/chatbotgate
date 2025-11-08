@@ -51,7 +51,7 @@ session:
 oauth2:
   providers:
     # Google OAuth2 (enabled)
-    - name: "google"
+    - type: "google"
       display_name: "Google Workspace"
       client_id: "123456789-abcdefghijklmnop.apps.googleusercontent.com"
       client_secret: "GOCSPX-abc123xyz456_secret"
@@ -67,7 +67,7 @@ oauth2:
         - "https://www.googleapis.com/auth/calendar.readonly"
 
     # GitHub OAuth2 (enabled)
-    - name: "github"
+    - type: "github"
       display_name: "GitHub Enterprise"
       client_id: "Iv1.abc123xyz456"
       client_secret: "github_client_secret_abc123xyz456"
@@ -81,7 +81,7 @@ oauth2:
         - "read:org"
 
     # Microsoft OAuth2 / Azure AD (enabled)
-    - name: "microsoft"
+    - type: "microsoft"
       display_name: "Microsoft 365"
       client_id: "abc12345-1234-5678-90ab-cdef12345678"
       client_secret: "microsoft_client_secret_abc~123.xyz-456"
@@ -97,7 +97,7 @@ oauth2:
         - "Mail.Read"
 
     # Custom OIDC Provider (e.g., Keycloak, Auth0, Okta)
-    - name: "custom-oidc"
+    - type: "custom"
       type: "custom"
       display_name: "Corporate SSO"
       client_id: "chatbotgate-client"

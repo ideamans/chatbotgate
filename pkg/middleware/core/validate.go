@@ -112,47 +112,43 @@ func ValidateConfig(cfg *config.Config) ValidationErrors {
 		if !provider.Disabled {
 			hasAvailableOAuth2Provider = true
 			// Validate available provider configuration
-			if provider.Name == "" {
+			if provider.Type == "" {
 				errs = append(errs, ValidationError{
-					Field:   fmt.Sprintf("oauth2.providers[%d].name", i),
-					Message: "provider name is required",
+					Field:   fmt.Sprintf("oauth2.providers[%d].type", i),
+					Message: "provider type is required",
 				})
 			}
 			if provider.ClientID == "" {
 				errs = append(errs, ValidationError{
 					Field:   fmt.Sprintf("oauth2.providers[%d].client_id", i),
-					Message: fmt.Sprintf("client ID is required for provider '%s'", provider.Name),
+					Message: fmt.Sprintf("client ID is required for provider '%s'", provider.Type),
 				})
 			}
 			if provider.ClientSecret == "" {
 				errs = append(errs, ValidationError{
 					Field:   fmt.Sprintf("oauth2.providers[%d].client_secret", i),
-					Message: fmt.Sprintf("client secret is required for provider '%s'", provider.Name),
+					Message: fmt.Sprintf("client secret is required for provider '%s'", provider.Type),
 				})
 			}
 
 			// Validate custom provider
-			providerType := provider.Type
-			if providerType == "" {
-				providerType = provider.Name
-			}
-			if providerType == "custom" {
+			if provider.Type == "custom" {
 				if provider.AuthURL == "" {
 					errs = append(errs, ValidationError{
 						Field:   fmt.Sprintf("oauth2.providers[%d].auth_url", i),
-						Message: fmt.Sprintf("auth URL is required for custom provider '%s'", provider.Name),
+						Message: fmt.Sprintf("auth URL is required for custom provider '%s'", provider.Type),
 					})
 				}
 				if provider.TokenURL == "" {
 					errs = append(errs, ValidationError{
 						Field:   fmt.Sprintf("oauth2.providers[%d].token_url", i),
-						Message: fmt.Sprintf("token URL is required for custom provider '%s'", provider.Name),
+						Message: fmt.Sprintf("token URL is required for custom provider '%s'", provider.Type),
 					})
 				}
 				if provider.UserInfoURL == "" {
 					errs = append(errs, ValidationError{
 						Field:   fmt.Sprintf("oauth2.providers[%d].userinfo_url", i),
-						Message: fmt.Sprintf("user info URL is required for custom provider '%s'", provider.Name),
+						Message: fmt.Sprintf("user info URL is required for custom provider '%s'", provider.Type),
 					})
 				}
 			}

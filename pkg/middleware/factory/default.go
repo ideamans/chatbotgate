@@ -117,13 +117,8 @@ func (f *DefaultFactory) CreateOAuth2Manager(oauth2Cfg config.OAuth2Config, serv
 		}
 		redirectURL := serverCfg.GetCallbackURL(normalizedHost, port)
 
-		// Determine provider type
-		providerType := providerCfg.Type
-		if providerType == "" {
-			providerType = providerCfg.Name
-		}
-
-		switch providerType {
+		// Use provider type directly
+		switch providerCfg.Type {
 		case "google":
 			provider = oauth2.NewGoogleProvider(
 				providerCfg.ClientID,
@@ -150,11 +145,11 @@ func (f *DefaultFactory) CreateOAuth2Manager(oauth2Cfg config.OAuth2Config, serv
 			)
 		case "custom":
 			if providerCfg.AuthURL == "" || providerCfg.TokenURL == "" || providerCfg.UserInfoURL == "" {
-				f.logger.Warn("Skipping custom OAuth2 provider: missing required URLs", "provider", providerCfg.Name)
+				f.logger.Warn("Skipping custom OAuth2 provider: missing required URLs", "type", providerCfg.Type)
 				continue
 			}
 			provider = oauth2.NewCustomProvider(
-				providerCfg.Name,
+				providerCfg.Type,
 				providerCfg.ClientID,
 				providerCfg.ClientSecret,
 				redirectURL,
@@ -165,12 +160,12 @@ func (f *DefaultFactory) CreateOAuth2Manager(oauth2Cfg config.OAuth2Config, serv
 				providerCfg.InsecureSkipVerify,
 			)
 		default:
-			f.logger.Warn("Skipping OAuth2 provider: unknown provider type", "provider", providerCfg.Name, "type", providerType)
+			f.logger.Warn("Skipping OAuth2 provider: unknown provider type", "type", providerCfg.Type)
 			continue
 		}
 
 		manager.AddProvider(provider)
-		f.logger.Debug("OAuth2 provider registered", "provider", providerCfg.Name, "type", providerType)
+		f.logger.Debug("OAuth2 provider registered", "type", providerCfg.Type)
 	}
 
 	return manager

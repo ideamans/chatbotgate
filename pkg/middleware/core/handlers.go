@@ -206,7 +206,7 @@ func (m *Middleware) handleLogin(w http.ResponseWriter, r *http.Request) {
 			// Find icon URL from config
 			var iconPath string
 			for _, providerCfg := range m.config.OAuth2.Providers {
-				if providerCfg.Name == providerName && providerCfg.IconURL != "" {
+				if providerCfg.Type == providerName && providerCfg.IconURL != "" {
 					// Use custom icon URL from config
 					iconPath = providerCfg.IconURL
 					break

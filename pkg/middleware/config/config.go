@@ -111,9 +111,8 @@ type OAuth2Config struct {
 
 // OAuth2Provider represents a single OAuth2 provider configuration
 type OAuth2Provider struct {
-	Name         string `yaml:"name" json:"name"`
-	Type         string `yaml:"type" json:"type"` // "google", "github", "microsoft", "custom" (optional, defaults to name)
-	DisplayName  string `yaml:"display_name" json:"display_name"`
+	Type         string `yaml:"type" json:"type"`                 // Provider type: "google", "github", "microsoft", "custom"
+	DisplayName  string `yaml:"display_name" json:"display_name"` // Display name shown in UI
 	ClientID     string `yaml:"client_id" json:"client_id"`
 	ClientSecret string `yaml:"client_secret" json:"client_secret"`
 	Disabled     bool   `yaml:"disabled" json:"disabled"` // If true, provider is hidden from login page

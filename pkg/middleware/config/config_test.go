@@ -102,7 +102,7 @@ func TestConfig_Validate(t *testing.T) {
 				OAuth2: OAuth2Config{
 					Providers: []OAuth2Provider{
 						{
-							Name:         "google",
+							Type:         "google",
 							DisplayName:  "Google",
 							ClientID:     "test-client-id",
 							ClientSecret: "test-client-secret",
@@ -219,7 +219,7 @@ func TestConfig_Validate(t *testing.T) {
 				OAuth2: OAuth2Config{
 					Providers: []OAuth2Provider{
 						{
-							Name:         "google",
+							Type:         "google",
 							DisplayName:  "Google",
 							ClientID:     "test-client-id",
 							ClientSecret: "test-client-secret",
@@ -251,7 +251,7 @@ func TestConfig_ValidateForwarding(t *testing.T) {
 			Service: ServiceConfig{Name: "Test Service"},
 			Session: SessionConfig{Cookie: CookieConfig{Secret: "this-is-a-secret-key-with-32-characters"}},
 			OAuth2: OAuth2Config{
-				Providers: []OAuth2Provider{{Name: "google", ClientID: "test", ClientSecret: "test"}},
+				Providers: []OAuth2Provider{{Type: "google", ClientID: "test", ClientSecret: "test"}},
 			},
 		}
 	}
