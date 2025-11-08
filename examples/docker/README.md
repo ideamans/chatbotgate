@@ -4,10 +4,67 @@ This directory contains example configuration files for running ChatbotGate in D
 
 ## Files
 
-- **`config.yaml`** - Example configuration optimized for Docker
-- **`docker-compose.yml`** - Docker Compose setup (coming soon)
+- **`config.yaml`** - Example configuration optimized for Docker (standalone usage)
+- **`compose.yaml`** - Docker Compose setup with 3-tier architecture demo
+- **`chatbotgate/`** - ChatbotGate configuration directory
+  - **`config.yaml`** - Configuration for Docker Compose demo
+- **`nginx/`** - Nginx configuration files for frontend proxy
+- **`backend/`** - Simple backend application for demonstration
 
-## Quick Start
+## Quick Start - 3-Tier Demo with Docker Compose
+
+The easiest way to try ChatbotGate is using the included Docker Compose setup, which demonstrates a complete 3-tier architecture:
+
+```
+Browser → Nginx (Frontend) → ChatbotGate (Auth Proxy) → Backend App
+```
+
+**Start the demo:**
+
+```bash
+# Navigate to examples/docker directory
+cd examples/docker
+
+# Start all services
+docker compose up -d
+
+# View logs
+docker compose logs -f
+
+# Access the application
+open http://localhost
+```
+
+The demo will:
+1. Start nginx on port 80 as the frontend
+2. Start ChatbotGate as the authentication proxy
+3. Start a simple backend application
+4. Require email authentication to access the backend
+
+**Stop the demo:**
+
+```bash
+docker compose down
+```
+
+**Architecture:**
+
+- **nginx** (`nginx:alpine`) - Frontend reverse proxy on port 80
+  - Forwards all requests to ChatbotGate
+  - Handles static content serving
+  - Can be configured for TLS termination
+
+- **ChatbotGate** (built from source) - Authentication middleware
+  - Email-based authentication (no OAuth2 in demo)
+  - Session management with in-memory store
+  - Forwards authenticated user info to backend
+
+- **Backend** (`nginx:alpine` with custom HTML) - Protected application
+  - Displays authenticated user information
+  - Receives user data via HTTP headers
+  - Simple demonstration of a protected resource
+
+## Quick Start - Standalone Container
 
 ### 1. Pull Docker Image
 

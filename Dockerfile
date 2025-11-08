@@ -48,9 +48,12 @@ COPY --from=builder /build/examples /app/examples
 # Note: Web assets are embedded in the binary via Go embed
 # No need to copy /build/web directory
 
-# Create config directory
-RUN mkdir -p /app/config && \
-    chown -R app:app /app
+# Create config directories
+RUN mkdir -p /etc/chatbotgate /app/config /var/lib/chatbotgate/kvs && \
+    chown -R app:app /app /etc/chatbotgate /var/lib/chatbotgate
+
+# Copy default configuration from examples
+COPY --from=builder --chown=app:app /build/examples/docker/chatbotgate/config.yaml /etc/chatbotgate/config.yaml
 
 # Switch to non-root user
 USER app
@@ -65,5 +68,6 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
 # Set entrypoint
 ENTRYPOINT ["/app/chatbotgate"]
 
-# Default command (can be overridden)
-CMD ["-config", "/app/config/config.yaml"]
+# Default command: use /etc/chatbotgate/config.yaml
+# Can be overridden with: docker run ... chatbotgate -config /path/to/config.yaml
+CMD ["-config", "/etc/chatbotgate/config.yaml"]
