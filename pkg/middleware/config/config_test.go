@@ -235,6 +235,136 @@ func TestConfig_Validate(t *testing.T) {
 			},
 			wantErr: nil,
 		},
+		{
+			name: "valid with only password auth (OAuth2 and email disabled)",
+			config: &Config{
+				Service: ServiceConfig{
+					Name:        "Test Service",
+					Description: "Test Description",
+				},
+				Server: ServerConfig{
+					AuthPathPrefix: "/_auth",
+				},
+				Session: SessionConfig{
+					Cookie: CookieConfig{
+						Secret: "this-is-a-secret-key-with-32-characters",
+					},
+				},
+				OAuth2: OAuth2Config{
+					Providers: []OAuth2Provider{
+						{Disabled: true},
+					},
+				},
+				EmailAuth: EmailAuthConfig{
+					Enabled: false,
+				},
+				PasswordAuth: PasswordAuthConfig{
+					Enabled:  true,
+					Password: "test-password",
+				},
+			},
+			wantErr: nil,
+		},
+		{
+			name: "valid with OAuth2 and password auth",
+			config: &Config{
+				Service: ServiceConfig{
+					Name:        "Test Service",
+					Description: "Test Description",
+				},
+				Server: ServerConfig{
+					AuthPathPrefix: "/_auth",
+				},
+				Session: SessionConfig{
+					Cookie: CookieConfig{
+						Secret: "this-is-a-secret-key-with-32-characters",
+					},
+				},
+				OAuth2: OAuth2Config{
+					Providers: []OAuth2Provider{
+						{
+							ID:           "google",
+							Type:         "google",
+							DisplayName:  "Google",
+							ClientID:     "test-client-id",
+							ClientSecret: "test-client-secret",
+							Disabled:     false,
+						},
+					},
+				},
+				EmailAuth: EmailAuthConfig{
+					Enabled: false,
+				},
+				PasswordAuth: PasswordAuthConfig{
+					Enabled:  true,
+					Password: "test-password",
+				},
+			},
+			wantErr: nil,
+		},
+		{
+			name: "valid with all auth methods enabled",
+			config: &Config{
+				Service: ServiceConfig{
+					Name:        "Test Service",
+					Description: "Test Description",
+				},
+				Server: ServerConfig{
+					AuthPathPrefix: "/_auth",
+				},
+				Session: SessionConfig{
+					Cookie: CookieConfig{
+						Secret: "this-is-a-secret-key-with-32-characters",
+					},
+				},
+				OAuth2: OAuth2Config{
+					Providers: []OAuth2Provider{
+						{
+							ID:           "google",
+							Type:         "google",
+							DisplayName:  "Google",
+							ClientID:     "test-client-id",
+							ClientSecret: "test-client-secret",
+							Disabled:     false,
+						},
+					},
+				},
+				EmailAuth: EmailAuthConfig{
+					Enabled: true,
+				},
+				PasswordAuth: PasswordAuthConfig{
+					Enabled:  true,
+					Password: "test-password",
+				},
+			},
+			wantErr: nil,
+		},
+		{
+			name: "no auth method (all disabled including password)",
+			config: &Config{
+				Service: ServiceConfig{
+					Name: "Test",
+				},
+				Server: ServerConfig{},
+				Session: SessionConfig{
+					Cookie: CookieConfig{
+						Secret: "this-is-a-secret-key-with-32-characters",
+					},
+				},
+				OAuth2: OAuth2Config{
+					Providers: []OAuth2Provider{
+						{Disabled: true},
+					},
+				},
+				EmailAuth: EmailAuthConfig{
+					Enabled: false,
+				},
+				PasswordAuth: PasswordAuthConfig{
+					Enabled: false,
+				},
+			},
+			wantErr: ErrNoAuthMethod,
+		},
 	}
 
 	for _, tt := range tests {

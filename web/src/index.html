@@ -569,7 +569,233 @@ otpInput.addEventListener('input', function() {
     <section id="pages" class="catalog-section">
       <h2>Page Examples</h2>
 
-      <h3>Login Page</h3>
+      <h3>Authentication Patterns</h3>
+      <p style="color: var(--color-text-secondary); margin-bottom: var(--spacing-lg);">
+        Different authentication configurations for ChatbotGate. Each pattern demonstrates a different combination of OAuth2, Email, and Password authentication.
+      </p>
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: var(--spacing-lg); margin-bottom: var(--spacing-xl);">
+
+        <!-- Pattern 1: OAuth2 Only -->
+        <div>
+          <h4 style="font-size: 1rem; font-weight: 600; color: var(--color-text-primary); margin-bottom: var(--spacing-sm);">OAuth2 Only</h4>
+          <p style="font-size: 0.875rem; color: var(--color-text-secondary); margin-bottom: var(--spacing-md);">Multiple OAuth2 providers</p>
+          <div class="component-demo">
+            <div class="auth-container" style="min-height: auto;">
+              <div style="width: 100%; max-width: 28rem;">
+                <div class="card auth-card">
+                  <h1 class="auth-title">Welcome Back</h1>
+                  <p class="auth-description">Sign in to your account</p>
+                  <button class="btn btn-secondary provider-btn">
+                    <img src="/icons/google.svg" alt="Google">
+                    Continue with Google
+                  </button>
+                  <button class="btn btn-secondary provider-btn">
+                    <img src="/icons/github.svg" alt="GitHub">
+                    Continue with GitHub
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Pattern 2: Email Only -->
+        <div>
+          <h4 style="font-size: 1rem; font-weight: 600; color: var(--color-text-primary); margin-bottom: var(--spacing-sm);">Email Only</h4>
+          <p style="font-size: 0.875rem; color: var(--color-text-secondary); margin-bottom: var(--spacing-md);">Passwordless email authentication</p>
+          <div class="component-demo">
+            <div class="auth-container" style="min-height: auto;">
+              <div style="width: 100%; max-width: 28rem;">
+                <div class="card auth-card">
+                  <h1 class="auth-title">Welcome Back</h1>
+                  <p class="auth-description">Enter your email to receive a login link</p>
+                  <form>
+                    <div class="form-group">
+                      <label class="label" for="pattern2-email">Email Address</label>
+                      <input type="email" id="pattern2-email" class="input" placeholder="you@example.com">
+                    </div>
+                    <button type="button" class="btn btn-primary provider-btn">
+                      <img src="/icons/email.svg" alt="Email">
+                      Send Login Link
+                    </button>
+                  </form>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Pattern 3: Password Only -->
+        <div>
+          <h4 style="font-size: 1rem; font-weight: 600; color: var(--color-text-primary); margin-bottom: var(--spacing-sm);">Password Only</h4>
+          <p style="font-size: 0.875rem; color: var(--color-text-secondary); margin-bottom: var(--spacing-md);">Simple password authentication</p>
+          <div class="component-demo">
+            <div class="auth-container" style="min-height: auto;">
+              <div style="width: 100%; max-width: 28rem;">
+                <div class="card auth-card">
+                  <h1 class="auth-title">Welcome Back</h1>
+                  <p class="auth-description">Enter your password to continue</p>
+                  <form>
+                    <div class="form-group">
+                      <label class="label" for="pattern3-password">Password</label>
+                      <input type="password" id="pattern3-password" class="input" placeholder="Enter password">
+                    </div>
+                    <button type="button" class="btn btn-primary provider-btn">
+                      <img src="/icons/password.svg" alt="Password">
+                      Sign In
+                    </button>
+                  </form>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Pattern 4: OAuth2 + Email -->
+        <div>
+          <h4 style="font-size: 1rem; font-weight: 600; color: var(--color-text-primary); margin-bottom: var(--spacing-sm);">OAuth2 + Email</h4>
+          <p style="font-size: 0.875rem; color: var(--color-text-secondary); margin-bottom: var(--spacing-md);">OAuth2 with email fallback</p>
+          <div class="component-demo">
+            <div class="auth-container" style="min-height: auto;">
+              <div style="width: 100%; max-width: 28rem;">
+                <div class="card auth-card">
+                  <h1 class="auth-title">Welcome Back</h1>
+                  <p class="auth-description">Sign in to your account</p>
+                  <button class="btn btn-secondary provider-btn">
+                    <img src="/icons/google.svg" alt="Google">
+                    Continue with Google
+                  </button>
+                  <div class="auth-divider"><span>or</span></div>
+                  <form>
+                    <div class="form-group">
+                      <label class="label" for="pattern4-email">Email Address</label>
+                      <input type="email" id="pattern4-email" class="input" placeholder="you@example.com">
+                    </div>
+                    <button type="button" class="btn btn-primary provider-btn">
+                      <img src="/icons/email.svg" alt="Email">
+                      Send Login Link
+                    </button>
+                  </form>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Pattern 5: OAuth2 + Password -->
+        <div>
+          <h4 style="font-size: 1rem; font-weight: 600; color: var(--color-text-primary); margin-bottom: var(--spacing-sm);">OAuth2 + Password</h4>
+          <p style="font-size: 0.875rem; color: var(--color-text-secondary); margin-bottom: var(--spacing-md);">OAuth2 with password fallback</p>
+          <div class="component-demo">
+            <div class="auth-container" style="min-height: auto;">
+              <div style="width: 100%; max-width: 28rem;">
+                <div class="card auth-card">
+                  <h1 class="auth-title">Welcome Back</h1>
+                  <p class="auth-description">Sign in to your account</p>
+                  <button class="btn btn-secondary provider-btn">
+                    <img src="/icons/google.svg" alt="Google">
+                    Continue with Google
+                  </button>
+                  <div class="auth-divider"><span>or</span></div>
+                  <form>
+                    <div class="form-group">
+                      <label class="label" for="pattern5-password">Password</label>
+                      <input type="password" id="pattern5-password" class="input" placeholder="Enter password">
+                    </div>
+                    <button type="button" class="btn btn-primary provider-btn">
+                      <img src="/icons/password.svg" alt="Password">
+                      Sign In
+                    </button>
+                  </form>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Pattern 6: Email + Password -->
+        <div>
+          <h4 style="font-size: 1rem; font-weight: 600; color: var(--color-text-primary); margin-bottom: var(--spacing-sm);">Email + Password</h4>
+          <p style="font-size: 0.875rem; color: var(--color-text-secondary); margin-bottom: var(--spacing-md);">Email with password fallback</p>
+          <div class="component-demo">
+            <div class="auth-container" style="min-height: auto;">
+              <div style="width: 100%; max-width: 28rem;">
+                <div class="card auth-card">
+                  <h1 class="auth-title">Welcome Back</h1>
+                  <p class="auth-description">Sign in to your account</p>
+                  <form>
+                    <div class="form-group">
+                      <label class="label" for="pattern6-email">Email Address</label>
+                      <input type="email" id="pattern6-email" class="input" placeholder="you@example.com">
+                    </div>
+                    <button type="button" class="btn btn-primary provider-btn">
+                      <img src="/icons/email.svg" alt="Email">
+                      Send Login Link
+                    </button>
+                  </form>
+                  <div class="auth-divider"><span>or</span></div>
+                  <form>
+                    <div class="form-group">
+                      <label class="label" for="pattern6-password">Password</label>
+                      <input type="password" id="pattern6-password" class="input" placeholder="Enter password">
+                    </div>
+                    <button type="button" class="btn btn-primary provider-btn">
+                      <img src="/icons/password.svg" alt="Password">
+                      Sign In
+                    </button>
+                  </form>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Pattern 7: All Three (OAuth2 + Email + Password) -->
+        <div>
+          <h4 style="font-size: 1rem; font-weight: 600; color: var(--color-text-primary); margin-bottom: var(--spacing-sm);">All Methods</h4>
+          <p style="font-size: 0.875rem; color: var(--color-text-secondary); margin-bottom: var(--spacing-md);">OAuth2 + Email + Password</p>
+          <div class="component-demo">
+            <div class="auth-container" style="min-height: auto;">
+              <div style="width: 100%; max-width: 28rem;">
+                <div class="card auth-card">
+                  <h1 class="auth-title">Welcome Back</h1>
+                  <p class="auth-description">Sign in to your account</p>
+                  <button class="btn btn-secondary provider-btn">
+                    <img src="/icons/google.svg" alt="Google">
+                    Continue with Google
+                  </button>
+                  <div class="auth-divider"><span>or</span></div>
+                  <form>
+                    <div class="form-group">
+                      <label class="label" for="pattern7-email">Email Address</label>
+                      <input type="email" id="pattern7-email" class="input" placeholder="you@example.com">
+                    </div>
+                    <button type="button" class="btn btn-primary provider-btn">
+                      <img src="/icons/email.svg" alt="Email">
+                      Send Login Link
+                    </button>
+                  </form>
+                  <div class="auth-divider"><span>or</span></div>
+                  <form>
+                    <div class="form-group">
+                      <label class="label" for="pattern7-password">Password</label>
+                      <input type="password" id="pattern7-password" class="input" placeholder="Enter password">
+                    </div>
+                    <button type="button" class="btn btn-primary provider-btn">
+                      <img src="/icons/password.svg" alt="Password">
+                      Sign In
+                    </button>
+                  </form>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <h3>Full Login Page Example</h3>
       <div class="component-demo">
         <div class="auth-container" style="min-height: auto;">
           <div style="width: 100%; max-width: 28rem;">

@@ -302,6 +302,17 @@ func (m *Middleware) handleLogin(w http.ResponseWriter, r *http.Request) {
 		</script>`
 	}
 
+	// Add password authentication if enabled
+	if m.passwordHandler != nil {
+		// Show divider if other auth methods exist
+		if len(providers) > 0 || m.emailHandler != nil {
+			html += `<div class="auth-divider"><span>` + t("login.or") + `</span></div>`
+		}
+
+		passwordHTML := m.passwordHandler.RenderPasswordForm(lang)
+		html += passwordHTML
+	}
+
 	prefix = normalizeAuthPrefix(m.config.Server.GetAuthPathPrefix())
 	iconPath := joinAuthPath(prefix, "/assets/icons/chatbotgate.svg")
 

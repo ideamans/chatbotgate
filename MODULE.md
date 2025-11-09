@@ -74,7 +74,7 @@ Each layer is implemented as Go middleware (`func(http.Handler) http.Handler`).
 
 ### 2. Provider Pattern
 
-Authentication providers (OAuth2, email) implement common interfaces, allowing easy extension.
+Authentication providers (OAuth2, email, password) implement common interfaces, allowing easy extension.
 
 ### 3. KVS Abstraction
 
@@ -313,6 +313,52 @@ Email authentication populates the same standardized fields as OAuth2 providers 
 - `_username`: Email local part (before @)
 - `_avatar_url`: Empty string (no avatar for email auth)
 - `userpart`: Email local part (before @, same as `_username`)
+
+#### Password Authentication (`pkg/middleware/auth/password`)
+
+Simple password-based authentication for testing and development:
+
+```go
+import (
+    "github.com/ideamans/chatbotgate/pkg/middleware/auth/password"
+    "github.com/ideamans/chatbotgate/pkg/middleware/config"
+    "github.com/ideamans/chatbotgate/pkg/shared/kvs"
+    "github.com/ideamans/chatbotgate/pkg/shared/i18n"
+    "github.com/ideamans/chatbotgate/pkg/shared/logging"
+)
+
+// Create password handler
+handler := password.NewHandler(
+    config.PasswordAuthConfig{
+        Enabled:  true,
+        Password: "your-secure-password",
+    },
+    sessionStore,      // kvs.Store for sessions
+    cookieConfig,      // config.CookieConfig
+    "/_auth",          // authPathPrefix
+    translator,        // *i18n.Translator
+    logger,            // logging.Logger
+)
+
+// Key methods:
+// - HandleLogin(w http.ResponseWriter, r *http.Request): Process password submission
+// - RenderPasswordForm(lang i18n.Language) string: Generate HTML form for login page
+```
+
+**Use Case**: Simple authentication for testing, demos, and internal tools without OAuth2 or email setup.
+
+**Security Note**: Password authentication uses a single shared password. Anyone with the password can authenticate as `password@localhost`. Use strong passwords and consider it for testing/development environments only.
+
+**Standardized Fields:**
+
+Password authentication populates these fields for consistent forwarding:
+
+- `email`: "password@localhost"
+- `username`: "Password User"
+- `provider`: "password"
+- `_email`: "password@localhost" (standardized)
+- `_username`: "Password User" (standardized)
+- `_avatar_url`: "" (empty, standardized)
 
 #### Authorization (`pkg/middleware/authz`)
 
@@ -1247,7 +1293,7 @@ type Session struct {
     ID            string                 // Session ID
     Email         string                 // User's email address
     Name          string                 // User's display name from OAuth2 provider
-    Provider      string                 // OAuth2 provider name or "email" for email auth
+    Provider      string                 // OAuth2 provider name, "email" for email auth, or "password" for password auth
     Extra         map[string]interface{} // Additional user data from OAuth2 provider
     CreatedAt     time.Time              // Session creation time
     ExpiresAt     time.Time              // Session expiration time
@@ -1255,7 +1301,7 @@ type Session struct {
 }
 ```
 
-**Standardized Extra Fields** (common across all OAuth2 providers and email auth):
+**Standardized Extra Fields** (common across all OAuth2 providers, email auth, and password auth):
 - `_email` (string): User email address (same as `Email`)
 - `_username` (string): User display name
   - Google: `name`
@@ -1502,7 +1548,7 @@ if err != nil {
 
 **Common Validation Errors:**
 - Cookie secret too short (minimum 32 characters)
-- No authentication methods enabled (neither OAuth2 nor email)
+- No authentication methods enabled (neither OAuth2, email, nor password)
 - Invalid encryption key length for forwarding
 - Missing required provider configuration
 - Invalid rule patterns (regex, minimatch)

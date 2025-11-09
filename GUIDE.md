@@ -13,6 +13,7 @@ Complete guide for deploying, configuring, and operating ChatbotGate as an authe
   - [Session Management](#session-management)
   - [OAuth2 Providers](#oauth2-providers)
   - [Email Authentication](#email-authentication)
+  - [Password Authentication](#password-authentication)
   - [Authorization](#authorization)
   - [KVS Backend](#kvs-backend)
   - [User Information Forwarding](#user-information-forwarding)
@@ -34,7 +35,7 @@ Complete guide for deploying, configuring, and operating ChatbotGate as an authe
 
 ## Introduction
 
-ChatbotGate is an authentication reverse proxy that sits between your users and your upstream application. It intercepts requests, authenticates users through OAuth2 or email, and then proxies authenticated requests to your backend.
+ChatbotGate is an authentication reverse proxy that sits between your users and your upstream application. It intercepts requests, authenticates users through OAuth2, email, or password, and then proxies authenticated requests to your backend.
 
 ### Key Concepts
 
@@ -583,6 +584,85 @@ Email authentication provides the same standardized fields as OAuth2 for consist
 - `userpart`: Email local part (same as `_username`)
 
 These fields can be used in [User Information Forwarding](#user-information-forwarding) configuration.
+
+### Password Authentication
+
+Simple password-based authentication for testing and demonstration purposes. Users enter a shared password to authenticate.
+
+```yaml
+password_auth:
+  enabled: true
+  # Shared password for authentication
+  password: "your-secure-password"
+```
+
+**Use Cases:**
+
+- **Quick Testing**: Works immediately after installation without OAuth2 or email configuration
+- **Demonstration**: Simple authentication for demos and proof-of-concepts
+- **Development**: Fast iteration during development without external dependencies
+- **Internal Tools**: Simple access control for internal tools with a shared password
+
+**How It Works:**
+
+1. User sees a password input field on the login page
+2. User enters the configured password
+3. Password is validated server-side
+4. After successful validation, user is authenticated with email `password@localhost`
+
+**Security Considerations:**
+
+⚠️ **Limited Security**: Password authentication uses a single shared password. Anyone with the password can authenticate.
+
+**Recommended Usage:**
+- Enable `password_auth` for initial testing after fresh installation
+- Use strong passwords if deploying to network-accessible environments
+- Disable it and enable OAuth2 or email authentication before production deployment
+- Useful for quick prototyping and local development
+
+**User Information Fields:**
+
+Password authentication provides these fields for forwarding:
+
+- `email`: "password@localhost"
+- `username`: "Password User"
+- `provider`: "password"
+- `_email`: "password@localhost" (standardized field)
+- `_username`: "Password User" (standardized field)
+- `_avatar_url`: "" (empty, standardized field)
+
+These fields can be used in [User Information Forwarding](#user-information-forwarding) configuration.
+
+**Example Configuration:**
+
+Initial setup for testing (default in example configs):
+```yaml
+# Password auth enabled for easy testing
+password_auth:
+  enabled: true
+  password: "change-me-in-production"
+
+# Email auth disabled (requires SMTP/SendGrid/Sendmail setup)
+email_auth:
+  enabled: false
+
+# OAuth2 disabled (requires provider credentials)
+oauth2:
+  providers: []
+```
+
+Production configuration (disable password auth):
+```yaml
+# Disable password auth in production
+password_auth:
+  enabled: false
+
+# Enable real authentication
+email_auth:
+  enabled: true
+  sender_type: "smtp"
+  # ... SMTP configuration
+```
 
 ### Authorization
 
@@ -1192,6 +1272,30 @@ session:
    ↓
 9. Authenticated request proxied to upstream
 ```
+
+### Password Authentication Flow
+
+```
+1. User visits: https://example.com/app
+   ↓
+2. ChatbotGate: No session → Redirect to /_auth/login
+   ↓
+3. User sees password input field and button
+   ↓
+4. User enters the configured password
+   ↓
+5. User clicks "Sign In" button
+   ↓
+6. POST /_auth/password/login with { password: "entered-password" }
+   ↓
+7. ChatbotGate: Validate password, check authorization
+   ↓
+8. Create session with email "password@localhost", redirect to /app
+   ↓
+9. Authenticated request proxied to upstream
+```
+
+**Note**: Password authentication uses a single shared password. Use strong passwords and consider it for testing/development environments only.
 
 ### Session Lifetime
 

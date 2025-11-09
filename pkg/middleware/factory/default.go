@@ -6,6 +6,7 @@ import (
 
 	"github.com/ideamans/chatbotgate/pkg/middleware/auth/email"
 	"github.com/ideamans/chatbotgate/pkg/middleware/auth/oauth2"
+	"github.com/ideamans/chatbotgate/pkg/middleware/auth/password"
 	"github.com/ideamans/chatbotgate/pkg/middleware/authz"
 	"github.com/ideamans/chatbotgate/pkg/middleware/config"
 	"github.com/ideamans/chatbotgate/pkg/middleware/core"
@@ -77,12 +78,25 @@ func (f *DefaultFactory) CreateMiddleware(
 		}
 	}
 
+	// Create password handler if enabled
+	var passwordHandler *password.Handler
+	if cfg.PasswordAuth.Enabled {
+		passwordHandler = f.CreatePasswordHandler(
+			cfg.PasswordAuth,
+			cfg.Session.Cookie,
+			cfg.Server.GetAuthPathPrefix(),
+			sessionStore,
+			translator,
+		)
+	}
+
 	// Create middleware
 	mw := middleware.New(
 		cfg,
 		sessionStore,
 		oauthManager,
 		emailHandler,
+		passwordHandler,
 		authzChecker,
 		forwarder,
 		rulesEvaluator,
@@ -223,6 +237,19 @@ func (f *DefaultFactory) CreateEmailHandler(
 
 	f.logger.Debug("Email authentication handler initialized", "sender", emailAuthCfg.SenderType)
 	return handler, nil
+}
+
+// CreatePasswordHandler creates a password authentication handler
+func (f *DefaultFactory) CreatePasswordHandler(
+	passwordCfg config.PasswordAuthConfig,
+	cookieCfg config.CookieConfig,
+	authPathPrefix string,
+	sessionStore kvs.Store,
+	translator *i18n.Translator,
+) *password.Handler {
+	handler := password.NewHandler(passwordCfg, sessionStore, cookieCfg, authPathPrefix, translator, f.logger)
+	f.logger.Debug("Password authentication handler initialized")
+	return handler
 }
 
 // CreateAuthzChecker creates an authorization checker based on config

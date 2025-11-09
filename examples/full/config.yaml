@@ -53,7 +53,6 @@ oauth2:
     # Google OAuth2 (enabled)
     - id: "google"
       type: "google"
-      display_name: "Google Workspace"
       client_id: "123456789-abcdefghijklmnop.apps.googleusercontent.com"
       client_secret: "GOCSPX-abc123xyz456_secret"
       disabled: false
@@ -70,7 +69,6 @@ oauth2:
     # GitHub OAuth2 (enabled)
     - id: "github"
       type: "github"
-      display_name: "GitHub Enterprise"
       client_id: "Iv1.abc123xyz456"
       client_secret: "github_client_secret_abc123xyz456"
       disabled: false
@@ -85,7 +83,6 @@ oauth2:
     # Microsoft OAuth2 / Azure AD (enabled)
     - id: "microsoft"
       type: "microsoft"
-      display_name: "Microsoft 365"
       client_id: "abc12345-1234-5678-90ab-cdef12345678"
       client_secret: "microsoft_client_secret_abc~123.xyz-456"
       disabled: false
@@ -102,7 +99,6 @@ oauth2:
     # Custom OIDC Provider (e.g., Keycloak, Auth0, Okta)
     - id: "custom"
       type: "custom"
-      display_name: "Corporate SSO"
       client_id: "chatbotgate-client"
       client_secret: "custom-oidc-secret-abc123xyz456"
       disabled: false
@@ -170,6 +166,16 @@ email_auth:
   # Token expiration
   token:
     expire: "15m"  # 15 minutes (valid duration format: "5m", "1h", "30m")
+
+# Password authentication (simple checkbox authentication for testing)
+# NO CONFIGURATION NEEDED - works immediately after installation
+# Useful for testing without OAuth2 or email setup
+# RECOMMENDED: Disable in production and use OAuth2 or email_auth instead
+password_auth:
+  enabled: false  # Disabled in full config (use OAuth2/email instead)
+  # Optional: URL to your terms of service (appears as link in checkbox label)
+  password: "P@ssW0rd"
+  # Optional: Customize the button text (default: "Start Using" / "使用を開始する")
 
 # Authorization configuration
 authorization:
