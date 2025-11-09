@@ -35,9 +35,10 @@ session:
 oauth2:
   providers: []
 
-# Email authentication with sendmail
+# Email authentication with sendmail (disabled by default)
+# Enable after testing with password_auth
 email_auth:
-  enabled: true
+  enabled: false
   sender_type: "sendmail"
 
   # Shared sender configuration (RFC 5322 format supported)
@@ -49,6 +50,13 @@ email_auth:
 
   token:
     expire: "15m"
+
+# Password authentication (enabled by default for easy testing)
+# NO CONFIGURATION NEEDED - works immediately after installation
+# Disable this and enable email_auth or OAuth2 for production
+password_auth:
+  enabled: true
+  password: "P@ssW0rd"
 
 # No authorization whitelist - all authenticated users allowed
 authorization:

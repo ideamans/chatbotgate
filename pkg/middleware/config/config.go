@@ -17,6 +17,7 @@ type Config struct {
 	Session       SessionConfig       `yaml:"session" json:"session"`
 	OAuth2        OAuth2Config        `yaml:"oauth2" json:"oauth2"`
 	EmailAuth     EmailAuthConfig     `yaml:"email_auth" json:"email_auth"`
+	PasswordAuth  PasswordAuthConfig  `yaml:"password_auth" json:"password_auth"`
 	Authorization AuthorizationConfig `yaml:"authorization" json:"authorization"`
 	Logging       LoggingConfig       `yaml:"logging" json:"logging"`
 	KVS           KVSConfig           `yaml:"kvs" json:"kvs"`               // KVS storage configuration
@@ -242,6 +243,14 @@ func (e EmailTokenConfig) GetTokenExpireDuration() (time.Duration, error) {
 	return time.ParseDuration(e.Expire)
 }
 
+// PasswordAuthConfig contains password authentication settings
+// This is a simple authentication method that requires a password
+// Useful for initial setup and testing without requiring email or OAuth2 configuration
+type PasswordAuthConfig struct {
+	Enabled  bool   `yaml:"enabled" json:"enabled"`   // Enable password authentication
+	Password string `yaml:"password" json:"password"` // Password for authentication
+}
+
 // AuthorizationConfig contains authorization settings
 type AuthorizationConfig struct {
 	Allowed []string `yaml:"allowed" json:"allowed"` // Email addresses or domains (domain starts with @)
@@ -324,7 +333,7 @@ func (c *Config) Validate() error {
 		verr.Add(ErrCookieSecretTooShort)
 	}
 
-	// Check at least one authentication method is available (OAuth2 or email)
+	// Check at least one authentication method is available (OAuth2, email, or agreement)
 	hasAvailableOAuth2 := false
 	for _, p := range c.OAuth2.Providers {
 		if !p.Disabled {
@@ -333,9 +342,10 @@ func (c *Config) Validate() error {
 		}
 	}
 	hasEmailAuth := c.EmailAuth.Enabled
+	hasPasswordAuth := c.PasswordAuth.Enabled
 
 	// At least one authentication method must be enabled
-	if !hasAvailableOAuth2 && !hasEmailAuth {
+	if !hasAvailableOAuth2 && !hasEmailAuth && !hasPasswordAuth {
 		verr.Add(ErrNoAuthMethod)
 	}
 

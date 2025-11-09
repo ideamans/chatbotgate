@@ -5,6 +5,7 @@ import (
 
 	"github.com/ideamans/chatbotgate/pkg/middleware/auth/email"
 	"github.com/ideamans/chatbotgate/pkg/middleware/auth/oauth2"
+	"github.com/ideamans/chatbotgate/pkg/middleware/auth/password"
 	"github.com/ideamans/chatbotgate/pkg/middleware/authz"
 	"github.com/ideamans/chatbotgate/pkg/middleware/config"
 	"github.com/ideamans/chatbotgate/pkg/middleware/forwarding"
@@ -18,16 +19,17 @@ import (
 // Middleware is the core authentication middleware
 // It implements http.Handler and can wrap any http.Handler
 type Middleware struct {
-	config         *config.Config
-	sessionStore   kvs.Store
-	oauthManager   *oauth2.Manager
-	emailHandler   *email.Handler
-	authzChecker   authz.Checker
-	forwarder      forwarding.Forwarder // Interface type
-	rulesEvaluator *rules.Evaluator     // Rules-based access control
-	translator     *i18n.Translator
-	logger         logging.Logger
-	next           http.Handler // The next handler to call after auth succeeds
+	config          *config.Config
+	sessionStore    kvs.Store
+	oauthManager    *oauth2.Manager
+	emailHandler    *email.Handler
+	passwordHandler *password.Handler
+	authzChecker    authz.Checker
+	forwarder       forwarding.Forwarder // Interface type
+	rulesEvaluator  *rules.Evaluator     // Rules-based access control
+	translator      *i18n.Translator
+	logger          logging.Logger
+	next            http.Handler // The next handler to call after auth succeeds
 }
 
 // New creates a new authentication middleware
@@ -36,6 +38,7 @@ func New(
 	sessionStore kvs.Store,
 	oauthManager *oauth2.Manager,
 	emailHandler *email.Handler,
+	passwordHandler *password.Handler,
 	authzChecker authz.Checker,
 	forwarder forwarding.Forwarder, // Interface type
 	rulesEvaluator *rules.Evaluator, // Rules evaluator
@@ -43,15 +46,16 @@ func New(
 	logger logging.Logger,
 ) *Middleware {
 	return &Middleware{
-		config:         cfg,
-		sessionStore:   sessionStore,
-		oauthManager:   oauthManager,
-		emailHandler:   emailHandler,
-		authzChecker:   authzChecker,
-		forwarder:      forwarder,
-		rulesEvaluator: rulesEvaluator,
-		translator:     translator,
-		logger:         logger,
+		config:          cfg,
+		sessionStore:    sessionStore,
+		oauthManager:    oauthManager,
+		emailHandler:    emailHandler,
+		passwordHandler: passwordHandler,
+		authzChecker:    authzChecker,
+		forwarder:       forwarder,
+		rulesEvaluator:  rulesEvaluator,
+		translator:      translator,
+		logger:          logger,
 	}
 }
 
@@ -92,6 +96,9 @@ func (m *Middleware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	case matchPath(r.URL.Path, prefix, "/email/verify-otp"):
 		m.handleEmailVerifyOTP(w, r)
+		return
+	case matchPath(r.URL.Path, prefix, "/password/login"):
+		m.handlePasswordLogin(w, r)
 		return
 	case matchPath(r.URL.Path, prefix, "/assets/main.css"):
 		m.handleMainCSS(w, r)

@@ -31,9 +31,10 @@ session:
 oauth2:
   providers: []
 
-# Email authentication
+# Email authentication (disabled by default)
+# Enable after testing with password_auth
 email_auth:
-  enabled: true
+  enabled: false
   sender_type: "sendmail"
   from: "ChatbotGate Demo <noreply@example.com>"
 
@@ -42,6 +43,13 @@ email_auth:
 
   token:
     expire: "15m"
+
+# Password authentication (enabled by default for easy testing)
+# NO CONFIGURATION NEEDED - works immediately after installation
+# Disable this and enable email_auth or OAuth2 for production
+password_auth:
+  enabled: true
+  password: "P@ssW0rd"
 
 # Authorization: allow all authenticated users
 authorization:

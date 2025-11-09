@@ -69,6 +69,23 @@
             Send Login Link
           </button>
         </form>
+
+        <!-- Divider -->
+        <div class="auth-divider">
+          <span>or</span>
+        </div>
+
+        <!-- Password Authentication -->
+        <form id="password-form">
+          <div class="form-group">
+            <label class="label" for="password">Password</label>
+            <input type="password" id="password" name="password" class="input" placeholder="Enter password" required>
+          </div>
+          <button type="submit" class="btn btn-primary provider-btn">
+            <img src="/icons/password.svg" alt="Password">
+            Sign In
+          </button>
+        </form>
       </div>
 
       <!-- Service Credit -->
@@ -174,6 +191,25 @@
       // 2. Redirect to email-sent page
       alert('Demo: Login link would be sent to ' + email);
     });
+
+    // Password Auth Handler
+    (function initPasswordAuth() {
+      const form = document.getElementById('password-form');
+      if (!form) return;
+
+      form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const password = document.getElementById('password').value;
+        console.log('Password authentication requested');
+
+        // In a real implementation, this would submit to the server
+        if (password === 'P@ssW0rd') {
+          alert('Demo: Authentication successful with password@localhost');
+        } else {
+          alert('Demo: Invalid password');
+        }
+      });
+    })();
 
     // Iframe Detection
     (function detectIframe() {
