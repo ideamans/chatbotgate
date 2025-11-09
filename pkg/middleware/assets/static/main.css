@@ -1,5 +1,12 @@
 @import "tailwindcss";
 
+/* Reset box-sizing */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
 /* Design System Variables - Light Mode (Default) */
 :root {
   /* Color Palette */

@@ -44,15 +44,29 @@ session:
     httponly: true
     samesite: "lax"
 
-# OAuth2 disabled for simple setup
-# To enable OAuth2, add providers here (see config.example.yaml)
+# OAuth2 providers (disabled by default for simple setup)
+# To enable OAuth2:
+#   1. Create OAuth2 credentials at Google Cloud Console
+#   2. Set redirect_uri to: {base_url}/_auth/oauth2/callback
+#   3. Fill in client_id and client_secret
+#   4. Set enabled to true
 oauth2:
-  providers: []
+  providers:
+    - name: "google"
+      enabled: false  # Set to true to enable
+      client_id: "YOUR_GOOGLE_CLIENT_ID"  # <-- CHANGE THIS
+      client_secret: "YOUR_GOOGLE_CLIENT_SECRET"  # <-- CHANGE THIS
+      # Optional: scopes (default: openid, email, profile)
+      # scopes:
+      #   - "openid"
+      #   - "email"
+      #   - "profile"
 
-# Email authentication with sendmail
+# Email authentication with sendmail (disabled by default)
 # Note: sendmail is pre-installed in the Docker image
+# Enable after testing with password_auth
 email_auth:
-  enabled: true
+  enabled: false
   sender_type: "sendmail"
 
   # Shared sender configuration (RFC 5322 format supported)
@@ -64,6 +78,13 @@ email_auth:
 
   token:
     expire: "15m"
+
+# Password authentication (enabled by default for easy testing)
+# NO CONFIGURATION NEEDED - works immediately after installation
+# Disable this and enable email_auth or OAuth2 for production
+password_auth:
+  enabled: true
+  password: "P@ssW0rd"
 
 # No authorization whitelist - all authenticated users allowed
 # To restrict access, add email addresses or domains here

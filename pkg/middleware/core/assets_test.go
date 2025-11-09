@@ -45,9 +45,10 @@ func TestBuildStyleLinks_DifyDisabled(t *testing.T) {
 		cfg,
 		sessionStore,
 		oauthManager,
-		nil,
+		nil, // email handler
+		nil, // agreement handler
 		authzChecker,
-		nil,
+		nil, // forwarder
 		nil, // rules evaluator not needed for this test
 		translator,
 		logger,
@@ -97,9 +98,10 @@ func TestBuildStyleLinks_DifyEnabled(t *testing.T) {
 		cfg,
 		sessionStore,
 		oauthManager,
-		nil,
+		nil, // email handler
+		nil, // agreement handler
 		authzChecker,
-		nil,
+		nil, // forwarder
 		nil, // rules evaluator not needed for this test
 		translator,
 		logger,
@@ -148,9 +150,10 @@ func TestBuildStyleLinks_CustomPrefix(t *testing.T) {
 		cfg,
 		sessionStore,
 		oauthManager,
-		nil,
+		nil, // email handler
+		nil, // agreement handler
 		authzChecker,
-		nil,
+		nil, // forwarder
 		nil, // rules evaluator not needed for this test
 		translator,
 		logger,
@@ -194,9 +197,10 @@ func TestHandleDifyCSS(t *testing.T) {
 		cfg,
 		sessionStore,
 		oauthManager,
-		nil,
+		nil, // email handler
+		nil, // agreement handler
 		authzChecker,
-		nil,
+		nil, // forwarder
 		nil, // rules evaluator not needed for this test
 		translator,
 		logger,
@@ -257,9 +261,10 @@ func TestMiddleware_DifyCSSRoute(t *testing.T) {
 		cfg,
 		sessionStore,
 		oauthManager,
-		nil,
+		nil, // email handler
+		nil, // agreement handler
 		authzChecker,
-		nil,
+		nil, // forwarder
 		nil, // rules evaluator not needed for this test
 		translator,
 		logger,
@@ -308,9 +313,10 @@ func TestMiddleware_DifyCSSRoute_CustomPrefix(t *testing.T) {
 		cfg,
 		sessionStore,
 		oauthManager,
-		nil,
+		nil, // email handler
+		nil, // agreement handler
 		authzChecker,
-		nil,
+		nil, // forwarder
 		nil, // rules evaluator not needed for this test
 		translator,
 		logger,
@@ -431,10 +437,11 @@ func TestBuildAuthHeader(t *testing.T) {
 				cfg,
 				sessionStore,
 				oauthManager,
-				nil,
+				nil, // email handler
+				nil, // agreement handler
 				authzChecker,
-				nil,
-				nil,
+				nil, // forwarder
+				nil, // rules evaluator
 				translator,
 				logger,
 			)

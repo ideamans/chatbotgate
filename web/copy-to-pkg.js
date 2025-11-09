@@ -25,7 +25,8 @@ const icons = [
   'github.svg',
   'google.svg',
   'microsoft.svg',
-  'oidc.svg'
+  'oidc.svg',
+  'password.svg'
 ];
 
 icons.forEach(icon => {

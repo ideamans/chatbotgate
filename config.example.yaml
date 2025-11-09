@@ -75,8 +75,9 @@ oauth2:
       display_name: "Google"
       client_id: "YOUR-GOOGLE-CLIENT-ID"
       client_secret: "YOUR-GOOGLE-CLIENT-SECRET"
-      # Optional: Set disabled: true to hide from login page (default: false)
-      # disabled: false
+      # Disabled by default for initial setup (requires OAuth2 client configuration)
+      # Set to false after configuring client_id and client_secret
+      disabled: true
       # Optional: Custom icon URL (if not set, uses default Google icon)
       # icon_url: "https://example.com/custom-google-icon.svg"
       # Optional: Custom scopes
@@ -146,7 +147,9 @@ oauth2:
 
 # Email authentication configuration (Phase 2)
 email_auth:
-  enabled: true
+  # Disabled by default for initial setup (requires email configuration)
+  # Enable after configuring SMTP, SendGrid, or Sendmail
+  enabled: false
 
   # Sender type: "smtp", "sendgrid", or "sendmail"
   sender_type: "smtp"
@@ -193,6 +196,19 @@ email_auth:
   # Token expiration
   token:
     expire: "15m"  # 15 minutes
+
+# Password authentication
+# Simple authentication requiring a password
+# Useful for initial setup and testing without requiring email or OAuth2 configuration
+# NO ADDITIONAL SETUP REQUIRED - works immediately after installation
+password_auth:
+  # Enabled by default for easy initial setup and testing
+  # Disable this and enable OAuth2 or email_auth for production use
+  enabled: true
+
+  # Password for authentication
+  # CHANGE THIS: Use a strong password for production
+  password: "P@ssW0rd"  # <-- CHANGE THIS
 
 # Authorization configuration
 authorization:

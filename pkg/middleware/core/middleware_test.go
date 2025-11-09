@@ -125,6 +125,7 @@ func TestMiddleware_RequiresEmail(t *testing.T) {
 				sessionStore,
 				oauthManager,
 				nil, // email handler
+				nil, // agreement handler
 				authzChecker,
 				nil, // forwarder
 				nil, // rules evaluator
@@ -172,7 +173,8 @@ func TestMiddleware_Authorization_NoWhitelist(t *testing.T) {
 		cfg,
 		sessionStore,
 		oauthManager,
-		nil,
+		nil, // email handler
+		nil, // agreement handler
 		authzChecker,
 		nil, // forwarder
 		nil, // rules evaluator
@@ -273,7 +275,8 @@ func TestMiddleware_Authorization_WithWhitelist(t *testing.T) {
 		cfg,
 		sessionStore,
 		oauthManager,
-		nil,
+		nil, // email handler
+		nil, // agreement handler
 		authzChecker,
 		nil, // forwarder
 		nil, // rules evaluator
@@ -428,9 +431,10 @@ func TestHandleLogin_DividerDisplay(t *testing.T) {
 				sessionStore,
 				oauthManager,
 				emailHandler,
+				nil, // agreement handler
 				authzChecker,
-				nil,
-				nil,
+				nil, // forwarder
+				nil, // rules evaluator
 				translator,
 				logger,
 			)

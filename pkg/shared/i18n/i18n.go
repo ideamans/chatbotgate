@@ -168,6 +168,10 @@ var defaultTranslations = Translations{
 		"login.email.submit":    "Send Login Link",
 		"login.back":            "Back to login options",
 
+		// Agreement auth
+		"password.label":  "Password",
+		"password.button": "Sign In",
+
 		// Email auth
 		"email.sent.title":           "Check Your Email",
 		"email.sent.heading":         "Check Your Email",
@@ -249,6 +253,10 @@ var defaultTranslations = Translations{
 		"login.email.save":      "保存",
 		"login.email.submit":    "ログインリンクを送信",
 		"login.back":            "ログイン方法の選択に戻る",
+
+		// Agreement auth
+		"password.label":  "パスワード",
+		"password.button": "サインイン",
 
 		// Email auth
 		"email.sent.title":           "メールを確認してください",
