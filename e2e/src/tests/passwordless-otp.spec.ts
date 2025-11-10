@@ -134,8 +134,15 @@ test.describe('Passwordless OTP flow', () => {
 
     await expect(page).toHaveURL(/\/_auth\/email\/sent/);
 
-    // Enter a valid-looking but incorrect OTP
-    const wrongOTP = 'ABCD EFGH 1234'; // Valid format with spaces (12 characters)
+    // Get the real OTP from email
+    const message = await waitForMessage(TEST_EMAIL);
+    const detail = await getMessage(message.ID);
+    const realOTP = extractOTP(detail.Text) || extractOTP(detail.HTML);
+    expect(realOTP).toBeTruthy();
+
+    // Create a wrong OTP by changing one character of the real OTP
+    // This ensures it passes client-side validation but fails server-side
+    const wrongOTP = realOTP!.substring(0, 11) + (realOTP![11] === 'A' ? 'B' : 'A');
     const otpInput = page.locator('input[name="otp"]');
     await otpInput.fill(wrongOTP);
 
