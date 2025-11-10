@@ -3,17 +3,34 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { execSync } from 'child_process';
 
-// Config file path (relative to test file)
-const CONFIG_FILE = path.join(__dirname, '../../config/proxy.e2e.with-whitelist.yaml');
+// Config file path in container
+const CONTAINER_CONFIG_FILE = '/config/proxy.e2e.with-whitelist.yaml';
+const CONTAINER_NAME = 'e2e-proxy-app-with-whitelist';
 
-// Helper to read config file
+// Helper to read config file from container
 function readConfig(): string {
-  return fs.readFileSync(CONFIG_FILE, 'utf-8');
+  try {
+    const result = execSync(`docker exec ${CONTAINER_NAME} cat ${CONTAINER_CONFIG_FILE}`, {
+      encoding: 'utf-8',
+      cwd: path.join(__dirname, '../..'),
+    });
+    return result;
+  } catch (error: any) {
+    throw new Error(`Failed to read config from container: ${error.message}`);
+  }
 }
 
-// Helper to write config file
+// Helper to write config file to container
 function writeConfig(content: string): void {
-  fs.writeFileSync(CONFIG_FILE, content, 'utf-8');
+  try {
+    // Write to container using docker exec
+    execSync(`docker exec ${CONTAINER_NAME} sh -c 'cat > ${CONTAINER_CONFIG_FILE} << "EOF"\n${content}\nEOF'`, {
+      encoding: 'utf-8',
+      cwd: path.join(__dirname, '../..'),
+    });
+  } catch (error: any) {
+    throw new Error(`Failed to write config to container: ${error.message}`);
+  }
 }
 
 // Helper to get container logs (with optional timestamp filter)
@@ -57,9 +74,16 @@ test.describe('Dynamic Configuration Reload', () => {
     originalConfig = readConfig();
   });
 
-  test.afterAll(() => {
-    // Restore original configuration
-    writeConfig(originalConfig);
+  test.afterEach(async () => {
+    // Restore original configuration after each test
+    // This ensures clean state even if test fails
+    try {
+      writeConfig(originalConfig);
+      // Wait for reload to complete
+      await new Promise(resolve => setTimeout(resolve, 2000));
+    } catch (error) {
+      console.error('Failed to restore config:', error);
+    }
   });
 
   test('should reload configuration when file changes', async () => {

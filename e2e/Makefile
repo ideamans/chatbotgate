@@ -56,5 +56,7 @@ test-down:
 # Remove generated OTP/test-result artifacts
 
 clean-e2e:
+	@# Remove all files in tmp directory
 	[ ! -d $(TMP_DIR) ] || find $(TMP_DIR) -type f -delete
+	@# Remove test results but keep .gitkeep
 	[ ! -d $(RESULTS_DIR) ] || find $(RESULTS_DIR) -mindepth 1 ! -name '.gitkeep' -delete

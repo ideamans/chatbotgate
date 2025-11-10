@@ -32,6 +32,7 @@ services:
       - stub-auth
       - mailpit
     volumes:
+      # Mount config as read-write for dynamic config reload tests
       - ../config/proxy.e2e.with-whitelist.yaml:/config/proxy.e2e.with-whitelist.yaml
       - otp-files:/otp
     environment:
