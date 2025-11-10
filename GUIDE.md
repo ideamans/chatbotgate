@@ -2069,71 +2069,209 @@ oauth2:
 
 ### Health Check Endpoints
 
-ChatbotGate provides two health check endpoints for monitoring and orchestration:
+ChatbotGate provides a unified `/health` endpoint for all health checks, supporting both readiness and liveness probes with minimal complexity.
 
-#### Health Check (`/health`)
+#### Overview
 
-Basic health check that returns immediately:
+**Design Philosophy:**
+- Single endpoint for simplicity: `/health`
+- Liveness and readiness use the same URL with different query parameters
+- JSON responses for both human and machine readability
+- Proper HTTP status codes (200 for ready, 503 for not ready)
 
+#### Endpoints
+
+**Readiness Probe** (`/health` - default)
 ```bash
 curl http://localhost:4180/health
-# Response: OK (200)
+
+# When ready (200 OK):
+{
+  "status": "ready",
+  "live": true,
+  "ready": true,
+  "since": "2025-11-10T08:05:12Z",
+  "detail": "ok",
+  "retry_after": null
+}
+
+# When starting/draining (503 Service Unavailable):
+{
+  "status": "starting",  # or "draining"
+  "live": true,
+  "ready": false,
+  "since": "2025-11-10T08:05:12Z",
+  "detail": "warming up",
+  "retry_after": 5
+}
 ```
 
-**Use cases:**
-- Load balancer health checks
-- Docker/Kubernetes liveness probes
-- Basic uptime monitoring
-- Service discovery
+**Liveness Probe** (`/health?probe=live`)
+```bash
+curl 'http://localhost:4180/health?probe=live'
 
-#### Readiness Check (`/ready`)
+# Always returns 200 OK if process is alive:
+{
+  "status": "live",
+  "live": true,
+  "ready": true,  # Included for visibility
+  "since": "2025-11-10T08:05:12Z",
+  "detail": "ok",
+  "retry_after": null
+}
+```
 
-Readiness check for service availability:
-
+**Legacy Endpoint** (`/ready` - backward compatibility)
 ```bash
 curl http://localhost:4180/ready
-# Response: READY (200)
+# Response: READY (200) or NOT READY (503)
 ```
 
-**Use cases:**
-- Kubernetes readiness probes
-- Service mesh health checks
-- Deployment readiness verification
-- Rolling update coordination
+#### Health States
 
-**Notes:**
-- Both endpoints are publicly accessible (no authentication required)
-- Return plain text responses with 200 status code
-- Respond immediately (no backend checks)
+- `starting` - Initial state after startup (returns 503)
+- `ready` - Fully initialized and accepting traffic (returns 200)
+- `draining` - Graceful shutdown in progress (returns 503)
+- `warming`, `migrating`, `prefilling` - Reserved for future use
 
-**Docker Healthcheck Example:**
+#### Graceful Shutdown Behavior
 
+When receiving SIGTERM:
+1. Health status immediately changes to `draining`
+2. `/health` starts returning 503 (with `Retry-After: 5`)
+3. Load balancers detect 503 and stop routing new requests
+4. Existing requests are allowed to complete
+5. Server shuts down cleanly
+
+This ensures zero downtime during deployments and updates.
+
+#### Container Orchestration Examples
+
+**Docker Compose:**
 ```yaml
-healthcheck:
-  test: ["CMD", "wget", "--spider", "-q", "http://localhost:4180/health"]
-  interval: 30s
-  timeout: 10s
-  retries: 3
-  start_period: 10s
+services:
+  chatbotgate:
+    image: ideamans/chatbotgate:latest
+    healthcheck:
+      # Use readiness probe for container health
+      test: ["CMD-SHELL", "curl -fsS http://localhost:4180/health || exit 1"]
+      interval: 5s
+      timeout: 2s
+      retries: 12
+      start_period: 60s  # Allow time for initialization
 ```
 
-**Kubernetes Probes Example:**
+**ECS Task Definition:**
+```json
+{
+  "healthCheck": {
+    "command": ["CMD-SHELL", "curl -fsS http://localhost:4180/health || exit 1"],
+    "interval": 5,
+    "timeout": 2,
+    "retries": 12,
+    "startPeriod": 60
+  }
+}
+```
 
+**Kubernetes Deployment:**
 ```yaml
-livenessProbe:
-  httpGet:
-    path: /health
-    port: 4180
-  initialDelaySeconds: 10
-  periodSeconds: 30
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: chatbotgate
+spec:
+  template:
+    spec:
+      containers:
+      - name: chatbotgate
+        image: ideamans/chatbotgate:latest
+        ports:
+        - containerPort: 4180
 
-readinessProbe:
-  httpGet:
-    path: /ready
-    port: 4180
-  initialDelaySeconds: 5
-  periodSeconds: 10
+        # Liveness: Restart if process is dead
+        livenessProbe:
+          httpGet:
+            path: /health?probe=live
+            port: 4180
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 2
+          failureThreshold: 3
+
+        # Readiness: Remove from service if not ready
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 4180
+          initialDelaySeconds: 5
+          periodSeconds: 3
+          timeoutSeconds: 2
+          successThreshold: 1
+          failureThreshold: 3
 ```
+
+**ALB Target Group:**
+```yaml
+HealthCheckPath: /health
+HealthCheckProtocol: HTTP
+HealthCheckIntervalSeconds: 5
+HealthCheckTimeoutSeconds: 2
+HealthyThresholdCount: 2
+UnhealthyThresholdCount: 3
+Matcher:
+  HttpCode: 200
+```
+
+#### Monitoring Integration
+
+**Prometheus:**
+```yaml
+- job_name: 'chatbotgate'
+  metrics_path: /health
+  static_configs:
+    - targets: ['chatbotgate:4180']
+  metric_relabel_configs:
+    - source_labels: [ready]
+      target_label: chatbotgate_ready
+```
+
+**Custom Monitoring:**
+```bash
+# Check readiness status
+STATUS=$(curl -s http://localhost:4180/health | jq -r '.ready')
+if [ "$STATUS" = "true" ]; then
+  echo "Service is ready"
+else
+  echo "Service is not ready"
+  exit 1
+fi
+```
+
+#### Best Practices
+
+1. **Use Readiness for Traffic Routing**
+   - Configure load balancers to check `/health` (default readiness probe)
+   - This ensures traffic is only routed to ready instances
+
+2. **Use Liveness for Process Monitoring**
+   - Configure container orchestrators to use `/health?probe=live` for liveness
+   - This detects and restarts crashed or deadlocked processes
+
+3. **Configure Appropriate Timeouts**
+   - Start period: 60s (allow time for initialization)
+   - Check interval: 5s (balance responsiveness and overhead)
+   - Failure threshold: 3 (avoid false positives)
+
+4. **Monitor Health Status**
+   - Log health state changes
+   - Alert on prolonged non-ready states
+   - Track health check latency
+
+5. **Test Graceful Shutdown**
+   - Verify health returns 503 after SIGTERM
+   - Confirm existing requests complete
+   - Check load balancer removes instance before shutdown
 
 ### Proxy Features
 

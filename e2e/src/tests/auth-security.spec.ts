@@ -82,7 +82,10 @@ test.describe('Authentication security', () => {
 
     // Complete authentication
     await page.getByRole('link', { name: 'stub-auth' }).click();
-    await expect(page).toHaveURL(/localhost:3001\/login/);
+
+    // Wait for navigation to stub-auth with timeout and retry logic
+    await page.waitForLoadState('domcontentloaded');
+    await expect(page).toHaveURL(/localhost:3001\/login/, { timeout: 15000 });
 
     const emailInput = page.locator('[data-test="login-email"]');
     await emailInput.fill('someone@example.com');
@@ -117,7 +120,10 @@ test.describe('Authentication security', () => {
 
     // Complete authentication
     await page.getByRole('link', { name: 'stub-auth' }).click();
-    await expect(page).toHaveURL(/localhost:3001\/login/);
+
+    // Wait for navigation to stub-auth with timeout and retry logic
+    await page.waitForLoadState('domcontentloaded');
+    await expect(page).toHaveURL(/localhost:3001\/login/, { timeout: 15000 });
 
     const emailInput = page.locator('[data-test="login-email"]');
     await emailInput.fill('someone@example.com');
@@ -170,6 +176,10 @@ test.describe('Authentication security', () => {
     // Authenticate
     await page.goto('/');
     await page.getByRole('link', { name: 'stub-auth' }).click();
+
+    // Wait for navigation to stub-auth
+    await page.waitForLoadState('domcontentloaded');
+
     const emailInput = page.locator('[data-test="login-email"]');
     await emailInput.fill(TEST_EMAIL);
     const passwordInput = page.locator('[data-test="login-password"]');

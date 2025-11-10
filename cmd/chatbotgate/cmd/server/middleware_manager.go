@@ -16,6 +16,9 @@ import (
 type MiddlewareManager interface {
 	// Handler returns the HTTP handler that includes the middleware and proxies to the next handler
 	Handler() http.Handler
+
+	// SetDraining marks the middleware as draining (shutting down gracefully)
+	SetDraining()
 }
 
 // SimpleMiddlewareManager is a simple implementation of MiddlewareManager with hot reload support
@@ -50,6 +53,9 @@ func NewMiddlewareManager(configPath string, host string, port int, next http.Ha
 
 	// Store initial middleware atomically
 	m.middleware.Store(mw)
+
+	// Mark middleware as ready to accept traffic
+	mw.SetReady()
 
 	logger.Info("Middleware manager initialized", "config_path", configPath)
 
@@ -114,9 +120,18 @@ func (m *SimpleMiddlewareManager) reload(configPath string) {
 		return
 	}
 
+	// Mark new middleware as ready
+	newMiddleware.SetReady()
+
 	// Atomically replace the middleware
 	m.middleware.Store(newMiddleware)
 	m.logger.Info("Configuration reloaded successfully", "component", "middleware")
+}
+
+// SetDraining marks the middleware as draining (shutting down gracefully)
+func (m *SimpleMiddlewareManager) SetDraining() {
+	mw := m.middleware.Load().(*middleware.Middleware)
+	mw.SetDraining()
 }
 
 // Handler returns the HTTP handler

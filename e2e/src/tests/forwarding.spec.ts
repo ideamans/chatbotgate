@@ -155,7 +155,9 @@ test.describe('Email authentication forwarding', () => {
     console.log(`Got login URL: ${loginUrl}`);
 
     // Rewrite the login URL to use port 4182 (forwarding proxy)
-    const forwardingLoginUrl = loginUrl.replace(':4180', ':4182');
+    const url = new URL(loginUrl);
+    url.port = '4182';
+    const forwardingLoginUrl = url.toString();
     console.log(`Rewritten login URL for forwarding proxy: ${forwardingLoginUrl}`);
 
     // Navigate to the login URL

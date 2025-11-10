@@ -1491,6 +1491,104 @@ handler, err := proxy.NewHandlerWithConfig(proxy.UpstreamConfig{...})
 
 **Note:** The `Handler` struct does not have a `Close()` method. Resources are automatically managed.
 
+### Health Check API
+
+#### `middleware.HealthStatus` and Methods
+
+The middleware provides health check state management for production deployments:
+
+```go
+// Health status constants
+type HealthStatus string
+
+const (
+    HealthStatusStarting   HealthStatus = "starting"   // Initial state
+    HealthStatusReady      HealthStatus = "ready"      // Ready to accept traffic
+    HealthStatusDraining   HealthStatus = "draining"   // Graceful shutdown
+    HealthStatusWarming    HealthStatus = "warming"    // (Reserved)
+    HealthStatusMigrating  HealthStatus = "migrating"  // (Reserved)
+    HealthStatusPrefilling HealthStatus = "prefilling" // (Reserved)
+)
+
+// Middleware methods for health management
+func (m *Middleware) SetReady()
+func (m *Middleware) SetDraining()
+func (m *Middleware) IsReady() bool
+func (m *Middleware) GetHealthStatus() HealthStatus
+```
+
+**Usage:**
+
+```go
+// Create middleware (starts in "starting" state)
+mw := middleware.New(cfg, store, oauth, email, password, authz, fwd, rules, trans, logger)
+
+// Mark as ready after initialization
+mw.SetReady()  // Changes to "ready" state
+
+// Later, on shutdown signal
+mw.SetDraining()  // Changes to "draining" state
+
+// Check current state
+if mw.IsReady() {
+    // Safe to route traffic
+}
+```
+
+**Health Check Endpoints:**
+
+The middleware automatically handles these endpoints:
+- `GET /health` - Readiness probe (200 when ready, 503 when starting/draining)
+- `GET /health?probe=live` - Liveness probe (always 200 if process alive)
+- `GET /ready` - Legacy endpoint (backward compatibility)
+
+**JSON Response Format:**
+
+```json
+{
+  "status": "ready",
+  "live": true,
+  "ready": true,
+  "since": "2025-11-10T08:05:12Z",
+  "detail": "ok",
+  "retry_after": null
+}
+```
+
+**Integration with Server Lifecycle:**
+
+```go
+// In your main.go or server setup
+func main() {
+    // Create middleware
+    mw := createMiddleware()
+
+    // Mark as ready after all initialization
+    mw.SetReady()
+
+    // Start server
+    server := &http.Server{Handler: mw.Wrap(upstreamHandler)}
+
+    // Setup graceful shutdown
+    sigChan := make(chan os.Signal, 1)
+    signal.Notify(sigChan, syscall.SIGTERM, syscall.SIGINT)
+
+    go func() {
+        <-sigChan
+        // Mark as draining before shutdown
+        mw.SetDraining()
+        server.Shutdown(context.Background())
+    }()
+
+    server.ListenAndServe()
+}
+```
+
+**See also:**
+- `pkg/middleware/core/handlers.go` - Health check implementation and strategy
+- `cmd/chatbotgate/cmd/server/middleware_manager.go` - Lifecycle management example
+- GUIDE.md - Health check endpoints and container orchestration
+
 ## Best Practices
 
 ### 1. Configuration Management

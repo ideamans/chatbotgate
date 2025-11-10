@@ -71,7 +71,7 @@ test.describe('Rules Configuration', () => {
     await page.goto('http://localhost:4183/')
 
     // Should redirect to login
-    await page.waitForURL('**/\_auth/login**')
+    await page.waitForURL(/\/_auth\/login/)
     expect(page.url()).toContain('/_auth/login')
   })
 
@@ -81,7 +81,7 @@ test.describe('Rules Configuration', () => {
     await page.goto('http://localhost:4183/api/private/data')
 
     // Should redirect to login
-    await page.waitForURL('**/\_auth/login**')
+    await page.waitForURL(/\/_auth\/login/)
     expect(page.url()).toContain('/_auth/login')
   })
 })

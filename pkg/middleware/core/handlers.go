@@ -3,6 +3,7 @@ package middleware
 import (
 	"crypto/rand"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"html"
 	"net/http"
@@ -16,16 +17,142 @@ import (
 	"github.com/ideamans/chatbotgate/pkg/shared/i18n"
 )
 
-// handleHealth handles the health check endpoint
-func (m *Middleware) handleHealth(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusOK)
-	_, _ = w.Write([]byte("OK"))
+// HealthResponse represents the JSON response for health check
+type HealthResponse struct {
+	Status     string `json:"status"`      // Current health status (starting/ready/draining/etc.)
+	Live       bool   `json:"live"`        // Process is alive
+	Ready      bool   `json:"ready"`       // Ready to accept traffic
+	Since      string `json:"since"`       // ISO8601 timestamp of when middleware started
+	Detail     string `json:"detail"`      // Human-readable detail message
+	RetryAfter *int   `json:"retry_after"` // Retry after N seconds (only present when 503)
 }
 
-// handleReady handles the readiness check endpoint
-func (m *Middleware) handleReady(w http.ResponseWriter, r *http.Request) {
+// Health Check Strategy
+// ======================
+//
+// ChatbotGate uses a unified /health endpoint for all health checks, supporting both
+// readiness and liveness probes through a single URL with minimal complexity.
+//
+// Endpoints:
+//   - /health           → Readiness probe (default)
+//   - /health?probe=live → Liveness probe
+//   - /ready            → Legacy endpoint (backward compatibility)
+//
+// Readiness vs Liveness:
+//   - Readiness: Returns 200 when ready to accept traffic, 503 when starting/draining
+//   - Liveness:  Always returns 200 if process is alive (no dependency checks)
+//
+// Health States:
+//   - starting   → Initial state after middleware creation
+//   - ready      → Middleware is ready (after SetReady() call)
+//   - draining   → Graceful shutdown in progress (after SetDraining() call)
+//   - warming    → (Reserved for future use, e.g., cache warming)
+//   - migrating  → (Reserved for future use, e.g., data migration)
+//   - prefilling → (Reserved for future use, e.g., connection pool setup)
+//
+// Response Format:
+//   - 200 OK: Ready to accept traffic (ready=true)
+//   - 503 Service Unavailable: Not ready (ready=false) with Retry-After header
+//   - Always returns JSON with status details for both success and failure
+//
+// Lifecycle:
+//   1. Middleware created → status="starting", ready=false
+//   2. Initialization complete → SetReady() → status="ready", ready=true
+//   3. SIGTERM received → SetDraining() → status="draining", ready=false
+//   4. Server shutdown → connections drained → process exit
+//
+// Container Orchestration:
+//   - Docker/ECS: Use /health for health checks
+//   - Kubernetes: Use /health for readinessProbe, /health?probe=live for livenessProbe
+//   - ALB/NLB: Use /health with 200 as healthy status
+//
+// Graceful Shutdown:
+//   When SIGTERM is received:
+//   1. SetDraining() is called → /health returns 503
+//   2. Load balancers detect 503 and stop sending new requests
+//   3. Existing requests are allowed to complete
+//   4. Server shuts down cleanly
+//
+// See also:
+//   - middleware.go: SetReady(), SetDraining(), health state management
+//   - server/middleware_manager.go: Lifecycle management
+//   - README.md: Deployment examples and configuration
+
+// handleHealth handles the health check endpoint
+// Supports both readiness check (default) and liveness check (?probe=live)
+// See: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/
+func (m *Middleware) handleHealth(w http.ResponseWriter, r *http.Request) {
+	probe := r.URL.Query().Get("probe")
+
+	// Liveness probe: just check if process is alive (no dependency checks)
+	if probe == "live" {
+		m.handleLiveness(w, r)
+		return
+	}
+
+	// Default: Readiness probe (check if ready to accept traffic)
+	m.handleReadiness(w, r)
+}
+
+// handleLiveness handles liveness probe (/health?probe=live)
+// Returns 200 if the process is alive (no dependency checks)
+func (m *Middleware) handleLiveness(w http.ResponseWriter, r *http.Request) {
+	response := HealthResponse{
+		Status: "live",
+		Live:   m.healthLive.Load(),
+		Ready:  m.healthReady.Load(), // Include ready status for visibility
+		Since:  m.healthStarted.Format(time.RFC3339),
+		Detail: "ok",
+	}
+
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	_, _ = w.Write([]byte("READY"))
+	_ = json.NewEncoder(w).Encode(response)
+}
+
+// handleReadiness handles readiness probe (/health)
+// Returns 200 if ready to accept traffic, 503 otherwise
+func (m *Middleware) handleReadiness(w http.ResponseWriter, r *http.Request) {
+	ready := m.healthReady.Load()
+	status := m.GetHealthStatus()
+	live := m.healthLive.Load()
+
+	response := HealthResponse{
+		Status: string(status),
+		Live:   live,
+		Ready:  ready,
+		Since:  m.healthStarted.Format(time.RFC3339),
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+
+	if ready {
+		// Ready to accept traffic
+		response.Detail = "ok"
+		w.WriteHeader(http.StatusOK)
+	} else {
+		// Not ready yet (starting, warming, draining, etc.)
+		retryAfter := 5
+		response.Detail = "warming up"
+		response.RetryAfter = &retryAfter
+
+		w.Header().Set("Retry-After", fmt.Sprintf("%d", retryAfter))
+		w.WriteHeader(http.StatusServiceUnavailable)
+	}
+
+	_ = json.NewEncoder(w).Encode(response)
+}
+
+// handleReady handles the readiness check endpoint (deprecated, use /health)
+// Kept for backward compatibility
+func (m *Middleware) handleReady(w http.ResponseWriter, r *http.Request) {
+	if m.healthReady.Load() {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("READY"))
+	} else {
+		w.WriteHeader(http.StatusServiceUnavailable)
+		_, _ = w.Write([]byte("NOT READY"))
+	}
 }
 
 // handleMainCSS serves the embedded CSS
