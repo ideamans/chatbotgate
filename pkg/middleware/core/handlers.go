@@ -19,12 +19,12 @@ import (
 
 // HealthResponse represents the JSON response for health check
 type HealthResponse struct {
-	Status     string  `json:"status"`      // Current health status (starting/ready/draining/etc.)
-	Live       bool    `json:"live"`        // Process is alive
-	Ready      bool    `json:"ready"`       // Ready to accept traffic
-	Since      string  `json:"since"`       // ISO8601 timestamp of when middleware started
-	Detail     string  `json:"detail"`      // Human-readable detail message
-	RetryAfter *int    `json:"retry_after"` // Retry after N seconds (only present when 503)
+	Status     string `json:"status"`      // Current health status (starting/ready/draining/etc.)
+	Live       bool   `json:"live"`        // Process is alive
+	Ready      bool   `json:"ready"`       // Ready to accept traffic
+	Since      string `json:"since"`       // ISO8601 timestamp of when middleware started
+	Detail     string `json:"detail"`      // Human-readable detail message
+	RetryAfter *int   `json:"retry_after"` // Retry after N seconds (only present when 503)
 }
 
 // Health Check Strategy
