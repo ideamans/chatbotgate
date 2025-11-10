@@ -108,9 +108,16 @@ test.describe('Passwordless OTP flow', () => {
     // Wait for the email sent page
     await expect(page).toHaveURL(/\/_auth\/email\/sent/);
 
-    // Enter a valid format but incorrect OTP to test server-side validation
+    // Get the real OTP from email to understand the format
+    const message = await waitForMessage(TEST_EMAIL);
+    const detail = await getMessage(message.ID);
+    const realOTP = extractOTP(detail.Text) || extractOTP(detail.HTML);
+    expect(realOTP).toBeTruthy();
+
+    // Create an invalid OTP by changing multiple characters
+    // This ensures it passes client-side validation but fails server-side
+    const invalidOTP = realOTP!.substring(0, 8) + 'XXXX';
     const otpInput = page.locator('input[name="otp"]');
-    const invalidOTP = 'AAAA BBBB CCCC'; // Valid format (12 chars) but wrong code
     await otpInput.fill(invalidOTP);
 
     // Button should be enabled with valid format
