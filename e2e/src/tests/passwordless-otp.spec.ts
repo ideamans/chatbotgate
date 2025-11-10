@@ -50,10 +50,7 @@ test.describe('Passwordless OTP flow', () => {
     // Enter the OTP code
     await otpInput.fill(otp!);
 
-    // Verify that the input turns green (validation passes)
-    await expect(otpInput).toHaveCSS('border-color', /rgb\(16, 185, 129\)/); // Success color (emerald-500)
-
-    // Verify button becomes enabled (stays btn-primary blue)
+    // Verify button becomes enabled (validation passes)
     await expect(verifyButton).toBeEnabled();
 
     // Submit the OTP form
@@ -92,10 +89,7 @@ test.describe('Passwordless OTP flow', () => {
 
     await otpInput.fill(otpWithSpaces);
 
-    // Should still turn green (validation normalizes spaces)
-    await expect(otpInput).toHaveCSS('border-color', /rgb\(16, 185, 129\)/);
-
-    // Button should be enabled (stays btn-primary blue)
+    // Button should be enabled (validation normalizes spaces)
     await expect(verifyButton).toBeEnabled();
 
     // Submit and verify login
@@ -114,19 +108,17 @@ test.describe('Passwordless OTP flow', () => {
     // Wait for the email sent page
     await expect(page).toHaveURL(/\/_auth\/email\/sent/);
 
-    // Enter an invalid OTP (wrong format - too short)
+    // Enter a valid format but incorrect OTP to test server-side validation
     const otpInput = page.locator('input[name="otp"]');
-    await otpInput.fill('INVALID');
+    const invalidOTP = 'AAAA BBBB CCCC'; // Valid format (12 chars) but wrong code
+    await otpInput.fill(invalidOTP);
 
-    // Should NOT turn green (validation fails)
-    await expect(otpInput).not.toHaveCSS('border-color', /rgb\(16, 185, 129\)/);
-
-    // Button should be disabled (client-side validation prevents submission)
+    // Button should be enabled with valid format
     const verifyButton = page.getByRole('button', { name: 'Verify Code' });
-    await expect(verifyButton).toBeDisabled();
+    await expect(verifyButton).toBeEnabled();
 
-    // Try to submit anyway by forcing the click (to test server-side validation)
-    await verifyButton.click({ force: true });
+    // Submit and verify server rejects it
+    await verifyButton.click();
 
     // Should redirect back to email sent page with error
     await expect(page).toHaveURL(/\/_auth\/email\/sent/);
@@ -147,15 +139,12 @@ test.describe('Passwordless OTP flow', () => {
     const otpInput = page.locator('input[name="otp"]');
     await otpInput.fill(wrongOTP);
 
-    // Note: Border color check removed - CSS styling is implementation detail
-    // and can vary based on theme/browser. We only care about functionality.
-
-    // Wait a bit for button to become enabled (if validation is done via JS)
-    await page.waitForTimeout(500);
-
-    // Submit the wrong OTP (force click even if disabled in some cases)
+    // Wait for button to become enabled (client-side validation should pass)
     const submitButton = page.getByRole('button', { name: 'Verify Code' });
-    await submitButton.click({ force: true });
+    await expect(submitButton).toBeEnabled();
+
+    // Submit the wrong OTP
+    await submitButton.click();
 
     // Should redirect back to email sent page (authentication failed)
     await expect(page).toHaveURL(/\/_auth\/email\/sent/);

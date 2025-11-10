@@ -20,11 +20,12 @@ function readConfig(): string {
   }
 }
 
-// Helper to write config file to container
+// Helper to write config file to container (using base64 to avoid shell quoting issues)
 function writeConfig(content: string): void {
   try {
-    // Write to container using docker exec
-    execSync(`docker exec ${CONTAINER_NAME} sh -c 'cat > ${CONTAINER_CONFIG_FILE} << "EOF"\n${content}\nEOF'`, {
+    // Use base64 encoding to safely pass content through shell without quoting issues
+    const base64Content = Buffer.from(content, 'utf-8').toString('base64');
+    execSync(`docker exec ${CONTAINER_NAME} sh -c 'echo "${base64Content}" | base64 -d > ${CONTAINER_CONFIG_FILE}'`, {
       encoding: 'utf-8',
       cwd: path.join(__dirname, '../..'),
     });
@@ -37,7 +38,7 @@ function writeConfig(content: string): void {
 function getContainerLogs(since?: Date): string {
   try {
     const sinceArg = since ? `--since ${Math.floor(since.getTime() / 1000)}` : '--tail 500';
-    return execSync(`docker logs e2e-proxy-app-with-whitelist ${sinceArg} 2>&1`, {
+    return execSync(`docker logs ${CONTAINER_NAME} ${sinceArg} 2>&1`, {
       encoding: 'utf-8',
       cwd: path.join(__dirname, '../..'),
     });
@@ -66,7 +67,7 @@ async function waitForLogMessage(
   return false;
 }
 
-test.describe('Dynamic Configuration Reload', () => {
+test.describe.serial('Dynamic Configuration Reload', () => {
   let originalConfig: string;
 
   test.beforeAll(() => {
@@ -83,6 +84,7 @@ test.describe('Dynamic Configuration Reload', () => {
       await new Promise(resolve => setTimeout(resolve, 2000));
     } catch (error) {
       console.error('Failed to restore config:', error);
+      throw error; // Re-throw to mark test as failed
     }
   });
 

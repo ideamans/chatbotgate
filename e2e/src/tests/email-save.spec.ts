@@ -7,9 +7,12 @@ test.describe('Email address save functionality', () => {
   test.beforeEach(async ({ page, context }) => {
     // Clear localStorage before each test
     await context.clearCookies();
+
+    // Setup routing before navigation
+    await routeStubAuthRequests(page);
+
     await page.goto('/');
     await expect(page).toHaveURL(/\/_auth\/login$/);
-    await routeStubAuthRequests(page);
 
     // Clear localStorage
     await page.evaluate(() => {
@@ -51,14 +54,14 @@ test.describe('Email address save functionality', () => {
     const emailInput = page.getByLabel('Email Address');
     await emailInput.fill(TEST_EMAIL);
 
-    // Wait a bit for localStorage to be updated
-    await page.waitForTimeout(100);
+    // Wait for localStorage to be updated
+    await expect.poll(async () => {
+      return await page.evaluate(() => localStorage.getItem('saved_email'));
+    }).toBe(TEST_EMAIL);
 
-    // Verify localStorage is updated
-    const savedEmail = await page.evaluate(() => localStorage.getItem('saved_email'));
-    const saveEnabled = await page.evaluate(() => localStorage.getItem('save_email_enabled'));
-    expect(savedEmail).toBe(TEST_EMAIL);
-    expect(saveEnabled).toBe('true');
+    await expect.poll(async () => {
+      return await page.evaluate(() => localStorage.getItem('save_email_enabled'));
+    }).toBe('true');
 
     // Reload the page
     await page.reload();
@@ -77,24 +80,22 @@ test.describe('Email address save functionality', () => {
     const emailInput = page.getByLabel('Email Address');
     await emailInput.fill(TEST_EMAIL);
 
-    // Wait a bit for localStorage to be updated
-    await page.waitForTimeout(100);
-
-    // Verify email is saved
-    let savedEmail = await page.evaluate(() => localStorage.getItem('saved_email'));
-    expect(savedEmail).toBe(TEST_EMAIL);
+    // Wait for localStorage to be updated
+    await expect.poll(async () => {
+      return await page.evaluate(() => localStorage.getItem('saved_email'));
+    }).toBe(TEST_EMAIL);
 
     // Now uncheck the save checkbox
     await saveCheckbox.uncheck();
 
-    // Wait a bit for localStorage to be cleared
-    await page.waitForTimeout(100);
+    // Wait for localStorage to be cleared
+    await expect.poll(async () => {
+      return await page.evaluate(() => localStorage.getItem('saved_email'));
+    }).toBeNull();
 
-    // Verify localStorage is cleared
-    savedEmail = await page.evaluate(() => localStorage.getItem('saved_email'));
-    const saveEnabled = await page.evaluate(() => localStorage.getItem('save_email_enabled'));
-    expect(savedEmail).toBeNull();
-    expect(saveEnabled).toBeNull();
+    await expect.poll(async () => {
+      return await page.evaluate(() => localStorage.getItem('save_email_enabled'));
+    }).toBeNull();
 
     // Email input should still have the value (not cleared immediately)
     await expect(emailInput).toHaveValue(TEST_EMAIL);
@@ -117,19 +118,19 @@ test.describe('Email address save functionality', () => {
 
     // Type email character by character to test real-time saving
     await emailInput.type('t', { delay: 50 });
-    await page.waitForTimeout(100);
-    let savedEmail = await page.evaluate(() => localStorage.getItem('saved_email'));
-    expect(savedEmail).toBe('t');
+    await expect.poll(async () => {
+      return await page.evaluate(() => localStorage.getItem('saved_email'));
+    }).toBe('t');
 
     await emailInput.type('est@', { delay: 50 });
-    await page.waitForTimeout(100);
-    savedEmail = await page.evaluate(() => localStorage.getItem('saved_email'));
-    expect(savedEmail).toBe('test@');
+    await expect.poll(async () => {
+      return await page.evaluate(() => localStorage.getItem('saved_email'));
+    }).toBe('test@');
 
     await emailInput.type('example.com', { delay: 50 });
-    await page.waitForTimeout(100);
-    savedEmail = await page.evaluate(() => localStorage.getItem('saved_email'));
-    expect(savedEmail).toBe(TEST_EMAIL);
+    await expect.poll(async () => {
+      return await page.evaluate(() => localStorage.getItem('saved_email'));
+    }).toBe(TEST_EMAIL);
 
     // Reload and verify
     await page.reload();
