@@ -134,6 +134,10 @@ func Run(ctx context.Context, cfg Config) error {
 	case <-stop:
 		logger.Info("Shutdown signal received, stopping server...")
 		cancel()
+
+		// Mark middleware as draining (will return 503 for health checks)
+		middlewareManager.SetDraining()
+
 		// Graceful shutdown
 		if err := server.Shutdown(context.Background()); err != nil {
 			logger.Error("Server shutdown error", "error", err)

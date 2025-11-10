@@ -2,6 +2,8 @@ package middleware
 
 import (
 	"net/http"
+	"sync/atomic"
+	"time"
 
 	"github.com/ideamans/chatbotgate/pkg/middleware/auth/email"
 	"github.com/ideamans/chatbotgate/pkg/middleware/auth/oauth2"
@@ -14,6 +16,18 @@ import (
 	"github.com/ideamans/chatbotgate/pkg/shared/i18n"
 	"github.com/ideamans/chatbotgate/pkg/shared/kvs"
 	"github.com/ideamans/chatbotgate/pkg/shared/logging"
+)
+
+// HealthStatus represents the current health status of the middleware
+type HealthStatus string
+
+const (
+	HealthStatusStarting   HealthStatus = "starting"
+	HealthStatusWarming    HealthStatus = "warming"
+	HealthStatusMigrating  HealthStatus = "migrating"
+	HealthStatusPrefilling HealthStatus = "prefilling"
+	HealthStatusDraining   HealthStatus = "draining"
+	HealthStatusReady      HealthStatus = "ready"
 )
 
 // Middleware is the core authentication middleware
@@ -30,6 +44,12 @@ type Middleware struct {
 	translator      *i18n.Translator
 	logger          logging.Logger
 	next            http.Handler // The next handler to call after auth succeeds
+
+	// Health check state management
+	healthStatus  atomic.Value // stores HealthStatus
+	healthLive    atomic.Bool  // true when process started
+	healthReady   atomic.Bool  // true when fully ready
+	healthStarted time.Time    // when the middleware was created
 }
 
 // New creates a new authentication middleware
@@ -45,7 +65,7 @@ func New(
 	translator *i18n.Translator,
 	logger logging.Logger,
 ) *Middleware {
-	return &Middleware{
+	m := &Middleware{
 		config:          cfg,
 		sessionStore:    sessionStore,
 		oauthManager:    oauthManager,
@@ -56,7 +76,44 @@ func New(
 		rulesEvaluator:  rulesEvaluator,
 		translator:      translator,
 		logger:          logger,
+		healthStarted:   time.Now().UTC(),
 	}
+
+	// Initialize health state
+	m.healthLive.Store(true)
+	m.healthStatus.Store(HealthStatusStarting)
+	m.healthReady.Store(false)
+
+	return m
+}
+
+// SetReady marks the middleware as ready to accept traffic
+// This should be called after all initialization is complete
+func (m *Middleware) SetReady() {
+	m.healthStatus.Store(HealthStatusReady)
+	m.healthReady.Store(true)
+	m.logger.Info("Middleware ready to accept traffic")
+}
+
+// SetDraining marks the middleware as draining (shutting down gracefully)
+// This should be called when receiving SIGTERM before closing connections
+func (m *Middleware) SetDraining() {
+	m.healthStatus.Store(HealthStatusDraining)
+	m.healthReady.Store(false)
+	m.logger.Info("Middleware entering draining state")
+}
+
+// IsReady returns true if the middleware is ready to accept traffic
+func (m *Middleware) IsReady() bool {
+	return m.healthReady.Load()
+}
+
+// GetHealthStatus returns the current health status
+func (m *Middleware) GetHealthStatus() HealthStatus {
+	if status := m.healthStatus.Load(); status != nil {
+		return status.(HealthStatus)
+	}
+	return HealthStatusStarting
 }
 
 // Wrap wraps a http.Handler with authentication
