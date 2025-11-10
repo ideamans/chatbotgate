@@ -3,8 +3,8 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { execSync } from 'child_process';
 
-// Config file path in container
-const CONTAINER_CONFIG_FILE = '/config/proxy.e2e.with-whitelist.yaml';
+// Config file path in container (mounted to /app/config which is owned by app user)
+const CONTAINER_CONFIG_FILE = '/app/config/proxy.e2e.with-whitelist.yaml';
 const CONTAINER_NAME = 'e2e-proxy-app-with-whitelist';
 
 // Helper to read config file from container
@@ -67,7 +67,8 @@ async function waitForLogMessage(
   return false;
 }
 
-test.describe.serial('Dynamic Configuration Reload', () => {
+test.describe('Dynamic Configuration Reload', () => {
+  test.describe.configure({ mode: 'serial' });
   let originalConfig: string;
 
   test.beforeAll(() => {

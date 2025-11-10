@@ -24,7 +24,12 @@ services:
       context: ../..
       dockerfile: Dockerfile
     container_name: e2e-proxy-app-with-whitelist
-    command: ["serve", "--config", "/config/proxy.e2e.with-whitelist.yaml", "--host", "0.0.0.0", "--port", "4180"]
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        cp /seed-config/proxy.e2e.with-whitelist.yaml /app/config/proxy.e2e.with-whitelist.yaml
+        exec /app/chatbotgate serve --config /app/config/proxy.e2e.with-whitelist.yaml --host 0.0.0.0 --port 4180
     ports:
       - "4181:4180"  # Map external 4181 to internal 4180
     depends_on:
@@ -32,8 +37,8 @@ services:
       - stub-auth
       - mailpit
     volumes:
-      # Mount config as read-write for dynamic config reload tests
-      - ../config/proxy.e2e.with-whitelist.yaml:/config/proxy.e2e.with-whitelist.yaml
+      # Mount config as read-only seed, then copy to /app/config at startup
+      - ../config/proxy.e2e.with-whitelist.yaml:/seed-config/proxy.e2e.with-whitelist.yaml:ro
       - otp-files:/otp
     environment:
       - LANGUAGE=en
