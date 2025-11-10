@@ -24,7 +24,7 @@ services:
       context: ../..
       dockerfile: Dockerfile
     container_name: e2e-proxy-app-with-whitelist
-    command: ["serve", "--config", "/config/proxy.e2e.with-whitelist.yaml", "--host", "0.0.0.0", "--port", "4180"]
+    command: ["serve", "--config", "/tmp/config/proxy.e2e.with-whitelist.yaml", "--host", "0.0.0.0", "--port", "4180"]
     ports:
       - "4181:4180"  # Map external 4181 to internal 4180
     depends_on:
@@ -32,8 +32,8 @@ services:
       - stub-auth
       - mailpit
     volumes:
-      # Mount config as read-write for dynamic config reload tests
-      - ../config/proxy.e2e.with-whitelist.yaml:/config/proxy.e2e.with-whitelist.yaml
+      # Mount config to /tmp/config for write access (dynamic config reload tests)
+      - ../config/proxy.e2e.with-whitelist.yaml:/tmp/config/proxy.e2e.with-whitelist.yaml
       - otp-files:/otp
     environment:
       - LANGUAGE=en
