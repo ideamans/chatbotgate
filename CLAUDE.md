@@ -161,6 +161,19 @@ All OAuth2 providers populate standardized fields in `UserInfo.Extra`:
 
 These fields enable consistent user info forwarding regardless of provider.
 
+**7. Health Check System:**
+The middleware maintains internal state for health monitoring:
+- `/health` - Readiness probe (returns 200 when ready, 503 when starting/draining)
+- `/health?probe=live` - Liveness probe (always returns 200 if process is alive)
+- `/ready` - Legacy endpoint for backward compatibility
+
+Health states:
+- `starting` - Initial state after creation
+- `ready` - Middleware is ready (after `SetReady()` call)
+- `draining` - Graceful shutdown in progress (after `SetDraining()` call)
+
+The `MiddlewareManager` is responsible for calling `SetReady()` after initialization and `SetDraining()` on SIGTERM.
+
 ### Web Development
 
 The `web/` directory contains the authentication UI built with:
