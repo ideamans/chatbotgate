@@ -94,7 +94,6 @@ access_control:
 # Logging - optimized for Docker
 logging:
   level: "info"
-  module_level: "debug"
   color: false  # Docker logs work better without ANSI colors
   # No file logging needed - use 'docker logs' to view logs
 

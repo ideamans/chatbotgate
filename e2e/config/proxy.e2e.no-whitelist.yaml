@@ -52,5 +52,4 @@ access_control:
 
 logging:
   level: "debug"
-  module_level: ""
   color: false

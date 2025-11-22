@@ -143,8 +143,6 @@
   "logging": {
     "_comment_level": "Log level: debug, info, warn, error",
     "level": "info",
-    "module_level": "debug",
-    "_comment_module": "Log level for sub-modules",
     "format": "text",
     "_comment_format": "Log format: text or json",
     "color": true,

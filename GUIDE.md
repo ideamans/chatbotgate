@@ -1087,9 +1087,6 @@ logging:
   # Main log level: debug, info, warn, error
   level: "info"
 
-  # Module-specific log level
-  module_level: "debug"
-
   # Colored output (auto-detects TTY)
   color: true
 ```
@@ -1606,7 +1603,6 @@ spec:
 
 2. **Structured Logs**
    - Use JSON format for log aggregators (Datadog, CloudWatch)
-   - Enable `module_level: "debug"` for specific packages
 
 3. **Metrics** (Future)
    - Prometheus metrics endpoint planned
@@ -1665,7 +1661,6 @@ For production deployments on Linux with systemd, the recommended approach is to
 ```yaml
 logging:
   level: "info"
-  module_level: "debug"
   color: false  # journalctl provides its own formatting
   # No file configuration needed
 ```
@@ -1820,7 +1815,6 @@ File-based logging is recommended only for specific scenarios.
 ```yaml
 logging:
   level: "info"
-  module_level: "debug"
   color: false
   file:
     path: "/var/log/chatbotgate/chatbotgate.log"
@@ -1967,23 +1961,14 @@ ChatbotGate supports multiple log levels:
   - Database errors
   - Authentication failures
 
-#### Module-Level Logging
+#### Configuration
 
-Set different log levels for different components:
+Configure the log level:
 
 ```yaml
 logging:
-  level: "info"         # Default level for all modules
-  module_level: "debug" # Level for sub-modules
+  level: "info" # Log level: debug, info, warn, error
 ```
-
-**Module hierarchy:**
-- `main` - Main server
-- `main/middleware` - Middleware manager
-- `main/middleware/auth` - Authentication
-- `main/middleware/auth/oauth2` - OAuth2 provider
-- `main/middleware/session` - Session management
-- `main/proxy` - Reverse proxy
 
 ### Log Format
 
@@ -2616,7 +2601,6 @@ Enable debug logging for detailed diagnostics:
 ```yaml
 logging:
   level: "debug"
-  module_level: "debug"
 ```
 
 Check logs for:

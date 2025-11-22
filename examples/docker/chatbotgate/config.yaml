@@ -68,7 +68,6 @@ forwarding:
 # Logging
 logging:
   level: "info"
-  module_level: "debug"
   color: false
 
 # KVS using memory (for demo - use LevelDB or Redis in production)

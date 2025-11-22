@@ -655,11 +655,7 @@ import (
 )
 
 // Create logger
-logger := logging.New(logging.Config{
-    Level:       "info",
-    ModuleLevel: "debug",
-    Color:       true,
-})
+logger := logging.NewSimpleLogger("myapp", logging.LevelInfo, true)
 
 // Log messages
 logger.Info("Server started", "port", 4180)
