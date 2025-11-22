@@ -849,8 +849,13 @@ func (m *Middleware) handleOAuth2Callback(w http.ResponseWriter, r *http.Request
 // generateSessionID generates a random session ID
 func generateSessionID() (string, error) {
 	b := make([]byte, 32)
-	if _, err := rand.Read(b); err != nil {
-		return "", err
+	n, err := rand.Read(b)
+	if err != nil {
+		return "", fmt.Errorf("failed to generate session ID: %w", err)
+	}
+	// Verify we got the expected number of random bytes
+	if n != 32 {
+		return "", fmt.Errorf("insufficient entropy for session ID generation: got %d bytes, expected 32", n)
 	}
 	return base64.URLEncoding.EncodeToString(b), nil
 }

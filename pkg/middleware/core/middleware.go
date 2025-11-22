@@ -111,7 +111,9 @@ func (m *Middleware) IsReady() bool {
 // GetHealthStatus returns the current health status
 func (m *Middleware) GetHealthStatus() HealthStatus {
 	if status := m.healthStatus.Load(); status != nil {
-		return status.(HealthStatus)
+		if hs, ok := status.(HealthStatus); ok {
+			return hs
+		}
 	}
 	return HealthStatusStarting
 }
