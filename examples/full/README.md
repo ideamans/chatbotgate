@@ -134,7 +134,7 @@ Replace example domains with your actual URLs:
 Review and modify the access control rules to match your application's paths:
 
 ```yaml
-rules:
+access_control:
   rules:
     - prefix: "/static/"
       action: allow

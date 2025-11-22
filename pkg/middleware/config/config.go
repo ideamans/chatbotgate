@@ -22,7 +22,6 @@ type Config struct {
 	Logging       LoggingConfig       `yaml:"logging" json:"logging"`
 	KVS           KVSConfig           `yaml:"kvs" json:"kvs"`               // KVS storage configuration
 	Forwarding    ForwardingConfig    `yaml:"forwarding" json:"forwarding"` // User info forwarding configuration
-	Rules         rules.Config        `yaml:"rules" json:"rules"`           // Access control rules configuration
 	Assets        AssetsConfig        `yaml:"assets" json:"assets"`         // Assets configuration
 }
 
@@ -253,7 +252,8 @@ type PasswordAuthConfig struct {
 
 // AccessControlConfig contains access control settings
 type AccessControlConfig struct {
-	Emails []string `yaml:"emails" json:"emails"` // Email addresses or domains (domain starts with @)
+	Emails []string     `yaml:"emails" json:"emails"` // Email addresses or domains (domain starts with @)
+	Rules  rules.Config `yaml:"rules" json:"rules"`   // Access control rules configuration
 }
 
 // LoggingConfig contains logging settings
@@ -355,8 +355,8 @@ func (c *Config) Validate() error {
 	}
 
 	// Validate rules configuration
-	if err := c.Rules.Validate(); err != nil {
-		verr.Add(fmt.Errorf("rules: %w", err))
+	if err := c.AccessControl.Rules.Validate(); err != nil {
+		verr.Add(fmt.Errorf("access_control.rules: %w", err))
 	}
 
 	return verr.ErrorOrNil()

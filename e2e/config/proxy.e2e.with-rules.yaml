@@ -51,6 +51,28 @@ email_auth:
 access_control:
   emails: []
 
+  # Access control rules for paths (evaluated in order, first match wins)
+  rules:
+    # Allow embed.js without authentication
+    - prefix: "/embed.js"
+      action: allow
+      description: "Embed script"
+
+    # Allow public directory without authentication
+    - prefix: "/public/"
+      action: allow
+      description: "Public directory"
+
+    # Allow public API endpoints
+    - regex: "^/api/public/"
+      action: allow
+      description: "Public API endpoints"
+
+    # Allow static directory
+    - minimatch: "/static/**"
+      action: allow
+      description: "Static files"
+
 logging:
   level: "debug"
   module_level: ""
@@ -82,27 +104,3 @@ forwarding:
       header: "X-ChatbotGate-User"
     - path: "email"
       header: "X-ChatbotGate-Email"
-
-# Rules configuration
-# Access control rules for paths (evaluated in order, first match wins)
-rules:
-  rules:
-    # Allow embed.js without authentication
-    - prefix: "/embed.js"
-      action: allow
-      description: "Embed script"
-
-    # Allow public directory without authentication
-    - prefix: "/public/"
-      action: allow
-      description: "Public directory"
-
-    # Allow public API endpoints
-    - regex: "^/api/public/"
-      action: allow
-      description: "Public API endpoints"
-
-    # Allow static directory
-    - minimatch: "/static/**"
-      action: allow
-      description: "Static files"

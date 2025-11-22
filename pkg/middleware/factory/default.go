@@ -49,7 +49,7 @@ func (f *DefaultFactory) CreateMiddleware(
 	translator := f.CreateTranslator()
 	authzChecker := f.CreateAuthzChecker(cfg.AccessControl)
 	forwarder := f.CreateForwarder(cfg.Forwarding, cfg.OAuth2.Providers)
-	rulesEvaluator, err := f.CreateRulesEvaluator(&cfg.Rules)
+	rulesEvaluator, err := f.CreateRulesEvaluator(&cfg.AccessControl.Rules)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create rules evaluator: %w", err)
 	}

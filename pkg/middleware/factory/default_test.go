@@ -139,7 +139,7 @@ func TestDefaultFactory_CreateRulesEvaluator(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			cfg := tt.configFunc()
-			evaluator, err := factory.CreateRulesEvaluator(&cfg.Rules)
+			evaluator, err := factory.CreateRulesEvaluator(&cfg.AccessControl.Rules)
 
 			if tt.expectError {
 				if err == nil {
