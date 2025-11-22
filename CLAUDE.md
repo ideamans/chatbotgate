@@ -163,9 +163,8 @@ These fields enable consistent user info forwarding regardless of provider.
 
 **7. Health Check System:**
 The middleware maintains internal state for health monitoring:
-- `/health` - Readiness probe (returns 200 when ready, 503 when starting/draining)
-- `/health?probe=live` - Liveness probe (always returns 200 if process is alive)
-- `/ready` - Legacy endpoint for backward compatibility
+- `/_auth/health` - Readiness probe (returns 200 when ready, 503 when starting/draining)
+- `/_auth/health?probe=live` - Liveness probe (always returns 200 if process is alive)
 
 Health states:
 - `starting` - Initial state after creation
@@ -291,7 +290,7 @@ Path-based rules with first-match-wins evaluation:
 - Enable `cookie_secure: true` with HTTPS
 - Pin Docker image versions (not `latest`)
 - Configure resource limits (0.5-1 CPU, 256-512MB memory)
-- Use health checks: `GET /health`
+- Use health checks: `GET /_auth/health`
 
 ### CI/CD
 

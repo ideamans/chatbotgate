@@ -30,13 +30,12 @@ type HealthResponse struct {
 // Health Check Strategy
 // ======================
 //
-// ChatbotGate uses a unified /health endpoint for all health checks, supporting both
+// ChatbotGate uses a unified /_auth/health endpoint for all health checks, supporting both
 // readiness and liveness probes through a single URL with minimal complexity.
 //
 // Endpoints:
-//   - /health           → Readiness probe (default)
-//   - /health?probe=live → Liveness probe
-//   - /ready            → Legacy endpoint (backward compatibility)
+//   - /_auth/health           → Readiness probe (default)
+//   - /_auth/health?probe=live → Liveness probe
 //
 // Readiness vs Liveness:
 //   - Readiness: Returns 200 when ready to accept traffic, 503 when starting/draining
@@ -62,13 +61,13 @@ type HealthResponse struct {
 //   4. Server shutdown → connections drained → process exit
 //
 // Container Orchestration:
-//   - Docker/ECS: Use /health for health checks
-//   - Kubernetes: Use /health for readinessProbe, /health?probe=live for livenessProbe
-//   - ALB/NLB: Use /health with 200 as healthy status
+//   - Docker/ECS: Use /_auth/health for health checks
+//   - Kubernetes: Use /_auth/health for readinessProbe, /_auth/health?probe=live for livenessProbe
+//   - ALB/NLB: Use /_auth/health with 200 as healthy status
 //
 // Graceful Shutdown:
 //   When SIGTERM is received:
-//   1. SetDraining() is called → /health returns 503
+//   1. SetDraining() is called → /_auth/health returns 503
 //   2. Load balancers detect 503 and stop sending new requests
 //   3. Existing requests are allowed to complete
 //   4. Server shuts down cleanly
@@ -78,7 +77,7 @@ type HealthResponse struct {
 //   - server/middleware_manager.go: Lifecycle management
 //   - README.md: Deployment examples and configuration
 
-// handleHealth handles the health check endpoint
+// handleHealth handles the health check endpoint (/_auth/health)
 // Supports both readiness check (default) and liveness check (?probe=live)
 // See: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/
 func (m *Middleware) handleHealth(w http.ResponseWriter, r *http.Request) {
@@ -94,7 +93,7 @@ func (m *Middleware) handleHealth(w http.ResponseWriter, r *http.Request) {
 	m.handleReadiness(w, r)
 }
 
-// handleLiveness handles liveness probe (/health?probe=live)
+// handleLiveness handles liveness probe (/_auth/health?probe=live)
 // Returns 200 if the process is alive (no dependency checks)
 func (m *Middleware) handleLiveness(w http.ResponseWriter, r *http.Request) {
 	response := HealthResponse{
@@ -110,7 +109,7 @@ func (m *Middleware) handleLiveness(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(response)
 }
 
-// handleReadiness handles readiness probe (/health)
+// handleReadiness handles readiness probe (/_auth/health)
 // Returns 200 if ready to accept traffic, 503 otherwise
 func (m *Middleware) handleReadiness(w http.ResponseWriter, r *http.Request) {
 	ready := m.healthReady.Load()
@@ -141,18 +140,6 @@ func (m *Middleware) handleReadiness(w http.ResponseWriter, r *http.Request) {
 	}
 
 	_ = json.NewEncoder(w).Encode(response)
-}
-
-// handleReady handles the readiness check endpoint (deprecated, use /health)
-// Kept for backward compatibility
-func (m *Middleware) handleReady(w http.ResponseWriter, r *http.Request) {
-	if m.healthReady.Load() {
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte("READY"))
-	} else {
-		w.WriteHeader(http.StatusServiceUnavailable)
-		_, _ = w.Write([]byte("NOT READY"))
-	}
 }
 
 // handleMainCSS serves the embedded CSS

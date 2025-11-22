@@ -172,11 +172,8 @@ func (m *Middleware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case matchPath(r.URL.Path, prefix, "/500"):
 		m.handle500(w, r, nil)
 		return
-	case r.URL.Path == "/health":
+	case matchPath(r.URL.Path, prefix, "/health"):
 		m.handleHealth(w, r)
-		return
-	case r.URL.Path == "/ready":
-		m.handleReady(w, r)
 		return
 	}
 
