@@ -1,3 +1,8 @@
+// Package ratelimit provides rate limiting functionality for email authentication.
+//
+// This package implements a token bucket algorithm to prevent abuse of magic link emails
+// by limiting how many times a user can request login links within a time window.
+// Currently used exclusively for email authentication send rate limiting.
 package ratelimit
 
 import (
@@ -9,6 +14,7 @@ import (
 )
 
 // Limiter implements a simple token bucket rate limiter backed by KVS
+// Currently used to rate limit email authentication magic link sends.
 type Limiter struct {
 	kvs      kvs.Store
 	rate     int // tokens per interval

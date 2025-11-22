@@ -313,7 +313,7 @@ All major components use interfaces for testability and extensibility.
 KVS uses namespace prefixes to separate concerns:
 - `session:` - Session data
 - `token:` - Email auth tokens
-- `ratelimit:` - Rate limiting counters
+- `email_quota:` - Email send quota/rate limiting (configurable via `email_auth.limit_per_minute`, default: 5/min)
 
 ### Pre-Commit Checklist
 

@@ -898,6 +898,14 @@ func (m *Middleware) handleEmailSend(w http.ResponseWriter, r *http.Request) {
 	err := m.emailHandler.SendLoginLink(email, lang)
 	if err != nil {
 		m.logger.Debug("Email send failed", "email", maskEmail(email), "error", err)
+
+		// Check if this is a rate limit error
+		if strings.Contains(err.Error(), "rate limit exceeded") {
+			m.logger.Warn("Email authentication rate limited", "email", maskEmail(email))
+			http.Error(w, t("error.rate_limit"), http.StatusTooManyRequests)
+			return
+		}
+
 		m.logger.Error("Email authentication failed: could not send login link", "email", maskEmail(email))
 		http.Error(w, t("error.internal"), http.StatusInternalServerError)
 		return

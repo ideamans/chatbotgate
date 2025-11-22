@@ -36,12 +36,12 @@ func NewDefaultFactory(host string, port int, logger logging.Logger) *DefaultFac
 }
 
 // CreateMiddleware creates a complete Middleware instance with all components
-// tokenKVS and rateLimitKVS should be created via CreateKVSStores() and passed in.
+// tokenKVS and emailQuotaKVS should be created via CreateKVSStores() and passed in.
 func (f *DefaultFactory) CreateMiddleware(
 	cfg *config.Config,
 	sessionStore session.Store,
 	tokenKVS kvs.Store,
-	rateLimitKVS kvs.Store,
+	emailQuotaKVS kvs.Store,
 	proxyHandler http.Handler,
 	logger logging.Logger,
 ) (*middleware.Middleware, error) {
@@ -71,7 +71,7 @@ func (f *DefaultFactory) CreateMiddleware(
 			authzChecker,
 			translator,
 			tokenKVS,
-			rateLimitKVS,
+			emailQuotaKVS,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create email handler: %w", err)
@@ -201,7 +201,7 @@ func (f *DefaultFactory) CreateEmailHandler(
 	authzChecker authz.Checker,
 	translator *i18n.Translator,
 	tokenKVS kvs.Store,
-	rateLimitKVS kvs.Store,
+	emailQuotaKVS kvs.Store,
 ) (*email.Handler, error) {
 	authPrefix := serverCfg.GetAuthPathPrefix()
 
@@ -229,7 +229,7 @@ func (f *DefaultFactory) CreateEmailHandler(
 		translator,
 		sessionCfg.Cookie.Secret,
 		tokenKVS,
-		rateLimitKVS,
+		emailQuotaKVS,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create email handler: %w", err)
@@ -298,7 +298,7 @@ func (f *DefaultFactory) CreateTranslator() *i18n.Translator {
 
 // CreateKVSStores creates all required KVS stores from configuration.
 // This consolidates the KVS creation logic that was previously in serve.go.
-func (f *DefaultFactory) CreateKVSStores(cfg *config.Config) (session kvs.Store, token kvs.Store, rateLimit kvs.Store, err error) {
+func (f *DefaultFactory) CreateKVSStores(cfg *config.Config) (session kvs.Store, token kvs.Store, emailQuota kvs.Store, err error) {
 	// Set default namespace names
 	cfg.KVS.Namespaces.SetDefaults()
 
@@ -343,28 +343,28 @@ func (f *DefaultFactory) CreateKVSStores(cfg *config.Config) (session kvs.Store,
 		f.logger.Debug("Token KVS initialized (default)", "type", tokenCfg.Type, "namespace", tokenCfg.Namespace)
 	}
 
-	// Initialize rate limit KVS (override or default with namespace)
-	if cfg.KVS.RateLimit != nil {
-		rateLimit, err = kvs.New(*cfg.KVS.RateLimit)
+	// Initialize email quota KVS (override or default with namespace)
+	if cfg.KVS.EmailQuota != nil {
+		emailQuota, err = kvs.New(*cfg.KVS.EmailQuota)
 		if err != nil {
 			_ = session.Close() // Cleanup
 			_ = token.Close()
-			return nil, nil, nil, fmt.Errorf("failed to create rate limit KVS: %w", err)
+			return nil, nil, nil, fmt.Errorf("failed to create email quota KVS: %w", err)
 		}
-		f.logger.Debug("Rate limit KVS initialized (dedicated)", "type", cfg.KVS.RateLimit.Type, "namespace", cfg.KVS.RateLimit.Namespace)
+		f.logger.Debug("Email quota KVS initialized (dedicated)", "type", cfg.KVS.EmailQuota.Type, "namespace", cfg.KVS.EmailQuota.Namespace)
 	} else {
-		rateLimitCfg := cfg.KVS.Default
-		rateLimitCfg.Namespace = cfg.KVS.Namespaces.RateLimit
-		rateLimit, err = kvs.New(rateLimitCfg)
+		emailQuotaCfg := cfg.KVS.Default
+		emailQuotaCfg.Namespace = cfg.KVS.Namespaces.EmailQuota
+		emailQuota, err = kvs.New(emailQuotaCfg)
 		if err != nil {
 			_ = session.Close() // Cleanup
 			_ = token.Close()
-			return nil, nil, nil, fmt.Errorf("failed to create rate limit KVS: %w", err)
+			return nil, nil, nil, fmt.Errorf("failed to create email quota KVS: %w", err)
 		}
-		f.logger.Debug("Rate limit KVS initialized (default)", "type", rateLimitCfg.Type, "namespace", rateLimitCfg.Namespace)
+		f.logger.Debug("Email quota KVS initialized (default)", "type", emailQuotaCfg.Type, "namespace", emailQuotaCfg.Namespace)
 	}
 
-	return session, token, rateLimit, nil
+	return session, token, emailQuota, nil
 }
 
 // CreateSessionStore creates a session store using the provided KVS

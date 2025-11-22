@@ -32,7 +32,7 @@ func NewTestingFactoryWithLogger(host string, port int, logger logging.Logger) *
 // CreateKVSStores creates all in-memory KVS stores for testing.
 // Unlike the production implementation, this always uses memory stores
 // regardless of configuration, making tests faster and isolated.
-func (f *TestingFactory) CreateKVSStores(cfg *config.Config) (session kvs.Store, token kvs.Store, rateLimit kvs.Store, err error) {
+func (f *TestingFactory) CreateKVSStores(cfg *config.Config) (session kvs.Store, token kvs.Store, emailQuota kvs.Store, err error) {
 	// Set default namespace names
 	cfg.KVS.Namespaces.SetDefaults()
 
@@ -56,16 +56,16 @@ func (f *TestingFactory) CreateKVSStores(cfg *config.Config) (session kvs.Store,
 		return nil, nil, nil, err
 	}
 
-	rateLimitCfg := kvs.Config{
+	emailQuotaCfg := kvs.Config{
 		Type:      "memory",
-		Namespace: cfg.KVS.Namespaces.RateLimit,
+		Namespace: cfg.KVS.Namespaces.EmailQuota,
 	}
-	rateLimit, err = kvs.New(rateLimitCfg)
+	emailQuota, err = kvs.New(emailQuotaCfg)
 	if err != nil {
 		_ = session.Close()
 		_ = token.Close()
 		return nil, nil, nil, err
 	}
 
-	return session, token, rateLimit, nil
+	return session, token, emailQuota, nil
 }
