@@ -774,7 +774,7 @@ kvs:
   namespaces:
     session: "session"
     token: "token"
-    ratelimit: "ratelimit"
+    email_quota: "email_quota"
 ```
 
 **How It Works:**
@@ -2023,29 +2023,33 @@ Most OIDC providers have a `.well-known/openid-configuration` endpoint. Use it t
 curl https://your-idp.com/.well-known/openid-configuration | jq .
 ```
 
-### Rate Limiting (Internal)
+### Rate Limiting
 
-ChatbotGate includes built-in rate limiting infrastructure:
+ChatbotGate includes built-in rate limiting for email authentication:
+
+**Email Authentication Rate Limiting:**
+
+Prevents abuse of magic link emails by limiting how many times a user can request login links:
+
+```yaml
+email_auth:
+  enabled: true
+  limit_per_minute: 5  # Maximum emails per minute per address (default: 5)
+  # ... other email auth settings
+```
 
 **Implementation Details:**
 - Token bucket algorithm for smooth rate control
-- Per-key (typically IP address) rate limiting
-- Backed by KVS (memory/LevelDB/Redis) with `ratelimit` namespace
+- Per-email-address rate limiting
+- Backed by KVS (memory/LevelDB/Redis) with `email_quota` namespace
 - Efficient and scalable
+- Configurable limit with sensible defaults
 
-**Current Status:**
-Rate limiting is implemented internally but not yet exposed in user-facing configuration. The infrastructure is in place and can be enabled with custom development or future releases.
-
-**Future Configuration (Planned):**
-
-```yaml
-ratelimit:
-  enabled: true
-  requests_per_minute: 60
-  burst: 10
-```
-
-If you need custom rate limiting for your deployment, please contact the developers or open a GitHub issue.
+**Configuration:**
+- Set `limit_per_minute` to control the maximum number of login emails per minute
+- Default: 5 emails per minute per email address
+- Set to 0 or negative value to use the default
+- Adjust based on your security requirements and email provider limits
 
 ### Custom Branding
 

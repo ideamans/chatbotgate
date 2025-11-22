@@ -42,9 +42,9 @@ func CreateTestConfig() *config.Config {
 				Type: "memory",
 			},
 			Namespaces: config.NamespaceConfig{
-				Session:   "session",
-				Token:     "token",
-				RateLimit: "ratelimit",
+				Session:    "session",
+				Token:      "token",
+				EmailQuota: "email_quota",
 			},
 		},
 		Logging: config.LoggingConfig{

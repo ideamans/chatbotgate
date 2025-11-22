@@ -33,9 +33,9 @@ func createTestTokenKVS() kvs.Store {
 	return kvsStore
 }
 
-// createTestRateLimitKVS creates a memory-based rate limit KVS for testing
-func createTestRateLimitKVS() kvs.Store {
-	kvsStore, _ := kvs.NewMemoryStore("ratelimit:", kvs.MemoryConfig{
+// createTestEmailQuotaKVS creates a memory-based email quota KVS for testing
+func createTestEmailQuotaKVS() kvs.Store {
+	kvsStore, _ := kvs.NewMemoryStore("email_quota:", kvs.MemoryConfig{
 		CleanupInterval: 1 * time.Minute,
 	})
 	return kvsStore
@@ -72,7 +72,7 @@ func TestNewHandler(t *testing.T) {
 
 	authzChecker := &MockAuthzChecker{allowed: true}
 
-	handler, err := NewHandler(cfg, testServiceConfig(), "http://localhost:4180", "/_auth", authzChecker, testTranslator(), "test-secret", createTestTokenKVS(), createTestRateLimitKVS())
+	handler, err := NewHandler(cfg, testServiceConfig(), "http://localhost:4180", "/_auth", authzChecker, testTranslator(), "test-secret", createTestTokenKVS(), createTestEmailQuotaKVS())
 	if err != nil {
 		t.Fatalf("NewHandler() error = %v", err)
 	}
@@ -90,7 +90,7 @@ func TestNewHandler_InvalidSenderType(t *testing.T) {
 
 	authzChecker := &MockAuthzChecker{allowed: true}
 
-	_, err := NewHandler(cfg, testServiceConfig(), "http://localhost:4180", "/_auth", authzChecker, testTranslator(), "test-secret", createTestTokenKVS(), createTestRateLimitKVS())
+	_, err := NewHandler(cfg, testServiceConfig(), "http://localhost:4180", "/_auth", authzChecker, testTranslator(), "test-secret", createTestTokenKVS(), createTestEmailQuotaKVS())
 	if err == nil {
 		t.Error("NewHandler() should return error for invalid sender type")
 	}
@@ -113,7 +113,7 @@ func TestHandler_SendLoginLink(t *testing.T) {
 	authzChecker := &MockAuthzChecker{allowed: true}
 	mockSender := &MockSender{}
 
-	handler, _ := NewHandler(cfg, testServiceConfig(), "http://localhost:4180", "/_auth", authzChecker, testTranslator(), "test-secret", createTestTokenKVS(), createTestRateLimitKVS())
+	handler, _ := NewHandler(cfg, testServiceConfig(), "http://localhost:4180", "/_auth", authzChecker, testTranslator(), "test-secret", createTestTokenKVS(), createTestEmailQuotaKVS())
 	handler.sender = mockSender // Replace with mock
 
 	email := "user@example.com"
@@ -160,7 +160,7 @@ func TestHandler_SendLoginLink_NotAuthorized(t *testing.T) {
 	authzChecker := &MockAuthzChecker{allowed: false}
 	mockSender := &MockSender{}
 
-	handler, _ := NewHandler(cfg, testServiceConfig(), "http://localhost:4180", "/_auth", authzChecker, testTranslator(), "test-secret", createTestTokenKVS(), createTestRateLimitKVS())
+	handler, _ := NewHandler(cfg, testServiceConfig(), "http://localhost:4180", "/_auth", authzChecker, testTranslator(), "test-secret", createTestTokenKVS(), createTestEmailQuotaKVS())
 	handler.sender = mockSender
 
 	email := "unauthorized@example.com"
@@ -185,27 +185,62 @@ func TestHandler_SendLoginLink_RateLimit(t *testing.T) {
 			Port: 587,
 			From: "noreply@example.com",
 		},
+		// Use default limit (5 per minute)
 	}
 
 	authzChecker := &MockAuthzChecker{allowed: true}
 	mockSender := &MockSender{}
 
-	handler, _ := NewHandler(cfg, testServiceConfig(), "http://localhost:4180", "/_auth", authzChecker, testTranslator(), "test-secret", createTestTokenKVS(), createTestRateLimitKVS())
+	handler, _ := NewHandler(cfg, testServiceConfig(), "http://localhost:4180", "/_auth", authzChecker, testTranslator(), "test-secret", createTestTokenKVS(), createTestEmailQuotaKVS())
 	handler.sender = mockSender
 
 	email := "user@example.com"
 
-	// Send 3 emails (should succeed)
-	for i := 0; i < 3; i++ {
+	// Send 5 emails (should succeed with default limit)
+	for i := 0; i < 5; i++ {
 		if err := handler.SendLoginLink(email, i18n.English); err != nil {
 			t.Fatalf("request %d should succeed", i+1)
 		}
 	}
 
-	// 4th should be rate limited
+	// 6th should be rate limited
 	err := handler.SendLoginLink(email, i18n.English)
 	if err == nil {
-		t.Error("4th request should be rate limited")
+		t.Error("6th request should be rate limited")
+	}
+}
+
+func TestHandler_SendLoginLink_CustomRateLimit(t *testing.T) {
+	cfg := config.EmailAuthConfig{
+		Enabled:        true,
+		SenderType:     "smtp",
+		LimitPerMinute: 2, // Custom limit: 2 per minute
+		SMTP: config.SMTPConfig{
+			Host: "smtp.example.com",
+			Port: 587,
+			From: "noreply@example.com",
+		},
+	}
+
+	authzChecker := &MockAuthzChecker{allowed: true}
+	mockSender := &MockSender{}
+
+	handler, _ := NewHandler(cfg, testServiceConfig(), "http://localhost:4180", "/_auth", authzChecker, testTranslator(), "test-secret", createTestTokenKVS(), createTestEmailQuotaKVS())
+	handler.sender = mockSender
+
+	email := "user@example.com"
+
+	// Send 2 emails (should succeed with custom limit)
+	for i := 0; i < 2; i++ {
+		if err := handler.SendLoginLink(email, i18n.English); err != nil {
+			t.Fatalf("request %d should succeed", i+1)
+		}
+	}
+
+	// 3rd should be rate limited
+	err := handler.SendLoginLink(email, i18n.English)
+	if err == nil {
+		t.Error("3rd request should be rate limited with custom limit of 2")
 	}
 }
 
@@ -227,7 +262,7 @@ func TestHandler_SendLoginLink_SendFails(t *testing.T) {
 		},
 	}
 
-	handler, _ := NewHandler(cfg, testServiceConfig(), "http://localhost:4180", "/_auth", authzChecker, testTranslator(), "test-secret", createTestTokenKVS(), createTestRateLimitKVS())
+	handler, _ := NewHandler(cfg, testServiceConfig(), "http://localhost:4180", "/_auth", authzChecker, testTranslator(), "test-secret", createTestTokenKVS(), createTestEmailQuotaKVS())
 	handler.sender = mockSender
 
 	email := "user@example.com"
@@ -252,7 +287,7 @@ func TestHandler_VerifyToken(t *testing.T) {
 	authzChecker := &MockAuthzChecker{allowed: true}
 	mockSender := &MockSender{}
 
-	handler, _ := NewHandler(cfg, testServiceConfig(), "http://localhost:4180", "/_auth", authzChecker, testTranslator(), "test-secret", createTestTokenKVS(), createTestRateLimitKVS())
+	handler, _ := NewHandler(cfg, testServiceConfig(), "http://localhost:4180", "/_auth", authzChecker, testTranslator(), "test-secret", createTestTokenKVS(), createTestEmailQuotaKVS())
 	handler.sender = mockSender
 
 	email := "user@example.com"

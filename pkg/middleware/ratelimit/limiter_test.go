@@ -10,7 +10,7 @@ import (
 
 // createTestLimiter creates a limiter with memory-based KVS for testing
 func createTestLimiter(rate int, interval time.Duration) *Limiter {
-	kvsStore, _ := kvs.NewMemoryStore("ratelimit:", kvs.MemoryConfig{
+	kvsStore, _ := kvs.NewMemoryStore("email_quota:", kvs.MemoryConfig{
 		CleanupInterval: 1 * time.Minute,
 	})
 	return NewLimiter(rate, interval, kvsStore)
@@ -108,7 +108,7 @@ func TestLimiter_Reset(t *testing.T) {
 }
 
 func TestLimiter_Cleanup(t *testing.T) {
-	kvsStore, _ := kvs.NewMemoryStore("ratelimit:", kvs.MemoryConfig{
+	kvsStore, _ := kvs.NewMemoryStore("email_quota:", kvs.MemoryConfig{
 		CleanupInterval: 1 * time.Minute,
 	})
 	limiter := NewLimiter(5, 1*time.Second, kvsStore)

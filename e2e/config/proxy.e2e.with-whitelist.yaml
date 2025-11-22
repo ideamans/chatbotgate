@@ -46,6 +46,8 @@ email_auth:
     insecure_skip_verify: true
   token:
     expire: "3m"
+  # Rate limiting: Maximum number of login emails per minute per email address (default: 5)
+  # limit_per_minute: 5
   # otp_output_file: "/otp/passwordless-otp-wl.jsonl"  # Commented out to use Mailpit instead
 
 # Whitelist configured - only specific emails and domains are allowed
@@ -69,7 +71,7 @@ kvs:
   namespaces:
     session: "session"
     token: "token"
-    ratelimit: "ratelimit"
+    email_quota: "email_quota"
 
 # User information forwarding configuration
 forwarding:

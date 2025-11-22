@@ -133,14 +133,15 @@ type OAuth2Provider struct {
 
 // EmailAuthConfig contains email authentication settings
 type EmailAuthConfig struct {
-	Enabled    bool             `yaml:"enabled" json:"enabled"`
-	SenderType string           `yaml:"sender_type" json:"sender_type"` // "smtp", "sendgrid", or "sendmail"
-	From       string           `yaml:"from" json:"from"`               // From email address (can be RFC 5322 format: "Name <email@example.com>" or just "email@example.com")
-	FromName   string           `yaml:"from_name" json:"from_name"`     // From display name (optional, used if From doesn't contain name)
-	SMTP       SMTPConfig       `yaml:"smtp" json:"smtp"`
-	SendGrid   SendGridConfig   `yaml:"sendgrid" json:"sendgrid"`
-	Sendmail   SendmailConfig   `yaml:"sendmail" json:"sendmail"`
-	Token      EmailTokenConfig `yaml:"token" json:"token"`
+	Enabled        bool             `yaml:"enabled" json:"enabled"`
+	SenderType     string           `yaml:"sender_type" json:"sender_type"`         // "smtp", "sendgrid", or "sendmail"
+	From           string           `yaml:"from" json:"from"`                       // From email address (can be RFC 5322 format: "Name <email@example.com>" or just "email@example.com")
+	FromName       string           `yaml:"from_name" json:"from_name"`             // From display name (optional, used if From doesn't contain name)
+	LimitPerMinute int              `yaml:"limit_per_minute" json:"limit_per_minute"` // Maximum number of emails per minute per address (default: 5)
+	SMTP           SMTPConfig       `yaml:"smtp" json:"smtp"`
+	SendGrid       SendGridConfig   `yaml:"sendgrid" json:"sendgrid"`
+	Sendmail       SendmailConfig   `yaml:"sendmail" json:"sendmail"`
+	Token          EmailTokenConfig `yaml:"token" json:"token"`
 }
 
 // GetFromAddress parses the From field and returns the email address and display name
@@ -167,6 +168,15 @@ func (e EmailAuthConfig) GetFromAddress() (string, string) {
 
 	// Plain email format: use FromName if specified
 	return from, e.FromName
+}
+
+// GetLimitPerMinute returns the rate limit per minute with default value
+// Returns the configured limit or default (5) if not set or invalid
+func (e EmailAuthConfig) GetLimitPerMinute() int {
+	if e.LimitPerMinute <= 0 {
+		return 5 // Default: 5 emails per minute
+	}
+	return e.LimitPerMinute
 }
 
 // SMTPConfig contains SMTP server settings
@@ -287,9 +297,9 @@ type KVSConfig struct {
 	// If nil, uses Default with token namespace prefix
 	Token *kvs.Config `yaml:"token,omitempty" json:"token,omitempty"`
 
-	// Optional override for rate limit storage
-	// If nil, uses Default with ratelimit namespace prefix
-	RateLimit *kvs.Config `yaml:"ratelimit,omitempty" json:"ratelimit,omitempty"`
+	// Optional override for email quota storage (email send rate limiting)
+	// If nil, uses Default with email_quota namespace prefix
+	EmailQuota *kvs.Config `yaml:"email_quota,omitempty" json:"email_quota,omitempty"`
 
 	// Namespace prefixes for shared KVS (has defaults)
 	Namespaces NamespaceConfig `yaml:"namespaces" json:"namespaces"`
@@ -297,9 +307,9 @@ type KVSConfig struct {
 
 // NamespaceConfig defines the key prefixes for each use case when sharing a KVS
 type NamespaceConfig struct {
-	Session   string `yaml:"session" json:"session"`     // Default: "session"
-	Token     string `yaml:"token" json:"token"`         // Default: "token"
-	RateLimit string `yaml:"ratelimit" json:"ratelimit"` // Default: "ratelimit"
+	Session    string `yaml:"session" json:"session"`         // Default: "session"
+	Token      string `yaml:"token" json:"token"`             // Default: "token"
+	EmailQuota string `yaml:"email_quota" json:"email_quota"` // Default: "email_quota"
 }
 
 // SetDefaults sets default namespace names if not specified
@@ -310,8 +320,8 @@ func (n *NamespaceConfig) SetDefaults() {
 	if n.Token == "" {
 		n.Token = "token"
 	}
-	if n.RateLimit == "" {
-		n.RateLimit = "ratelimit"
+	if n.EmailQuota == "" {
+		n.EmailQuota = "email_quota"
 	}
 }
 

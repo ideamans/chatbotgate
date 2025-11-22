@@ -46,6 +46,8 @@ email_auth:
     insecure_skip_verify: true
   token:
     expire: "3m"
+  # Rate limiting: Maximum number of login emails per minute per email address (default: 5)
+  # limit_per_minute: 5
 
 # No authorization whitelist configured - all authenticated users are allowed
 access_control:
@@ -65,7 +67,7 @@ kvs:
   namespaces:
     session: "session"
     token: "token"
-    ratelimit: "ratelimit"
+    email_quota: "email_quota"
 
 # User information forwarding configuration
 forwarding:

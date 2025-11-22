@@ -37,7 +37,7 @@ func NewHandler(
 	translator *i18n.Translator,
 	cookieSecret string,
 	tokenKVS kvs.Store,
-	rateLimitKVS kvs.Store,
+	emailQuotaKVS kvs.Store,
 ) (*Handler, error) {
 	serviceName := serviceCfg.Name
 	// Create token store with KVS backend
@@ -59,8 +59,8 @@ func NewHandler(
 		return nil, fmt.Errorf("unsupported sender type: %s", cfg.SenderType)
 	}
 
-	// Create rate limiter with KVS backend (3 emails per minute per address)
-	limiter := ratelimit.NewLimiter(3, 1*time.Minute, rateLimitKVS)
+	// Create rate limiter with KVS backend using configured limit per minute
+	limiter := ratelimit.NewLimiter(cfg.GetLimitPerMinute(), 1*time.Minute, emailQuotaKVS)
 
 	// Create email template
 	logoWidth := serviceCfg.LogoWidth

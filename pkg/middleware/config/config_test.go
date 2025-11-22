@@ -78,6 +78,54 @@ func TestEmailAuthConfig_GetFromAddress(t *testing.T) {
 	}
 }
 
+func TestEmailAuthConfig_GetLimitPerMinute(t *testing.T) {
+	tests := []struct {
+		name           string
+		limitPerMinute int
+		want           int
+	}{
+		{
+			name:           "default limit (zero)",
+			limitPerMinute: 0,
+			want:           5,
+		},
+		{
+			name:           "default limit (negative)",
+			limitPerMinute: -1,
+			want:           5,
+		},
+		{
+			name:           "custom limit 1",
+			limitPerMinute: 1,
+			want:           1,
+		},
+		{
+			name:           "custom limit 10",
+			limitPerMinute: 10,
+			want:           10,
+		},
+		{
+			name:           "custom limit 100",
+			limitPerMinute: 100,
+			want:           100,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := EmailAuthConfig{
+				LimitPerMinute: tt.limitPerMinute,
+			}
+
+			got := cfg.GetLimitPerMinute()
+
+			if got != tt.want {
+				t.Errorf("GetLimitPerMinute() = %d, want %d", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestConfig_Validate(t *testing.T) {
 	tests := []struct {
 		name    string

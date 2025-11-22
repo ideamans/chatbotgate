@@ -8,7 +8,7 @@ This directory contains the end-to-end test harness for `chatbotgate`.
 - `src/stub-auth/`: OAuth2/OIDC スタブプロバイダー (ポート 3001)。ブラウザから `http://localhost:3001` で直接ログイン画面を確認できます。
 - `config/`: プロキシ・ターゲットアプリ・スタブプロバイダー向けの環境設定。
 - `docker/`: Dockerfile および Compose スタック (`make dev`, `make test`)。
-- `src/tests/`: Playwright の E2E シナリオ (OAuth2・パスワードレス)。
+- `src/tests/`: Playwright の E2E シナリオ (OAuth2・パスワードレス・レート制限)。
 - `tmp/`: OTP JSONL の共有ボリューム (`passwordless-otp.jsonl`)。
 - `test-results/`: Playwright のアーティファクト (スクリーンショット、トレース、レポート)。
 
@@ -71,6 +71,11 @@ make test HEADLESS=false
 
 1. **OAuth2認証でのユーザー情報転送**: OAuth2プロバイダー経由でログインし、ユーザー名とメールアドレスの両方が転送されることを確認
 2. **メール認証でのユーザー情報転送**: メール認証でログインし、ユーザー名が空でメールアドレスのみが転送されることを確認
+
+`src/tests/email-rate-limit.spec.ts` には以下のテストが含まれています:
+
+1. **メール送信のレート制限**: 連続したログインリンク送信リクエストがレート制限によって制限されることを確認（デフォルト: 5回/分）
+2. **メールアドレス単位のレート制限**: レート制限がメールアドレスごとに独立していることを確認
 
 ### 動作確認
 

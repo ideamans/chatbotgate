@@ -55,7 +55,7 @@
 - Shell completion (bash, zsh, fish, powershell)
 - Health check endpoints (`/_auth/health`)
 - Structured logging with configurable levels
-- Rate limiting infrastructure (internal)
+- Email send rate limiting (prevents abuse of magic link emails)
 - Comprehensive test coverage
 - Docker support with multi-arch images (amd64/arm64)
 
@@ -490,7 +490,7 @@ Combine reverse proxy and authentication for microservices.
 - **Secrets Storage**: Use environment variables or secret managers for sensitive data
 - **Upstream Secret**: Protect your upstream from direct access with secret headers
 - **Whitelisting**: Restrict access by email/domain when possible
-- **Rate Limiting**: Configure rate limits to prevent abuse
+- **Email Rate Limiting**: Configure `email_auth.limit_per_minute` to prevent magic link abuse (default: 5/min)
 
 ## Contributing
 
