@@ -7,6 +7,7 @@ const app = express();
 const PORT = Number(process.env.TARGET_APP_PORT ?? 3000);
 const HOST = process.env.TARGET_APP_HOST ?? '0.0.0.0';
 const APP_NAME = process.env.TARGET_APP_NAME ?? 'Target Application';
+const AUTH_PATH_PREFIX = process.env.AUTH_PATH_PREFIX ?? '/_auth';
 
 app.use(morgan('dev'));
 
@@ -161,7 +162,7 @@ app.get('*', (req, res) => {
       <main>
         <div class="card">
           <p>このページは ChatbotGate の背後で保護されています。<br/>プロキシ経由でアクセスするとユーザー情報が表示されます。</p>
-          <p><a href="/_auth/login" data-test="app-login-link">認証ページへ移動</a></p>
+          <p><a href="${AUTH_PATH_PREFIX}/login" data-test="app-login-link">認証ページへ移動</a></p>
         </div>
       </main>
     `;
@@ -270,7 +271,7 @@ app.get('*', (req, res) => {
           <li><strong>chatbotgate.*</strong>: User info forwarding via querystring (configured in <code>forwarding.querystring</code>)</li>
         </ul>
         <p><strong>Current user</strong>: ${emailDisplay} (${nameDisplay}), Provider: ${authProvider}</p>
-        <form method="post" action="/_auth/logout">
+        <form method="post" action="${AUTH_PATH_PREFIX}/logout">
           <button type="submit" data-test="oauth-signout">サインアウト</button>
         </form>
       </div>

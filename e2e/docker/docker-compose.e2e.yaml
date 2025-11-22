@@ -117,6 +117,31 @@ services:
       timeout: 3s
       retries: 10
 
+  proxy-app-custom-prefix:
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+    container_name: e2e-proxy-app-custom-prefix
+    command: ["serve", "--config", "/config/proxy.e2e.custom-prefix.yaml", "--host", "0.0.0.0", "--port", "4180"]
+    ports:
+      - "4185:4180"  # Map external 4185 to internal 4180
+    depends_on:
+      - target-app-custom-prefix
+      - stub-auth
+      - mailpit
+    volumes:
+      - ../config/proxy.e2e.custom-prefix.yaml:/config/proxy.e2e.custom-prefix.yaml:ro
+      - otp-files:/otp
+    environment:
+      - LANGUAGE=en
+    networks:
+      - e2e-net
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:4180/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
   target-app:
     build:
       context: ..
@@ -125,7 +150,22 @@ services:
     env_file:
       - ../config/target-app.env
     ports:
-      - "3000:3000"
+      - "13000:3000"  # Temporary: use 13000 to avoid conflict
+    networks:
+      - e2e-net
+
+  target-app-custom-prefix:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.target-app
+    container_name: e2e-target-app-custom-prefix
+    env_file:
+      - ../config/target-app.env
+    environment:
+      - AUTH_PATH_PREFIX=/_oauth2_proxy
+      - TARGET_APP_NAME=Target App (Custom Prefix)
+    ports:
+      - "13001:3000"  # Separate port for custom prefix target app
     networks:
       - e2e-net
 

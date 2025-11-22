@@ -327,6 +327,10 @@ html.dark body,
   gap: var(--spacing-md);
 }
 
+.auth-header .auth-title {
+  margin-bottom: 0;
+}
+
 .auth-icon {
   width: 48px;
   height: 48px;

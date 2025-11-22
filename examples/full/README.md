@@ -247,7 +247,6 @@ volumes:
 - `server.port`: Listen port (default: 4180)
 - `server.auth_path_prefix`: Auth endpoint prefix (default: "/_auth")
 - `server.base_url`: Public URL for callbacks and emails
-- `server.development`: Enable dev mode (relaxes CSP)
 
 ### Session Management
 - `session.cookie_name`: Cookie name (default: "_oauth2_proxy")
