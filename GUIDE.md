@@ -143,11 +143,71 @@ docker-compose logs -f chatbotgate
 - `v1.0.0-arm64` - ARM64 architecture only
 - `sha-abc1234` - Specific commit (for testing)
 
-**Note:** Environment variable configuration is not currently supported. ChatbotGate requires a YAML configuration file specified via the `--config` or `-c` flag.
-
 ## Configuration
 
 Configuration is done via a YAML file. See `config.example.yaml` for a complete example.
+
+### Environment Variable Expansion
+
+**New in v1.1.0**: Configuration files support environment variable references.
+
+You can reference environment variables in your configuration file using the following syntax:
+
+- `${VAR}` - Replaces with the value of environment variable `VAR` (empty string if not set)
+- `${VAR:-default}` - Replaces with the value of `VAR`, or uses `default` if `VAR` is not set or empty
+
+**Examples:**
+
+```yaml
+session:
+  cookie:
+    # Use environment variable with fallback
+    secret: "${COOKIE_SECRET:-change-this-default-secret}"
+
+proxy:
+  upstream:
+    # Use environment variable
+    url: "${UPSTREAM_URL:-http://localhost:8080}"
+
+oauth2:
+  providers:
+    - id: "google"
+      type: "google"
+      # Credentials from environment
+      client_id: "${GOOGLE_CLIENT_ID}"
+      client_secret: "${GOOGLE_CLIENT_SECRET}"
+
+email_auth:
+  smtp:
+    host: "${SMTP_HOST:-smtp.gmail.com}"
+    username: "${SMTP_USERNAME}"
+    password: "${SMTP_PASSWORD}"
+```
+
+**Common Use Cases:**
+
+- **Security**: Keep secrets out of configuration files and version control
+- **Container Deployments**: Use environment variables in Docker/Kubernetes
+- **Multi-Environment**: Same config file for dev/staging/production with different env vars
+- **CI/CD**: Inject credentials during deployment without modifying config files
+
+**Example Deployment:**
+
+```bash
+# Set environment variables
+export COOKIE_SECRET="$(openssl rand -base64 32)"
+export GOOGLE_CLIENT_ID="your-client-id"
+export GOOGLE_CLIENT_SECRET="your-client-secret"
+export UPSTREAM_URL="http://my-app:8080"
+
+# Run with environment variables
+./chatbotgate -c config.yaml
+
+# Or with Docker
+docker run -e COOKIE_SECRET="..." -e GOOGLE_CLIENT_ID="..." \
+  -v $(pwd)/config.yaml:/app/config.yaml \
+  ideamans/chatbotgate
+```
 
 ### Service Settings
 

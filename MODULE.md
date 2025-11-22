@@ -1594,8 +1594,17 @@ func main() {
 ### 1. Configuration Management
 
 ```go
-// Load from file
-cfg, err := config.LoadFromFile("config.yaml")
+import (
+    "github.com/ideamans/chatbotgate/pkg/middleware/config"
+    "github.com/ideamans/chatbotgate/pkg/shared/filewatcher"
+)
+
+// Load from file (automatically expands environment variables)
+loader := config.NewFileLoader("config.yaml")
+cfg, err := loader.Load()
+if err != nil {
+    log.Fatal(err)
+}
 
 // Validate before use
 if err := cfg.Validate(); err != nil {
@@ -1604,9 +1613,58 @@ if err := cfg.Validate(); err != nil {
 
 // Watch for changes
 watcher := filewatcher.New("config.yaml", func(path string) {
-    cfg, _ = config.LoadFromFile(path)
+    loader := config.NewFileLoader(path)
+    cfg, _ = loader.Load()
     // Reload components
 })
+```
+
+**Environment Variable Expansion:**
+
+The configuration loader automatically expands environment variables using `${VAR}` or `${VAR:-default}` syntax:
+
+```yaml
+# config.yaml
+session:
+  cookie:
+    secret: "${COOKIE_SECRET:-change-this-default}"
+
+oauth2:
+  providers:
+    - id: "google"
+      type: "google"
+      client_id: "${GOOGLE_CLIENT_ID}"
+      client_secret: "${GOOGLE_CLIENT_SECRET}"
+```
+
+```bash
+# Set environment variables
+export COOKIE_SECRET="$(openssl rand -base64 32)"
+export GOOGLE_CLIENT_ID="your-client-id"
+export GOOGLE_CLIENT_SECRET="your-client-secret"
+```
+
+You can also use the shared `config` package for custom expansion:
+
+```go
+import (
+    sharedconfig "github.com/ideamans/chatbotgate/pkg/shared/config"
+)
+
+// Expand environment variables in strings
+expanded := sharedconfig.ExpandEnv("${VAR:-default}")
+
+// Expand in byte slices (for file contents)
+data, _ := os.ReadFile("config.yaml")
+expanded := sharedconfig.ExpandEnvBytes(data)
+
+// Extract referenced variables
+vars := sharedconfig.ExtractEnvVars("${VAR1} ${VAR2:-default}")
+// Returns: []string{"VAR1", "VAR2"}
+
+// Validate required variables (excludes vars with defaults)
+missing := sharedconfig.ValidateEnvVars("${REQUIRED} ${OPTIONAL:-default}")
+// Returns: []string{"REQUIRED"} if REQUIRED is not set
 ```
 
 ### 2. Error Handling
@@ -1622,8 +1680,9 @@ import (
     "github.com/ideamans/chatbotgate/pkg/middleware/config"
 )
 
-// Validate configuration
-cfg, err := config.LoadFromFile("config.yaml")
+// Load and validate configuration
+loader := config.NewFileLoader("config.yaml")
+cfg, err := loader.Load()
 if err != nil {
     log.Fatal(err)
 }
