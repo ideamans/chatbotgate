@@ -51,9 +51,9 @@ password_auth:
   enabled: true
   password: "P@ssW0rd"
 
-# Authorization: allow all authenticated users
-authorization:
-  allowed: []
+# Access control: allow all authenticated users
+access_control:
+  emails: []
 
 # Forward user information to backend
 forwarding:

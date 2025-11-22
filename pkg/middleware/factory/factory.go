@@ -51,7 +51,7 @@ type Factory interface {
 	) (*email.Handler, error)
 
 	// CreateAuthzChecker creates an authorization checker based on config
-	CreateAuthzChecker(authzCfg config.AuthorizationConfig) authz.Checker
+	CreateAuthzChecker(accessControlCfg config.AccessControlConfig) authz.Checker
 
 	// CreateForwarder creates a forwarder for user info forwarding (may return nil)
 	CreateForwarder(forwardingCfg config.ForwardingConfig, providers []config.OAuth2Provider) forwarding.Forwarder

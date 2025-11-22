@@ -18,7 +18,7 @@ type Config struct {
 	OAuth2        OAuth2Config        `yaml:"oauth2" json:"oauth2"`
 	EmailAuth     EmailAuthConfig     `yaml:"email_auth" json:"email_auth"`
 	PasswordAuth  PasswordAuthConfig  `yaml:"password_auth" json:"password_auth"`
-	Authorization AuthorizationConfig `yaml:"authorization" json:"authorization"`
+	AccessControl AccessControlConfig `yaml:"access_control" json:"access_control"`
 	Logging       LoggingConfig       `yaml:"logging" json:"logging"`
 	KVS           KVSConfig           `yaml:"kvs" json:"kvs"`               // KVS storage configuration
 	Forwarding    ForwardingConfig    `yaml:"forwarding" json:"forwarding"` // User info forwarding configuration
@@ -251,9 +251,9 @@ type PasswordAuthConfig struct {
 	Password string `yaml:"password" json:"password"` // Password for authentication
 }
 
-// AuthorizationConfig contains authorization settings
-type AuthorizationConfig struct {
-	Allowed []string `yaml:"allowed" json:"allowed"` // Email addresses or domains (domain starts with @)
+// AccessControlConfig contains access control settings
+type AccessControlConfig struct {
+	Emails []string `yaml:"emails" json:"emails"` // Email addresses or domains (domain starts with @)
 }
 
 // LoggingConfig contains logging settings

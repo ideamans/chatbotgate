@@ -46,10 +46,9 @@ email_auth:
     expire: "3m"
   # otp_output_file: "/otp/passwordless-otp.jsonl"  # Commented out to use Mailpit instead
 
-# No authorization whitelist configured - all authenticated users are allowed
-authorization:
-  allowed_emails: []
-  allowed_domains: []
+# No access control whitelist configured - all authenticated users are allowed
+access_control:
+  emails: []
 
 logging:
   level: "debug"

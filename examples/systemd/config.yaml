@@ -72,9 +72,9 @@ password_auth:
   enabled: true
   password: "P@ssW0rd"
 
-# No authorization whitelist - all authenticated users allowed
-authorization:
-  allowed: []
+# No access control whitelist - all authenticated users allowed
+access_control:
+  emails: []
 
 # Logging - optimized for systemd/journald
 logging:

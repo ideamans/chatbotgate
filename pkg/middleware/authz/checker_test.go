@@ -7,8 +7,8 @@ import (
 )
 
 func TestEmailChecker_IsAllowed(t *testing.T) {
-	cfg := config.AuthorizationConfig{
-		Allowed: []string{
+	cfg := config.AccessControlConfig{
+		Emails: []string{
 			"user@example.com",
 			"admin@test.org",
 			"@ideamans.com",
@@ -96,8 +96,8 @@ func TestEmailChecker_IsAllowed(t *testing.T) {
 }
 
 func TestEmailChecker_EmptyConfig(t *testing.T) {
-	cfg := config.AuthorizationConfig{
-		Allowed: []string{},
+	cfg := config.AccessControlConfig{
+		Emails: []string{},
 	}
 
 	checker := NewEmailChecker(cfg)
@@ -123,8 +123,8 @@ func TestEmailChecker_EmptyConfig(t *testing.T) {
 }
 
 func TestNewEmailChecker(t *testing.T) {
-	cfg := config.AuthorizationConfig{
-		Allowed: []string{
+	cfg := config.AccessControlConfig{
+		Emails: []string{
 			"User@Example.COM",
 			"@IDEAMANS.COM",
 		},
@@ -146,34 +146,34 @@ func TestNewEmailChecker(t *testing.T) {
 func TestEmailChecker_RequiresEmail(t *testing.T) {
 	tests := []struct {
 		name   string
-		config config.AuthorizationConfig
+		config config.AccessControlConfig
 		want   bool
 	}{
 		{
 			name: "no whitelist - email not required",
-			config: config.AuthorizationConfig{
-				Allowed: []string{},
+			config: config.AccessControlConfig{
+				Emails: []string{},
 			},
 			want: false,
 		},
 		{
 			name: "only allowed emails - email required",
-			config: config.AuthorizationConfig{
-				Allowed: []string{"user@example.com"},
+			config: config.AccessControlConfig{
+				Emails: []string{"user@example.com"},
 			},
 			want: true,
 		},
 		{
 			name: "only allowed domains - email required",
-			config: config.AuthorizationConfig{
-				Allowed: []string{"@example.com"},
+			config: config.AccessControlConfig{
+				Emails: []string{"@example.com"},
 			},
 			want: true,
 		},
 		{
 			name: "both emails and domains - email required",
-			config: config.AuthorizationConfig{
-				Allowed: []string{
+			config: config.AccessControlConfig{
+				Emails: []string{
 					"user@example.com",
 					"@company.com",
 				},

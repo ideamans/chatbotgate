@@ -86,10 +86,10 @@ password_auth:
   enabled: true
   password: "P@ssW0rd"
 
-# No authorization whitelist - all authenticated users allowed
+# No access control whitelist - all authenticated users allowed
 # To restrict access, add email addresses or domains here
-authorization:
-  allowed: []
+access_control:
+  emails: []
 
 # Logging - optimized for Docker
 logging:

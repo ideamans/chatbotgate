@@ -127,7 +127,7 @@ Replace example domains with your actual URLs:
 - `server.base_url`: Your public URL (e.g., `https://auth.example.com`)
 - `proxy.upstream.url`: Your upstream application URL
 - `service.icon_url` / `service.logo_url`: Your branding assets
-- `authorization.allowed`: Allowed email addresses and domains
+- `access_control.emails`: Allowed email addresses and domains
 
 ### 6. Customize Access Rules
 
@@ -351,7 +351,7 @@ Actions: `allow` (no auth), `auth` (require auth), `deny` (403)
 - [ ] Redis configured for session storage
 - [ ] `server.base_url` set to production URL
 - [ ] `session.cookie_secure: true` for HTTPS
-- [ ] `authorization.allowed` configured with allowed users/domains
+- [ ] `access_control.emails` configured with allowed users/domains
 - [ ] Access rules customized for your application
 - [ ] Configuration file permissions set to 600 (read-only by owner)
 - [ ] Logging configured (systemd journal or file rotation)

@@ -235,12 +235,12 @@ password_auth:
   # Using environment variable (recommended for production)
   password: "${AUTH_PASSWORD:-P@ssW0rd}"  # <-- CHANGE THIS
 
-# Authorization configuration
-authorization:
+# Access control configuration
+access_control:
   # Allowed email addresses and domains
   # Entries starting with @ are domains, others are email addresses
   # Leave empty [] to allow all authenticated users (no whitelist)
-  allowed:
+  emails:
     - "user@example.com"
     - "admin@company.com"
     - "@example.org"

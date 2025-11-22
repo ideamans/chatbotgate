@@ -177,12 +177,12 @@ password_auth:
   password: "P@ssW0rd"
   # Optional: Customize the button text (default: "Start Using" / "使用を開始する")
 
-# Authorization configuration
-authorization:
+# Access control configuration
+access_control:
   # Allowed email addresses and domains
   # Entries starting with @ are domains, others are email addresses
   # Empty array [] allows all authenticated users (no whitelist)
-  allowed:
+  emails:
     # Specific email addresses
     - "admin@example.com"
     - "user1@company.com"

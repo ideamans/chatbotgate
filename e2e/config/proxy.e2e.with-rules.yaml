@@ -48,8 +48,8 @@ email_auth:
     expire: "3m"
 
 # No authorization whitelist configured - all authenticated users are allowed
-authorization:
-  allowed: []
+access_control:
+  emails: []
 
 logging:
   level: "debug"

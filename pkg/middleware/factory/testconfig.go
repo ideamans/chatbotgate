@@ -33,8 +33,8 @@ func CreateTestConfig() *config.Config {
 			Enabled:    false,
 			SenderType: "smtp",
 		},
-		Authorization: config.AuthorizationConfig{
-			Allowed: []string{"test@example.com"},
+		AccessControl: config.AccessControlConfig{
+			Emails: []string{"test@example.com"},
 		},
 		KVS: config.KVSConfig{
 			Default: kvs.Config{

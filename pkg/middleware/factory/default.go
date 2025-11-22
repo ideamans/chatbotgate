@@ -47,7 +47,7 @@ func (f *DefaultFactory) CreateMiddleware(
 ) (*middleware.Middleware, error) {
 	// Create all components using factory methods
 	translator := f.CreateTranslator()
-	authzChecker := f.CreateAuthzChecker(cfg.Authorization)
+	authzChecker := f.CreateAuthzChecker(cfg.AccessControl)
 	forwarder := f.CreateForwarder(cfg.Forwarding, cfg.OAuth2.Providers)
 	rulesEvaluator, err := f.CreateRulesEvaluator(&cfg.Rules)
 	if err != nil {
@@ -253,10 +253,10 @@ func (f *DefaultFactory) CreatePasswordHandler(
 }
 
 // CreateAuthzChecker creates an authorization checker based on config
-func (f *DefaultFactory) CreateAuthzChecker(authzCfg config.AuthorizationConfig) authz.Checker {
-	checker := authz.NewEmailChecker(authzCfg)
-	if len(authzCfg.Allowed) > 0 {
-		f.logger.Debug("Authorization checker initialized", "allowed_entries", len(authzCfg.Allowed))
+func (f *DefaultFactory) CreateAuthzChecker(accessControlCfg config.AccessControlConfig) authz.Checker {
+	checker := authz.NewEmailChecker(accessControlCfg)
+	if len(accessControlCfg.Emails) > 0 {
+		f.logger.Debug("Authorization checker initialized", "allowed_entries", len(accessControlCfg.Emails))
 	} else {
 		f.logger.Debug("Authorization checker initialized with no restrictions")
 	}

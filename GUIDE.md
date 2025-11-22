@@ -729,11 +729,11 @@ email_auth:
 Control who can access your application:
 
 ```yaml
-authorization:
+access_control:
   # Allowed email addresses and domains
   # Entries starting with @ are domain wildcards
   # Empty list [] allows ALL authenticated users
-  allowed:
+  emails:
     - "alice@example.com"      # Specific email
     - "bob@company.com"        # Another email
     - "@example.org"           # All @example.org emails
@@ -744,23 +744,23 @@ authorization:
 
 ```yaml
 # Allow everyone (no whitelist)
-authorization:
-  allowed: []
+access_control:
+  emails: []
 
 # Allow only specific users
-authorization:
-  allowed:
+access_control:
+  emails:
     - "admin@example.com"
     - "manager@example.com"
 
 # Allow entire domain
-authorization:
-  allowed:
+access_control:
+  emails:
     - "@example.com"
 
 # Mix and match
-authorization:
-  allowed:
+access_control:
+  emails:
     - "external-user@gmail.com"
     - "@company.com"
     - "@partner-company.com"
@@ -2460,8 +2460,8 @@ vim config.yaml
 
 3. **Restrict Access**
    ```yaml
-   authorization:
-     allowed:
+   access_control:
+     emails:
        - "@company.com"
    ```
 

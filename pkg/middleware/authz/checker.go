@@ -24,13 +24,13 @@ type EmailChecker struct {
 }
 
 // NewEmailChecker creates a new EmailChecker from configuration
-func NewEmailChecker(cfg config.AuthorizationConfig) *EmailChecker {
+func NewEmailChecker(cfg config.AccessControlConfig) *EmailChecker {
 	// Convert allowed entries to emails and domains
 	// Entries starting with @ are domains, others are email addresses
 	emailMap := make(map[string]bool)
 	var domains []string
 
-	for _, entry := range cfg.Allowed {
+	for _, entry := range cfg.Emails {
 		entry = strings.TrimSpace(entry)
 		if entry == "" {
 			continue

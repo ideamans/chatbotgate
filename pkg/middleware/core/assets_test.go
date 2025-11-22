@@ -37,7 +37,7 @@ func TestBuildStyleLinks_DifyDisabled(t *testing.T) {
 
 	sessionStore := func() kvs.Store { store, _ := kvs.NewMemoryStore("test", kvs.MemoryConfig{}); return store }()
 	oauthManager := oauth2.NewManager()
-	authzChecker := authz.NewEmailChecker(cfg.Authorization)
+	authzChecker := authz.NewEmailChecker(cfg.AccessControl)
 	translator := i18n.NewTranslator()
 	logger := logging.NewTestLogger()
 
@@ -90,7 +90,7 @@ func TestBuildStyleLinks_DifyEnabled(t *testing.T) {
 
 	sessionStore := func() kvs.Store { store, _ := kvs.NewMemoryStore("test", kvs.MemoryConfig{}); return store }()
 	oauthManager := oauth2.NewManager()
-	authzChecker := authz.NewEmailChecker(cfg.Authorization)
+	authzChecker := authz.NewEmailChecker(cfg.AccessControl)
 	translator := i18n.NewTranslator()
 	logger := logging.NewTestLogger()
 
@@ -142,7 +142,7 @@ func TestBuildStyleLinks_CustomPrefix(t *testing.T) {
 
 	sessionStore := func() kvs.Store { store, _ := kvs.NewMemoryStore("test", kvs.MemoryConfig{}); return store }()
 	oauthManager := oauth2.NewManager()
-	authzChecker := authz.NewEmailChecker(cfg.Authorization)
+	authzChecker := authz.NewEmailChecker(cfg.AccessControl)
 	translator := i18n.NewTranslator()
 	logger := logging.NewTestLogger()
 
@@ -189,7 +189,7 @@ func TestHandleDifyCSS(t *testing.T) {
 
 	sessionStore := func() kvs.Store { store, _ := kvs.NewMemoryStore("test", kvs.MemoryConfig{}); return store }()
 	oauthManager := oauth2.NewManager()
-	authzChecker := authz.NewEmailChecker(cfg.Authorization)
+	authzChecker := authz.NewEmailChecker(cfg.AccessControl)
 	translator := i18n.NewTranslator()
 	logger := logging.NewTestLogger()
 
@@ -253,7 +253,7 @@ func TestMiddleware_DifyCSSRoute(t *testing.T) {
 
 	sessionStore := func() kvs.Store { store, _ := kvs.NewMemoryStore("test", kvs.MemoryConfig{}); return store }()
 	oauthManager := oauth2.NewManager()
-	authzChecker := authz.NewEmailChecker(cfg.Authorization)
+	authzChecker := authz.NewEmailChecker(cfg.AccessControl)
 	translator := i18n.NewTranslator()
 	logger := logging.NewTestLogger()
 
@@ -305,7 +305,7 @@ func TestMiddleware_DifyCSSRoute_CustomPrefix(t *testing.T) {
 
 	sessionStore := func() kvs.Store { store, _ := kvs.NewMemoryStore("test", kvs.MemoryConfig{}); return store }()
 	oauthManager := oauth2.NewManager()
-	authzChecker := authz.NewEmailChecker(cfg.Authorization)
+	authzChecker := authz.NewEmailChecker(cfg.AccessControl)
 	translator := i18n.NewTranslator()
 	logger := logging.NewTestLogger()
 
@@ -429,7 +429,7 @@ func TestBuildAuthHeader(t *testing.T) {
 
 			sessionStore := func() kvs.Store { store, _ := kvs.NewMemoryStore("test", kvs.MemoryConfig{}); return store }()
 			oauthManager := oauth2.NewManager()
-			authzChecker := authz.NewEmailChecker(cfg.Authorization)
+			authzChecker := authz.NewEmailChecker(cfg.AccessControl)
 			translator := i18n.NewTranslator()
 			logger := logging.NewTestLogger()
 

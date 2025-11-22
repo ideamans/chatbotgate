@@ -48,7 +48,7 @@ func TestDefaultFactory_CreateAuthzChecker(t *testing.T) {
 
 	cfg := CreateTestConfig()
 
-	checker := factory.CreateAuthzChecker(cfg.Authorization)
+	checker := factory.CreateAuthzChecker(cfg.AccessControl)
 	if checker == nil {
 		t.Fatal("CreateAuthzChecker returned nil")
 	}
