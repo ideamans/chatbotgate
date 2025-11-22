@@ -9,6 +9,7 @@ import (
 
 	"github.com/ideamans/chatbotgate/pkg/middleware/config"
 	"github.com/ideamans/chatbotgate/pkg/proxy/core"
+	sharedconfig "github.com/ideamans/chatbotgate/pkg/shared/config"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 )
@@ -109,6 +110,9 @@ func loadProxyConfig(path string) (proxy.UpstreamConfig, error) {
 	if err != nil {
 		return proxy.UpstreamConfig{}, fmt.Errorf("failed to read config file: %w", err)
 	}
+
+	// Expand environment variables in config file
+	data = sharedconfig.ExpandEnvBytes(data)
 
 	var cfg ProxyConfig
 	ext := strings.ToLower(filepath.Ext(path))

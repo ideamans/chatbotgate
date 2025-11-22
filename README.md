@@ -49,6 +49,7 @@
 - Query parameters and HTTP headers
 
 ### ⚙️ Production-Ready
+- **Environment variable expansion** in config files (`${VAR:-default}`)
 - Live configuration reloading (most settings)
 - Configuration validation tool (`test-config`)
 - Shell completion (bash, zsh, fish, powershell)
@@ -82,7 +83,7 @@ Docker images are automatically built and published to [Docker Hub](https://hub.
 
 ### Basic Configuration
 
-Create a `config.yaml` file:
+Create a `config.yaml` file. You can use environment variables with `${VAR}` or `${VAR:-default}` syntax:
 
 ```yaml
 service:
@@ -97,23 +98,35 @@ server:
 
 proxy:
   upstream:
-    url: "http://localhost:8080"
+    # Use environment variable with fallback
+    url: "${UPSTREAM_URL:-http://localhost:8080}"
 
 session:
   cookie:
-    secret: "CHANGE-THIS-TO-A-RANDOM-SECRET"
+    # Use environment variable for secrets (recommended)
+    secret: "${COOKIE_SECRET:-CHANGE-THIS-TO-A-RANDOM-SECRET}"
     expire: "168h"
 
 oauth2:
   providers:
     - id: "google"
       type: "google"
-      client_id: "YOUR-CLIENT-ID"
-      client_secret: "YOUR-CLIENT-SECRET"
+      # Credentials from environment variables
+      client_id: "${GOOGLE_CLIENT_ID}"
+      client_secret: "${GOOGLE_CLIENT_SECRET}"
 
 authorization:
   allowed:
     - "@example.com"  # Allow all @example.com emails
+```
+
+**Setting environment variables:**
+
+```bash
+export COOKIE_SECRET="$(openssl rand -base64 32)"
+export GOOGLE_CLIENT_ID="your-client-id"
+export GOOGLE_CLIENT_SECRET="your-client-secret"
+export UPSTREAM_URL="http://localhost:8080"
 ```
 
 ### Validate Configuration

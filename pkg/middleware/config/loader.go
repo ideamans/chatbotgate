@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	sharedconfig "github.com/ideamans/chatbotgate/pkg/shared/config"
 	"gopkg.in/yaml.v3"
 )
 
@@ -28,6 +29,7 @@ func NewFileLoader(path string) *FileLoader {
 // Load reads and parses the configuration file
 // Supports both YAML (.yaml, .yml) and JSON (.json) formats
 // Format is automatically detected from file extension
+// Environment variables in the format ${VAR} or ${VAR:-default} are expanded
 func (l *FileLoader) Load() (*Config, error) {
 	data, err := os.ReadFile(l.path)
 	if err != nil {
@@ -36,6 +38,9 @@ func (l *FileLoader) Load() (*Config, error) {
 		}
 		return nil, fmt.Errorf("failed to read config file: %w", err)
 	}
+
+	// Expand environment variables in config file
+	data = sharedconfig.ExpandEnvBytes(data)
 
 	var cfg Config
 	ext := strings.ToLower(filepath.Ext(l.path))

@@ -6,6 +6,7 @@ import (
 
 	"github.com/ideamans/chatbotgate/cmd/chatbotgate/cmd/server"
 	"github.com/ideamans/chatbotgate/pkg/middleware/config"
+	sharedconfig "github.com/ideamans/chatbotgate/pkg/shared/config"
 	"github.com/ideamans/chatbotgate/pkg/shared/logging"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
@@ -39,6 +40,8 @@ func runServe(cmd *cobra.Command, args []string) error {
 		if err != nil {
 			return fmt.Errorf("failed to read config file: %w", err)
 		}
+		// Expand environment variables in config file
+		data = sharedconfig.ExpandEnvBytes(data)
 		if err := yaml.Unmarshal(data, &appConfig); err != nil {
 			return fmt.Errorf("failed to parse config file: %w", err)
 		}
