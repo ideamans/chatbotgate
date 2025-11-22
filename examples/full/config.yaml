@@ -245,7 +245,6 @@ access_control:
 # Logging configuration
 logging:
   level: "info"         # Options: "debug", "info", "warn", "error"
-  module_level: "debug" # Log level for sub-modules (can be different from main level)
 
   # Color output (recommended: false for systemd, true for development)
   # systemd's journalctl provides its own formatting and colors

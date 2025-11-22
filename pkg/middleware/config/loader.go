@@ -85,10 +85,6 @@ func applyDefaults(cfg *Config) {
 		cfg.Logging.Level = "info"
 	}
 
-	if cfg.Logging.ModuleLevel == "" {
-		cfg.Logging.ModuleLevel = "debug"
-	}
-
 	// Set default cookie_httponly to true
 	cfg.Session.Cookie.HTTPOnly = true
 }

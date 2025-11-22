@@ -45,7 +45,6 @@ access_control:
 # Logging
 logging:
   level: "debug"
-  module_level: "debug"
   color: true
 
 # KVS configuration (memory for testing)

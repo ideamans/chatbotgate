@@ -48,7 +48,6 @@ access_control:
 
 logging:
   level: "debug"
-  module_level: "info"
   color: true
 `,
 			wantErr: false,
@@ -214,7 +213,6 @@ func TestFileLoader_Load_JSON(t *testing.T) {
   },
   "logging": {
     "level": "debug",
-    "module_level": "info",
     "color": true
   }
 }`,

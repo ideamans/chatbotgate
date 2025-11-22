@@ -79,7 +79,6 @@ access_control:
 # Logging - optimized for systemd/journald
 logging:
   level: "info"
-  module_level: "debug"
   color: false  # journalctl provides its own formatting
   # No file logging needed - journald handles everything
 

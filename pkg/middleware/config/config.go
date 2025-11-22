@@ -258,10 +258,9 @@ type AccessControlConfig struct {
 
 // LoggingConfig contains logging settings
 type LoggingConfig struct {
-	Level       string             `yaml:"level" json:"level"`
-	ModuleLevel string             `yaml:"module_level" json:"module_level"`
-	Color       bool               `yaml:"color" json:"color"`
-	File        *FileLoggingConfig `yaml:"file,omitempty" json:"file,omitempty"` // Optional file logging configuration
+	Level string             `yaml:"level" json:"level"`
+	Color bool               `yaml:"color" json:"color"`
+	File  *FileLoggingConfig `yaml:"file,omitempty" json:"file,omitempty"` // Optional file logging configuration
 }
 
 // FileLoggingConfig contains file logging and rotation settings
