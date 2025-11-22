@@ -64,6 +64,21 @@ go test -race ./...
 
 # Run e2e tests (requires Docker)
 cd e2e && make test
+
+# Run e2e tests with visible browser
+cd e2e && make test HEADLESS=false
+
+# Run dev environment for manual e2e testing
+cd e2e && make dev
+
+# Stop dev environment
+cd e2e && make dev-down
+
+# Run only Playwright tests (services must be running)
+cd e2e && make playwright
+
+# Clean e2e artifacts (OTP files, test results)
+cd e2e && make clean-e2e
 ```
 
 ### Architecture Overview
@@ -81,11 +96,13 @@ chatbotgate/
 │   ├── middleware/           # Authentication & authorization middleware
 │   │   ├── auth/
 │   │   │   ├── oauth2/       # OAuth2 providers (Google, GitHub, Microsoft, Custom)
-│   │   │   └── email/        # Passwordless email authentication
+│   │   │   ├── email/        # Passwordless email authentication
+│   │   │   └── password/     # Basic password authentication
 │   │   ├── authz/            # Authorization (email/domain whitelisting)
 │   │   ├── session/          # Session management with multiple backends
 │   │   ├── rules/            # Path-based access control (allow/auth/deny)
 │   │   ├── forwarding/       # User info forwarding to upstream
+│   │   ├── ratelimit/        # Rate limiting for email sends
 │   │   ├── config/           # Middleware configuration
 │   │   ├── core/             # Core middleware logic
 │   │   └── factory/          # Middleware factory pattern
@@ -203,7 +220,21 @@ The `web/` directory contains the authentication UI built with:
 - Playwright-based browser automation
 - Tests full OAuth2 flow with mock providers
 - Email authentication flow testing
+- Password authentication testing
+- User info forwarding validation (encrypted/compressed)
+- Rate limiting verification
+- Access control rules testing
 - Docker Compose for test environment
+- Mock OAuth2 provider (stub-auth on port 3001)
+- Mailpit for email testing (UI on port 8025)
+
+**E2E Environment Ports:**
+- `4180`: ChatbotGate (default config)
+- `4181`: ChatbotGate (with whitelist)
+- `4182`: ChatbotGate (with user info forwarding & encryption)
+- `3000`: Target app (protected backend)
+- `3001`: Stub OAuth2 provider (accessible at http://localhost:3001)
+- `8025`: Mailpit Web UI (email inspection)
 
 ### OAuth2 Provider Implementation
 
@@ -297,6 +328,11 @@ Path-based rules with first-match-wins evaluation:
 GitHub Actions workflows:
 - **CI** (`ci.yml`): Lint, format check, unit tests, e2e tests
 - **Release** (`release.yml`): GoReleaser + Docker Hub publish on tags
+
+**Versioning:**
+- GoReleaser uses `git describe --tags --always --dirty` for version info
+- Version is embedded in binary at build time via `-ldflags`
+- Docker images tagged with: `latest`, `v1.0.0`, `1.0`, `1`, `v1.0.0-amd64`, `v1.0.0-arm64`
 
 ### Common Patterns
 
