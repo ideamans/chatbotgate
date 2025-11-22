@@ -33,8 +33,9 @@ func CreateTestConfig() *config.Config {
 			Enabled:    false,
 			SenderType: "smtp",
 		},
-		Authorization: config.AuthorizationConfig{
-			Allowed: []string{"test@example.com"},
+		AccessControl: config.AccessControlConfig{
+			Emails: []string{"test@example.com"},
+			Rules:  rules.Config{}, // Empty rules = default behavior (require auth for all)
 		},
 		KVS: config.KVSConfig{
 			Default: kvs.Config{
@@ -51,7 +52,6 @@ func CreateTestConfig() *config.Config {
 			Color: false,
 		},
 		Forwarding: config.ForwardingConfig{},
-		Rules:      rules.Config{}, // Empty rules = default behavior (require auth for all)
 	}
 }
 

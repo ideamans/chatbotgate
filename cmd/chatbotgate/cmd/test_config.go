@@ -92,8 +92,8 @@ func runTestConfig(cmd *cobra.Command, args []string) error {
 		fmt.Printf("  Session KVS: %s (shared with namespace: %s)\n", middlewareCfg.KVS.Default.Type, middlewareCfg.KVS.Namespaces.Session)
 	}
 
-	// Authorization
-	allowedCount := len(middlewareCfg.Authorization.Allowed)
+	// Access Control
+	allowedCount := len(middlewareCfg.AccessControl.Emails)
 	if allowedCount > 0 {
 		fmt.Printf("  Allowed Users/Domains: %d entries\n", allowedCount)
 	} else {

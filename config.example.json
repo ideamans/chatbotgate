@@ -130,15 +130,11 @@
     }
   },
 
-  "authorization": {
-    "_comment_emails": "Individual email addresses",
-    "allowed_emails": [
+  "access_control": {
+    "_comment": "Allowed email addresses and domains (entries starting with @ are domains)",
+    "emails": [
       "user@example.com",
-      "admin@company.com"
-    ],
-
-    "_comment_domains": "Allow all users from these domains",
-    "allowed_domains": [
+      "admin@company.com",
       "@example.org",
       "@company.com"
     ]

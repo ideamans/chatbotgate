@@ -50,8 +50,8 @@ email_auth:
 
 # Whitelist configured - only specific emails and domains are allowed
 # Entries starting with @ are domains, others are email addresses
-authorization:
-  allowed:
+access_control:
+  emails:
     - "allowed@example.com"
     - "@allowed.example.com"
 

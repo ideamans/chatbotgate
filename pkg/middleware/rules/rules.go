@@ -17,8 +17,9 @@ type Evaluator struct {
 // NewEvaluator creates a new rule evaluator from configuration
 func NewEvaluator(config *Config) (*Evaluator, error) {
 	// If no rules specified, use default (require auth for all)
-	if config == nil || len(config.Rules) == 0 {
-		config = GetDefaultConfig()
+	if config == nil || len(*config) == 0 {
+		defaultConfig := GetDefaultConfig()
+		config = &defaultConfig
 	}
 
 	// Validate configuration first
@@ -27,8 +28,8 @@ func NewEvaluator(config *Config) (*Evaluator, error) {
 	}
 
 	// Compile all rules
-	rules := make([]*Rule, 0, len(config.Rules))
-	for i, ruleConfig := range config.Rules {
+	rules := make([]*Rule, 0, len(*config))
+	for i, ruleConfig := range *config {
 		rule, err := compileRule(&ruleConfig)
 		if err != nil {
 			return nil, fmt.Errorf("failed to compile rule[%d]: %w", i, err)

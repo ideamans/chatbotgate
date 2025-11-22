@@ -177,12 +177,12 @@ password_auth:
   password: "P@ssW0rd"
   # Optional: Customize the button text (default: "Start Using" / "使用を開始する")
 
-# Authorization configuration
-authorization:
+# Access control configuration
+access_control:
   # Allowed email addresses and domains
   # Entries starting with @ are domains, others are email addresses
   # Empty array [] allows all authenticated users (no whitelist)
-  allowed:
+  emails:
     # Specific email addresses
     - "admin@example.com"
     - "user1@company.com"
@@ -191,6 +191,56 @@ authorization:
     - "@example.com"
     - "@partner.org"
     - "@trusted-client.net"
+
+  # Access control rules (evaluated in order, first match wins)
+  # Actions: allow (no auth), auth (require auth), deny (403)
+  rules:
+    # Allow public static files without authentication
+    - prefix: "/static/"
+      action: allow
+      description: "Public static assets (CSS, JS, images)"
+
+    - prefix: "/assets/"
+      action: allow
+      description: "Public assets directory"
+
+    # Allow health check endpoint
+    - exact: "/health"
+      action: allow
+      description: "Health check endpoint for load balancer"
+
+    - exact: "/metrics"
+      action: allow
+      description: "Prometheus metrics endpoint"
+
+    # Allow public API endpoints (regex pattern)
+    - regex: "^/api/v1/public/"
+      action: allow
+      description: "Public API v1 endpoints"
+
+    # Allow specific file types (glob/minimatch patterns)
+    - minimatch: "**/*.{js,css,png,jpg,jpeg,gif,svg,ico,woff,woff2,ttf,eot}"
+      action: allow
+      description: "All static file types"
+
+    # Deny access to admin paths (403 forbidden)
+    - prefix: "/admin/"
+      action: deny
+      description: "Admin interface - access denied"
+
+    - prefix: "/_internal/"
+      action: deny
+      description: "Internal endpoints - access denied"
+
+    # Require authentication for API endpoints
+    - prefix: "/api/"
+      action: auth
+      description: "Authenticated API access"
+
+    # Default: require authentication for all other paths
+    - all: true
+      action: auth
+      description: "Default - require authentication for everything else"
 
 # Logging configuration
 logging:
@@ -358,58 +408,6 @@ forwarding:
     # Example 8: Forward Google-specific field (only available for Google OAuth2)
     - path: extra.picture
       header: X-Google-Picture
-
-# Access control rules configuration
-# Rules are evaluated in order, first match wins
-# Actions: allow (no auth), auth (require auth), deny (403)
-rules:
-  rules:
-    # Allow public static files without authentication
-    - prefix: "/static/"
-      action: allow
-      description: "Public static assets (CSS, JS, images)"
-
-    - prefix: "/assets/"
-      action: allow
-      description: "Public assets directory"
-
-    # Allow health check endpoint
-    - exact: "/health"
-      action: allow
-      description: "Health check endpoint for load balancer"
-
-    - exact: "/metrics"
-      action: allow
-      description: "Prometheus metrics endpoint"
-
-    # Allow public API endpoints (regex pattern)
-    - regex: "^/api/v1/public/"
-      action: allow
-      description: "Public API v1 endpoints"
-
-    # Allow specific file types (glob/minimatch patterns)
-    - minimatch: "**/*.{js,css,png,jpg,jpeg,gif,svg,ico,woff,woff2,ttf,eot}"
-      action: allow
-      description: "All static file types"
-
-    # Deny access to admin paths (403 forbidden)
-    - prefix: "/admin/"
-      action: deny
-      description: "Admin interface - access denied"
-
-    - prefix: "/_internal/"
-      action: deny
-      description: "Internal endpoints - access denied"
-
-    # Require authentication for API endpoints
-    - prefix: "/api/"
-      action: auth
-      description: "Authenticated API access"
-
-    # Default: require authentication for all other paths
-    - all: true
-      action: auth
-      description: "Default - require authentication for everything else"
 
 # Assets configuration
 # Controls CSS and JavaScript assets loading for authentication pages

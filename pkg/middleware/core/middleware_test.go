@@ -64,27 +64,27 @@ func (p *mockProvider) GetUserEmail(ctx context.Context, token *stdoauth2.Token)
 func TestMiddleware_RequiresEmail(t *testing.T) {
 	tests := []struct {
 		name           string
-		authzConfig    config.AuthorizationConfig
+		authzConfig    config.AccessControlConfig
 		expectRequired bool
 	}{
 		{
 			name: "no whitelist - email not required",
-			authzConfig: config.AuthorizationConfig{
-				Allowed: []string{},
+			authzConfig: config.AccessControlConfig{
+				Emails: []string{},
 			},
 			expectRequired: false,
 		},
 		{
 			name: "with allowed emails - email required",
-			authzConfig: config.AuthorizationConfig{
-				Allowed: []string{"user@example.com"},
+			authzConfig: config.AccessControlConfig{
+				Emails: []string{"user@example.com"},
 			},
 			expectRequired: true,
 		},
 		{
 			name: "with allowed domains - email required",
-			authzConfig: config.AuthorizationConfig{
-				Allowed: []string{"@example.com"},
+			authzConfig: config.AccessControlConfig{
+				Emails: []string{"@example.com"},
 			},
 			expectRequired: true,
 		},
@@ -105,7 +105,7 @@ func TestMiddleware_RequiresEmail(t *testing.T) {
 						Secure: false,
 					},
 				},
-				Authorization: tt.authzConfig,
+				AccessControl: tt.authzConfig,
 			}
 
 			sessionStore := func() session.Store { store, _ := kvs.NewMemoryStore("test", kvs.MemoryConfig{}); return store }()
@@ -157,15 +157,15 @@ func TestMiddleware_Authorization_NoWhitelist(t *testing.T) {
 				HTTPOnly: true,
 			},
 		},
-		Authorization: config.AuthorizationConfig{
-			Allowed: []string{}, // No whitelist
+		AccessControl: config.AccessControlConfig{
+			Emails: []string{}, // No whitelist
 		},
 	}
 
 	sessionStore := func() session.Store { store, _ := kvs.NewMemoryStore("test", kvs.MemoryConfig{}); return store }()
 
 	oauthManager := oauth2.NewManager()
-	authzChecker := authz.NewEmailChecker(cfg.Authorization)
+	authzChecker := authz.NewEmailChecker(cfg.AccessControl)
 	translator := i18n.NewTranslator()
 	logger := logging.NewTestLogger()
 
@@ -259,15 +259,15 @@ func TestMiddleware_Authorization_WithWhitelist(t *testing.T) {
 				Secure: false,
 			},
 		},
-		Authorization: config.AuthorizationConfig{
-			Allowed: []string{"authorized@example.com"}, // Whitelist configured
+		AccessControl: config.AccessControlConfig{
+			Emails: []string{"authorized@example.com"}, // Whitelist configured
 		},
 	}
 
 	sessionStore := func() session.Store { store, _ := kvs.NewMemoryStore("test", kvs.MemoryConfig{}); return store }()
 
 	oauthManager := oauth2.NewManager()
-	authzChecker := authz.NewEmailChecker(cfg.Authorization)
+	authzChecker := authz.NewEmailChecker(cfg.AccessControl)
 	translator := i18n.NewTranslator()
 	logger := logging.NewTestLogger()
 
@@ -414,7 +414,7 @@ func TestHandleLogin_DividerDisplay(t *testing.T) {
 				})
 			}
 
-			authzChecker := authz.NewEmailChecker(cfg.Authorization)
+			authzChecker := authz.NewEmailChecker(cfg.AccessControl)
 			translator := i18n.NewTranslator()
 			logger := logging.NewTestLogger()
 

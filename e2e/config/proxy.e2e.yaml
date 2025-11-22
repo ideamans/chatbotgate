@@ -49,8 +49,8 @@ email_auth:
   # otp_output_file: "/otp/passwordless-otp.jsonl"  # Commented out to use Mailpit instead
 
 # No authorization whitelist configured - all authenticated users are allowed
-authorization:
-  allowed: []
+access_control:
+  emails: []
 
 logging:
   level: "debug"

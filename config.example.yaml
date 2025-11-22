@@ -235,16 +235,51 @@ password_auth:
   # Using environment variable (recommended for production)
   password: "${AUTH_PASSWORD:-P@ssW0rd}"  # <-- CHANGE THIS
 
-# Authorization configuration
-authorization:
+# Access control configuration
+access_control:
   # Allowed email addresses and domains
   # Entries starting with @ are domains, others are email addresses
   # Leave empty [] to allow all authenticated users (no whitelist)
-  allowed:
+  emails:
     - "user@example.com"
     - "admin@company.com"
     - "@example.org"
     - "@company.com"
+
+  # Access control rules for paths (evaluated in order, first match wins)
+  # Actions: allow (no auth), auth (require auth), deny (403)
+  rules:
+    # Example rules (uncomment to use):
+
+    # Allow public static files without authentication
+    # - prefix: "/static/"
+    #   action: allow
+    #   description: "Public static files"
+
+    # Allow specific file (exact match)
+    # - exact: "/health"
+    #   action: allow
+    #   description: "Health check endpoint"
+
+    # Regex pattern matching
+    # - regex: "^/api/public/"
+    #   action: allow
+    #   description: "Public API endpoints"
+
+    # Glob/minimatch patterns (supports *, **, ?, {a,b})
+    # - minimatch: "**/*.{js,css}"
+    #   action: allow
+    #   description: "All JavaScript and CSS files"
+
+    # Deny access to admin paths
+    # - prefix: "/admin/"
+    #   action: deny
+    #   description: "Admin access denied"
+
+    # Default: require authentication for all other paths
+    # - all: true
+    #   action: auth
+    #   description: "Require authentication for everything else"
 
 # Logging configuration
 logging:
@@ -419,42 +454,6 @@ forwarding:
     #   header: X-User-Name
     # - path: _avatar_url
     #   header: X-User-Avatar
-
-# Rules configuration
-# Access control rules for paths (evaluated in order, first match wins)
-# Actions: allow (no auth), auth (require auth), deny (403)
-rules:
-  # Example rules (uncomment to use):
-
-  # Allow public static files without authentication
-  # - prefix: "/static/"
-  #   action: allow
-  #   description: "Public static files"
-
-  # Allow specific file (exact match)
-  # - exact: "/health"
-  #   action: allow
-  #   description: "Health check endpoint"
-
-  # Regex pattern matching
-  # - regex: "^/api/public/"
-  #   action: allow
-  #   description: "Public API endpoints"
-
-  # Glob/minimatch patterns (supports *, **, ?, {a,b})
-  # - minimatch: "**/*.{js,css}"
-  #   action: allow
-  #   description: "All JavaScript and CSS files"
-
-  # Deny access to admin paths
-  # - prefix: "/admin/"
-  #   action: deny
-  #   description: "Admin access denied"
-
-  # Default: require authentication for all other paths
-  # - all: true
-  #   action: auth
-  #   description: "Require authentication for everything else"
 
 # Assets configuration
 # Controls CSS and JavaScript assets loading for authentication pages

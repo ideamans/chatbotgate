@@ -39,8 +39,8 @@ email_auth:
   enabled: false
 
 # Authorization (allow all for testing)
-authorization:
-  allowed: []
+access_control:
+  emails: []
 
 # Logging
 logging:

@@ -97,7 +97,7 @@ func TestTestingFactory_Integration(t *testing.T) {
 	}
 
 	// Create authz checker
-	authzChecker := factory.CreateAuthzChecker(cfg.Authorization)
+	authzChecker := factory.CreateAuthzChecker(cfg.AccessControl)
 	if authzChecker == nil {
 		t.Fatal("CreateAuthzChecker returned nil")
 	}

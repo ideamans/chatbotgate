@@ -153,7 +153,7 @@ test.describe('OAuth2 flow', () => {
     ]);
 
     // Should show error page because:
-    // 1. Whitelist is configured on :4181 (allowed_emails: ["allowed@example.com"], allowed_domains: ["@allowed.example.com"])
+    // 1. Whitelist is configured on :4181 (access_control.emails: ["allowed@example.com", "@allowed.example.com"])
     // 2. Provider didn't provide email address
     // 3. Email is required for authorization check when whitelist is configured
     await expect(page.locator('body')).toContainText(/Email Address Required|メールアドレスが必要です/i);

@@ -729,11 +729,11 @@ email_auth:
 Control who can access your application:
 
 ```yaml
-authorization:
+access_control:
   # Allowed email addresses and domains
   # Entries starting with @ are domain wildcards
   # Empty list [] allows ALL authenticated users
-  allowed:
+  emails:
     - "alice@example.com"      # Specific email
     - "bob@company.com"        # Another email
     - "@example.org"           # All @example.org emails
@@ -744,23 +744,23 @@ authorization:
 
 ```yaml
 # Allow everyone (no whitelist)
-authorization:
-  allowed: []
+access_control:
+  emails: []
 
 # Allow only specific users
-authorization:
-  allowed:
+access_control:
+  emails:
     - "admin@example.com"
     - "manager@example.com"
 
 # Allow entire domain
-authorization:
-  allowed:
+access_control:
+  emails:
     - "@example.com"
 
 # Mix and match
-authorization:
-  allowed:
+access_control:
+  emails:
     - "external-user@gmail.com"
     - "@company.com"
     - "@partner-company.com"
@@ -997,36 +997,37 @@ function decryptUserInfo(encrypted, key) {
 Path-based access control with pattern matching:
 
 ```yaml
-rules:
-  # Allow public static files without authentication
-  - prefix: "/static/"
-    action: allow
-    description: "Public static assets"
+access_control:
+  rules:
+    # Allow public static files without authentication
+    - prefix: "/static/"
+      action: allow
+      description: "Public static assets"
 
-  # Health check endpoint
-  - exact: "/health"
-    action: allow
-    description: "Health check"
+    # Health check endpoint
+    - exact: "/health"
+      action: allow
+      description: "Health check"
 
-  # Public API endpoints (regex)
-  - regex: "^/api/public/"
-    action: allow
-    description: "Public API"
+    # Public API endpoints (regex)
+    - regex: "^/api/public/"
+      action: allow
+      description: "Public API"
 
-  # JavaScript and CSS files (minimatch/glob)
-  - minimatch: "**/*.{js,css}"
-    action: allow
-    description: "Frontend assets"
+    # JavaScript and CSS files (minimatch/glob)
+    - minimatch: "**/*.{js,css}"
+      action: allow
+      description: "Frontend assets"
 
-  # Deny admin access
-  - prefix: "/admin/"
-    action: deny
-    description: "Admin area blocked"
+    # Deny admin access
+    - prefix: "/admin/"
+      action: deny
+      description: "Admin area blocked"
 
-  # Default: require authentication
-  - all: true
-    action: auth
-    description: "Require auth for everything else"
+    # Default: require authentication
+    - all: true
+      action: auth
+      description: "Require auth for everything else"
 ```
 
 **Rule Types:**
@@ -1049,13 +1050,14 @@ rules:
 **Example: Public homepage, authenticated app:**
 
 ```yaml
-rules:
-  - exact: "/"
-    action: allow
-  - prefix: "/app/"
-    action: auth
-  - all: true
-    action: deny
+access_control:
+  rules:
+    - exact: "/"
+      action: allow
+    - prefix: "/app/"
+      action: auth
+    - all: true
+      action: deny
 ```
 
 ### Assets Optimization
@@ -2460,8 +2462,8 @@ vim config.yaml
 
 3. **Restrict Access**
    ```yaml
-   authorization:
-     allowed:
+   access_control:
+     emails:
        - "@company.com"
    ```
 

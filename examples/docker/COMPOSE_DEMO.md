@@ -331,7 +331,7 @@ For production deployments:
    - Generate random `session.cookie_secret` (32+ chars)
    - Use environment variables or Docker secrets
 
-5. **Add authorization:**
+5. **Add access control:**
    - Whitelist email addresses or domains
    - Configure access control rules
 

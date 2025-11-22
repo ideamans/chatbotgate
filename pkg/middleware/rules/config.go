@@ -32,19 +32,17 @@ type RuleConfig struct {
 	Description string `yaml:"description,omitempty"`
 }
 
-// Config represents the rules configuration
-type Config struct {
-	Rules []RuleConfig `yaml:"rules,omitempty"`
-}
+// Config represents the rules configuration (a list of rules)
+type Config []RuleConfig
 
 // Validate validates the rules configuration
-func (c *Config) Validate() error {
-	if len(c.Rules) == 0 {
+func (c Config) Validate() error {
+	if len(c) == 0 {
 		// No rules specified = default to require auth for all
 		return nil
 	}
 
-	for i, rule := range c.Rules {
+	for i, rule := range c {
 		if err := rule.Validate(); err != nil {
 			return fmt.Errorf("rule[%d]: %w", i, err)
 		}
@@ -112,15 +110,13 @@ func (r *RuleConfig) Validate() error {
 }
 
 // GetDefaultConfig returns the default rules configuration (require auth for all)
-func GetDefaultConfig() *Config {
+func GetDefaultConfig() Config {
 	allTrue := true
-	return &Config{
-		Rules: []RuleConfig{
-			{
-				All:         &allTrue,
-				Action:      ActionAuth,
-				Description: "Default: require authentication for all paths",
-			},
+	return Config{
+		{
+			All:         &allTrue,
+			Action:      ActionAuth,
+			Description: "Default: require authentication for all paths",
 		},
 	}
 }
