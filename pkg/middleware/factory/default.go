@@ -283,7 +283,11 @@ func (f *DefaultFactory) CreateRulesEvaluator(rulesCfg *rules.Config) (*rules.Ev
 	if err != nil {
 		return nil, fmt.Errorf("invalid rules configuration: %w", err)
 	}
-	f.logger.Debug("Rules evaluator initialized", "rule_count", len(rulesCfg.Rules))
+	ruleCount := 0
+	if rulesCfg != nil {
+		ruleCount = len(*rulesCfg)
+	}
+	f.logger.Debug("Rules evaluator initialized", "rule_count", ruleCount)
 	return evaluator, nil
 }
 
