@@ -101,7 +101,7 @@ sudo systemctl status chatbotgate
 journalctl -u chatbotgate -f
 
 # Test endpoint
-curl http://localhost:4180/health
+curl http://localhost:4180/_auth/health
 ```
 
 ## Log Management

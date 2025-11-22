@@ -143,71 +143,11 @@ docker-compose logs -f chatbotgate
 - `v1.0.0-arm64` - ARM64 architecture only
 - `sha-abc1234` - Specific commit (for testing)
 
+**Note:** Environment variable configuration is not currently supported. ChatbotGate requires a YAML configuration file specified via the `--config` or `-c` flag.
+
 ## Configuration
 
 Configuration is done via a YAML file. See `config.example.yaml` for a complete example.
-
-### Environment Variable Expansion
-
-**New in v1.1.0**: Configuration files support environment variable references.
-
-You can reference environment variables in your configuration file using the following syntax:
-
-- `${VAR}` - Replaces with the value of environment variable `VAR` (empty string if not set)
-- `${VAR:-default}` - Replaces with the value of `VAR`, or uses `default` if `VAR` is not set or empty
-
-**Examples:**
-
-```yaml
-session:
-  cookie:
-    # Use environment variable with fallback
-    secret: "${COOKIE_SECRET:-change-this-default-secret}"
-
-proxy:
-  upstream:
-    # Use environment variable
-    url: "${UPSTREAM_URL:-http://localhost:8080}"
-
-oauth2:
-  providers:
-    - id: "google"
-      type: "google"
-      # Credentials from environment
-      client_id: "${GOOGLE_CLIENT_ID}"
-      client_secret: "${GOOGLE_CLIENT_SECRET}"
-
-email_auth:
-  smtp:
-    host: "${SMTP_HOST:-smtp.gmail.com}"
-    username: "${SMTP_USERNAME}"
-    password: "${SMTP_PASSWORD}"
-```
-
-**Common Use Cases:**
-
-- **Security**: Keep secrets out of configuration files and version control
-- **Container Deployments**: Use environment variables in Docker/Kubernetes
-- **Multi-Environment**: Same config file for dev/staging/production with different env vars
-- **CI/CD**: Inject credentials during deployment without modifying config files
-
-**Example Deployment:**
-
-```bash
-# Set environment variables
-export COOKIE_SECRET="$(openssl rand -base64 32)"
-export GOOGLE_CLIENT_ID="your-client-id"
-export GOOGLE_CLIENT_SECRET="your-client-secret"
-export UPSTREAM_URL="http://my-app:8080"
-
-# Run with environment variables
-./chatbotgate -c config.yaml
-
-# Or with Docker
-docker run -e COOKIE_SECRET="..." -e GOOGLE_CLIENT_ID="..." \
-  -v $(pwd)/config.yaml:/app/config.yaml \
-  ideamans/chatbotgate
-```
 
 ### Service Settings
 
@@ -729,11 +669,11 @@ email_auth:
 Control who can access your application:
 
 ```yaml
-access_control:
+authorization:
   # Allowed email addresses and domains
   # Entries starting with @ are domain wildcards
   # Empty list [] allows ALL authenticated users
-  emails:
+  allowed:
     - "alice@example.com"      # Specific email
     - "bob@company.com"        # Another email
     - "@example.org"           # All @example.org emails
@@ -744,23 +684,23 @@ access_control:
 
 ```yaml
 # Allow everyone (no whitelist)
-access_control:
-  emails: []
+authorization:
+  allowed: []
 
 # Allow only specific users
-access_control:
-  emails:
+authorization:
+  allowed:
     - "admin@example.com"
     - "manager@example.com"
 
 # Allow entire domain
-access_control:
-  emails:
+authorization:
+  allowed:
     - "@example.com"
 
 # Mix and match
-access_control:
-  emails:
+authorization:
+  allowed:
     - "external-user@gmail.com"
     - "@company.com"
     - "@partner-company.com"
@@ -997,37 +937,36 @@ function decryptUserInfo(encrypted, key) {
 Path-based access control with pattern matching:
 
 ```yaml
-access_control:
-  rules:
-    # Allow public static files without authentication
-    - prefix: "/static/"
-      action: allow
-      description: "Public static assets"
+rules:
+  # Allow public static files without authentication
+  - prefix: "/static/"
+    action: allow
+    description: "Public static assets"
 
-    # Health check endpoint
-    - exact: "/health"
-      action: allow
-      description: "Health check"
+  # Upstream health check endpoint (if your upstream has its own /health)
+  - exact: "/health"
+    action: allow
+    description: "Upstream health check"
 
-    # Public API endpoints (regex)
-    - regex: "^/api/public/"
-      action: allow
-      description: "Public API"
+  # Public API endpoints (regex)
+  - regex: "^/api/public/"
+    action: allow
+    description: "Public API"
 
-    # JavaScript and CSS files (minimatch/glob)
-    - minimatch: "**/*.{js,css}"
-      action: allow
-      description: "Frontend assets"
+  # JavaScript and CSS files (minimatch/glob)
+  - minimatch: "**/*.{js,css}"
+    action: allow
+    description: "Frontend assets"
 
-    # Deny admin access
-    - prefix: "/admin/"
-      action: deny
-      description: "Admin area blocked"
+  # Deny admin access
+  - prefix: "/admin/"
+    action: deny
+    description: "Admin area blocked"
 
-    # Default: require authentication
-    - all: true
-      action: auth
-      description: "Require auth for everything else"
+  # Default: require authentication
+  - all: true
+    action: auth
+    description: "Require auth for everything else"
 ```
 
 **Rule Types:**
@@ -1050,14 +989,13 @@ access_control:
 **Example: Public homepage, authenticated app:**
 
 ```yaml
-access_control:
-  rules:
-    - exact: "/"
-      action: allow
-    - prefix: "/app/"
-      action: auth
-    - all: true
-      action: deny
+rules:
+  - exact: "/"
+    action: allow
+  - prefix: "/app/"
+    action: auth
+  - all: true
+    action: deny
 ```
 
 ### Assets Optimization
@@ -1086,6 +1024,9 @@ Configure logging output:
 logging:
   # Main log level: debug, info, warn, error
   level: "info"
+
+  # Module-specific log level
+  module_level: "debug"
 
   # Colored output (auto-detects TTY)
   color: true
@@ -1472,7 +1413,7 @@ networks:
 7. **Set Up Health Checks**
    ```yaml
    healthcheck:
-     test: ["CMD", "wget", "--spider", "-q", "http://localhost:4180/health"]
+     test: ["CMD", "wget", "--spider", "-q", "http://localhost:4180/_auth/health"]
      interval: 30s
      timeout: 10s
      retries: 3
@@ -1565,13 +1506,13 @@ spec:
             memory: "256Mi"
         livenessProbe:
           httpGet:
-            path: /health
+            path: /_auth/health?probe=live
             port: 4180
           initialDelaySeconds: 10
           periodSeconds: 30
         readinessProbe:
           httpGet:
-            path: /health
+            path: /_auth/health
             port: 4180
           initialDelaySeconds: 5
           periodSeconds: 10
@@ -1598,11 +1539,12 @@ spec:
 
 1. **Health Endpoint**
    ```bash
-   curl http://localhost:4180/health
+   curl http://localhost:4180/_auth/health
    ```
 
 2. **Structured Logs**
    - Use JSON format for log aggregators (Datadog, CloudWatch)
+   - Enable `module_level: "debug"` for specific packages
 
 3. **Metrics** (Future)
    - Prometheus metrics endpoint planned
@@ -1661,6 +1603,7 @@ For production deployments on Linux with systemd, the recommended approach is to
 ```yaml
 logging:
   level: "info"
+  module_level: "debug"
   color: false  # journalctl provides its own formatting
   # No file configuration needed
 ```
@@ -1815,6 +1758,7 @@ File-based logging is recommended only for specific scenarios.
 ```yaml
 logging:
   level: "info"
+  module_level: "debug"
   color: false
   file:
     path: "/var/log/chatbotgate/chatbotgate.log"
@@ -1961,14 +1905,23 @@ ChatbotGate supports multiple log levels:
   - Database errors
   - Authentication failures
 
-#### Configuration
+#### Module-Level Logging
 
-Configure the log level:
+Set different log levels for different components:
 
 ```yaml
 logging:
-  level: "info" # Log level: debug, info, warn, error
+  level: "info"         # Default level for all modules
+  module_level: "debug" # Level for sub-modules
 ```
+
+**Module hierarchy:**
+- `main` - Main server
+- `main/middleware` - Middleware manager
+- `main/middleware/auth` - Authentication
+- `main/middleware/auth/oauth2` - OAuth2 provider
+- `main/middleware/session` - Session management
+- `main/proxy` - Reverse proxy
 
 ### Log Format
 
@@ -2116,21 +2069,21 @@ oauth2:
 
 ### Health Check Endpoints
 
-ChatbotGate provides a unified `/health` endpoint for all health checks, supporting both readiness and liveness probes with minimal complexity.
+ChatbotGate provides a unified `/_auth/health` endpoint for all health checks, supporting both readiness and liveness probes with minimal complexity.
 
 #### Overview
 
 **Design Philosophy:**
-- Single endpoint for simplicity: `/health`
+- Single endpoint for simplicity: `/_auth/health`
 - Liveness and readiness use the same URL with different query parameters
 - JSON responses for both human and machine readability
 - Proper HTTP status codes (200 for ready, 503 for not ready)
 
 #### Endpoints
 
-**Readiness Probe** (`/health` - default)
+**Readiness Probe** (`/_auth/health` - default)
 ```bash
-curl http://localhost:4180/health
+curl http://localhost:4180/_auth/health
 
 # When ready (200 OK):
 {
@@ -2153,9 +2106,9 @@ curl http://localhost:4180/health
 }
 ```
 
-**Liveness Probe** (`/health?probe=live`)
+**Liveness Probe** (`/_auth/health?probe=live`)
 ```bash
-curl 'http://localhost:4180/health?probe=live'
+curl 'http://localhost:4180/_auth/health?probe=live'
 
 # Always returns 200 OK if process is alive:
 {
@@ -2166,12 +2119,6 @@ curl 'http://localhost:4180/health?probe=live'
   "detail": "ok",
   "retry_after": null
 }
-```
-
-**Legacy Endpoint** (`/ready` - backward compatibility)
-```bash
-curl http://localhost:4180/ready
-# Response: READY (200) or NOT READY (503)
 ```
 
 #### Health States
@@ -2185,7 +2132,7 @@ curl http://localhost:4180/ready
 
 When receiving SIGTERM:
 1. Health status immediately changes to `draining`
-2. `/health` starts returning 503 (with `Retry-After: 5`)
+2. `/_auth/health` starts returning 503 (with `Retry-After: 5`)
 3. Load balancers detect 503 and stop routing new requests
 4. Existing requests are allowed to complete
 5. Server shuts down cleanly
@@ -2201,7 +2148,7 @@ services:
     image: ideamans/chatbotgate:latest
     healthcheck:
       # Use readiness probe for container health
-      test: ["CMD-SHELL", "curl -fsS http://localhost:4180/health || exit 1"]
+      test: ["CMD-SHELL", "curl -fsS http://localhost:4180/_auth/health || exit 1"]
       interval: 5s
       timeout: 2s
       retries: 12
@@ -2212,7 +2159,7 @@ services:
 ```json
 {
   "healthCheck": {
-    "command": ["CMD-SHELL", "curl -fsS http://localhost:4180/health || exit 1"],
+    "command": ["CMD-SHELL", "curl -fsS http://localhost:4180/_auth/health || exit 1"],
     "interval": 5,
     "timeout": 2,
     "retries": 12,
@@ -2239,7 +2186,7 @@ spec:
         # Liveness: Restart if process is dead
         livenessProbe:
           httpGet:
-            path: /health?probe=live
+            path: /_auth/health?probe=live
             port: 4180
           initialDelaySeconds: 10
           periodSeconds: 5
@@ -2249,7 +2196,7 @@ spec:
         # Readiness: Remove from service if not ready
         readinessProbe:
           httpGet:
-            path: /health
+            path: /_auth/health
             port: 4180
           initialDelaySeconds: 5
           periodSeconds: 3
@@ -2260,7 +2207,7 @@ spec:
 
 **ALB Target Group:**
 ```yaml
-HealthCheckPath: /health
+HealthCheckPath: /_auth/health
 HealthCheckProtocol: HTTP
 HealthCheckIntervalSeconds: 5
 HealthCheckTimeoutSeconds: 2
@@ -2275,7 +2222,7 @@ Matcher:
 **Prometheus:**
 ```yaml
 - job_name: 'chatbotgate'
-  metrics_path: /health
+  metrics_path: /_auth/health
   static_configs:
     - targets: ['chatbotgate:4180']
   metric_relabel_configs:
@@ -2286,7 +2233,7 @@ Matcher:
 **Custom Monitoring:**
 ```bash
 # Check readiness status
-STATUS=$(curl -s http://localhost:4180/health | jq -r '.ready')
+STATUS=$(curl -s http://localhost:4180/_auth/health | jq -r '.ready')
 if [ "$STATUS" = "true" ]; then
   echo "Service is ready"
 else
@@ -2298,11 +2245,11 @@ fi
 #### Best Practices
 
 1. **Use Readiness for Traffic Routing**
-   - Configure load balancers to check `/health` (default readiness probe)
+   - Configure load balancers to check `/_auth/health` (default readiness probe)
    - This ensures traffic is only routed to ready instances
 
 2. **Use Liveness for Process Monitoring**
-   - Configure container orchestrators to use `/health?probe=live` for liveness
+   - Configure container orchestrators to use `/_auth/health?probe=live` for liveness
    - This detects and restarts crashed or deadlocked processes
 
 3. **Configure Appropriate Timeouts**
@@ -2316,7 +2263,7 @@ fi
    - Track health check latency
 
 5. **Test Graceful Shutdown**
-   - Verify health returns 503 after SIGTERM
+   - Verify `/_auth/health` returns 503 after SIGTERM
    - Confirm existing requests complete
    - Check load balancer removes instance before shutdown
 
@@ -2447,8 +2394,8 @@ vim config.yaml
 
 3. **Restrict Access**
    ```yaml
-   access_control:
-     emails:
+   authorization:
+     allowed:
        - "@company.com"
    ```
 
@@ -2601,6 +2548,7 @@ Enable debug logging for detailed diagnostics:
 ```yaml
 logging:
   level: "debug"
+  module_level: "debug"
 ```
 
 Check logs for:

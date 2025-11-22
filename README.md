@@ -53,7 +53,7 @@
 - Live configuration reloading (most settings)
 - Configuration validation tool (`test-config`)
 - Shell completion (bash, zsh, fish, powershell)
-- Health check endpoints (`/health`, `/ready`)
+- Health check endpoints (`/_auth/health`)
 - Structured logging with configurable levels
 - Rate limiting infrastructure (internal)
 - Comprehensive test coverage
@@ -391,19 +391,15 @@ ChatbotGate provides comprehensive health check endpoints for monitoring and orc
 
 ### Endpoints
 
-**Readiness Check** (`/health`)
+**Readiness Check** (`/_auth/health`)
 - Returns `200 OK` when ready to accept traffic
 - Returns `503 Service Unavailable` when starting up or draining
 - JSON response with status details
 
-**Liveness Check** (`/health?probe=live`)
+**Liveness Check** (`/_auth/health?probe=live`)
 - Returns `200 OK` if the process is alive
 - Lightweight check with no dependency validation
 - Useful for container orchestrators
-
-**Legacy Endpoint** (`/ready`)
-- Simple text endpoint for backward compatibility
-- Returns `READY` (200) or `NOT READY` (503)
 
 ### Response Format
 
@@ -427,7 +423,7 @@ services:
     image: ideamans/chatbotgate:latest
     ports: ["4180:4180"]
     healthcheck:
-      test: ["CMD-SHELL", "curl -fsS http://localhost:4180/health || exit 1"]
+      test: ["CMD-SHELL", "curl -fsS http://localhost:4180/_auth/health || exit 1"]
       interval: 5s
       timeout: 2s
       retries: 12
@@ -438,7 +434,7 @@ services:
 ```json
 {
   "healthCheck": {
-    "command": ["CMD-SHELL", "curl -fsS http://localhost:4180/health || exit 1"],
+    "command": ["CMD-SHELL", "curl -fsS http://localhost:4180/_auth/health || exit 1"],
     "interval": 5,
     "timeout": 2,
     "retries": 12,
@@ -451,14 +447,14 @@ services:
 ```yaml
 livenessProbe:
   httpGet:
-    path: /health?probe=live
+    path: /_auth/health?probe=live
     port: 4180
   initialDelaySeconds: 10
   periodSeconds: 5
 
 readinessProbe:
   httpGet:
-    path: /health
+    path: /_auth/health
     port: 4180
   initialDelaySeconds: 5
   periodSeconds: 3
@@ -467,7 +463,7 @@ readinessProbe:
 ### Graceful Shutdown
 
 When receiving SIGTERM, ChatbotGate:
-1. Immediately returns `503` for `/health` (status: `"draining"`)
+1. Immediately returns `503` for `/_auth/health` (status: `"draining"`)
 2. Waits for existing requests to complete
 3. Shuts down cleanly
 
