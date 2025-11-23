@@ -43,6 +43,7 @@ type Middleware struct {
 	rulesEvaluator  *rules.Evaluator     // Rules-based access control
 	translator      *i18n.Translator
 	logger          logging.Logger
+	templates       *Templates   // HTML templates
 	next            http.Handler // The next handler to call after auth succeeds
 
 	// Health check state management
@@ -64,7 +65,13 @@ func New(
 	rulesEvaluator *rules.Evaluator, // Rules evaluator
 	translator *i18n.Translator,
 	logger logging.Logger,
-) *Middleware {
+) (*Middleware, error) {
+	// Initialize templates
+	templates, err := newTemplates()
+	if err != nil {
+		return nil, err
+	}
+
 	m := &Middleware{
 		config:          cfg,
 		sessionStore:    sessionStore,
@@ -76,6 +83,7 @@ func New(
 		rulesEvaluator:  rulesEvaluator,
 		translator:      translator,
 		logger:          logger,
+		templates:       templates,
 		healthStarted:   time.Now().UTC(),
 	}
 
@@ -84,7 +92,7 @@ func New(
 	m.healthStatus.Store(HealthStatusStarting)
 	m.healthReady.Store(false)
 
-	return m
+	return m, nil
 }
 
 // SetReady marks the middleware as ready to accept traffic
