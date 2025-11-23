@@ -2,6 +2,8 @@ import { test, expect } from '@playwright/test';
 import { authenticateViaOAuth2 } from '../support/auth-helpers';
 
 const BASE_URL = 'http://localhost:4180';
+const TEST_EMAIL = 'someone@example.com';
+const TEST_PASSWORD = 'password';
 
 /**
  * WebSocket test helper - executes WebSocket operations in browser context
@@ -105,7 +107,8 @@ test.describe('WebSocket proxying', () => {
   test('authenticated user can connect to WebSocket', async ({ page }) => {
     // First authenticate via OAuth2
     await authenticateViaOAuth2(page, {
-      email: 'user@example.com',
+      email: TEST_EMAIL,
+      password: TEST_PASSWORD,
       baseUrl: BASE_URL,
     });
 
@@ -162,7 +165,8 @@ test.describe('WebSocket proxying', () => {
   test('WebSocket supports bidirectional communication', async ({ page }) => {
     // Authenticate first
     await authenticateViaOAuth2(page, {
-      email: 'ws-user@example.com',
+      email: TEST_EMAIL,
+      password: TEST_PASSWORD,
       baseUrl: BASE_URL,
     });
 
@@ -225,9 +229,9 @@ test.describe('WebSocket proxying', () => {
 
   test('WebSocket forwards authentication headers to upstream', async ({ page }) => {
     // Authenticate with specific user
-    const testEmail = 'ws-header-test@example.com';
     await authenticateViaOAuth2(page, {
-      email: testEmail,
+      email: TEST_EMAIL,
+      password: TEST_PASSWORD,
       baseUrl: BASE_URL,
     });
 
@@ -253,7 +257,8 @@ test.describe('WebSocket proxying', () => {
   test('WebSocket connection closes gracefully', async ({ page }) => {
     // Authenticate
     await authenticateViaOAuth2(page, {
-      email: 'close-test@example.com',
+      email: TEST_EMAIL,
+      password: TEST_PASSWORD,
       baseUrl: BASE_URL,
     });
 
@@ -304,7 +309,8 @@ test.describe('WebSocket proxying', () => {
   test('multiple WebSocket connections can coexist', async ({ page, context }) => {
     // Authenticate
     await authenticateViaOAuth2(page, {
-      email: 'multi-ws@example.com',
+      email: TEST_EMAIL,
+      password: TEST_PASSWORD,
       baseUrl: BASE_URL,
     });
 
