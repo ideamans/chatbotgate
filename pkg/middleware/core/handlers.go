@@ -778,8 +778,16 @@ func (m *Middleware) handleEmailSend(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Send login link
-	err := m.emailHandler.SendLoginLink(email, lang)
+	// Get redirect URL from cookie (where user originally wanted to go)
+	redirectURL := "/"
+	if cookie, err := r.Cookie(redirectCookieName); err == nil && cookie.Value != "" {
+		if isValidRedirectURL(cookie.Value) {
+			redirectURL = cookie.Value
+		}
+	}
+
+	// Send login link with redirect URL embedded in token
+	err := m.emailHandler.SendLoginLink(email, redirectURL, lang)
 	if err != nil {
 		m.logger.Debug("Email send failed", "email", maskEmail(email), "error", err)
 
@@ -813,8 +821,8 @@ func (m *Middleware) handleEmailVerify(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Verify token
-	email, err := m.emailHandler.VerifyToken(token)
+	// Verify token and get redirect URL
+	email, redirectURL, err := m.emailHandler.VerifyToken(token)
 	if err != nil {
 		m.logger.Debug("Token verification failed", "error", err)
 		m.logger.Error("Email authentication failed: invalid or expired token")
@@ -938,8 +946,23 @@ func (m *Middleware) handleEmailVerify(w http.ResponseWriter, r *http.Request) {
 
 	m.logger.Info("Email authentication successful", "email", maskEmail(email))
 
-	// Get redirect URL
-	redirectURL := m.getRedirectURL(w, r)
+	// Use redirect URL from token, or fall back to cookie or home page
+	if redirectURL == "" {
+		redirectURL = m.getRedirectURL(w, r)
+	} else {
+		// Still delete the redirect cookie if it exists
+		http.SetCookie(w, &http.Cookie{
+			Name:   redirectCookieName,
+			Value:  "",
+			Path:   "/",
+			MaxAge: -1,
+		})
+	}
+
+	// Validate redirect URL to prevent open redirect attacks
+	if !isValidRedirectURL(redirectURL) {
+		redirectURL = "/"
+	}
 
 	// Add user info to query string if forwarding is enabled
 	if m.forwarder != nil {
@@ -982,8 +1005,8 @@ func (m *Middleware) handleEmailVerifyOTP(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	// Verify OTP
-	email, err := m.emailHandler.VerifyOTP(otp)
+	// Verify OTP and get redirect URL
+	email, redirectURL, err := m.emailHandler.VerifyOTP(otp)
 	if err != nil {
 		m.logger.Debug("OTP verification failed", "error", err)
 		m.logger.Error("Email authentication failed: invalid or expired OTP")
@@ -1064,8 +1087,23 @@ func (m *Middleware) handleEmailVerifyOTP(w http.ResponseWriter, r *http.Request
 
 	m.logger.Info("Email authentication successful via OTP", "email", maskEmail(email))
 
-	// Get redirect URL
-	redirectURL := m.getRedirectURL(w, r)
+	// Use redirect URL from token, or fall back to cookie or home page
+	if redirectURL == "" {
+		redirectURL = m.getRedirectURL(w, r)
+	} else {
+		// Still delete the redirect cookie if it exists
+		http.SetCookie(w, &http.Cookie{
+			Name:   redirectCookieName,
+			Value:  "",
+			Path:   "/",
+			MaxAge: -1,
+		})
+	}
+
+	// Validate redirect URL to prevent open redirect attacks
+	if !isValidRedirectURL(redirectURL) {
+		redirectURL = "/"
+	}
 
 	// Add user info to query string if forwarding is enabled
 	if m.forwarder != nil {

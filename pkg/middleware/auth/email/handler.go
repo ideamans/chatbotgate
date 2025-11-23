@@ -89,8 +89,8 @@ func NewHandler(
 	}, nil
 }
 
-// SendLoginLink sends a login link to the specified email address
-func (h *Handler) SendLoginLink(email string, lang i18n.Language) error {
+// SendLoginLink sends a login link to the specified email address with redirect URL
+func (h *Handler) SendLoginLink(email string, redirectURL string, lang i18n.Language) error {
 	// Check authorization first
 	if !h.authzChecker.IsAllowed(email) {
 		return fmt.Errorf("email not authorized: %s", email)
@@ -107,8 +107,8 @@ func (h *Handler) SendLoginLink(email string, lang i18n.Language) error {
 		duration = 15 * time.Minute // Default
 	}
 
-	// Generate token
-	token, err := h.tokenStore.GenerateToken(email, duration)
+	// Generate token with redirect URL
+	token, err := h.tokenStore.GenerateToken(email, redirectURL, duration)
 	if err != nil {
 		return fmt.Errorf("failed to generate token: %w", err)
 	}
@@ -149,13 +149,13 @@ func (h *Handler) SendLoginLink(email string, lang i18n.Language) error {
 	return nil
 }
 
-// VerifyToken verifies a login token and returns the associated email
-func (h *Handler) VerifyToken(token string) (string, error) {
+// VerifyToken verifies a login token and returns the associated email and redirect URL
+func (h *Handler) VerifyToken(token string) (email string, redirectURL string, error error) {
 	return h.tokenStore.VerifyToken(token)
 }
 
-// VerifyOTP verifies an OTP and returns the associated email
-func (h *Handler) VerifyOTP(otp string) (string, error) {
+// VerifyOTP verifies an OTP and returns the associated email and redirect URL
+func (h *Handler) VerifyOTP(otp string) (email string, redirectURL string, error error) {
 	return h.tokenStore.VerifyOTP(otp)
 }
 

@@ -425,7 +425,7 @@ func TestHandleEmailVerify(t *testing.T) {
 				token = "invalid-token-that-does-not-exist"
 			} else {
 				// Send login link to generate token
-				err := emailHandler.SendLoginLink(tt.email, i18n.English)
+				err := emailHandler.SendLoginLink(tt.email, "/", i18n.English)
 				if err != nil && tt.authzConfig.Emails != nil {
 					// Authorization failed as expected for unauthorized emails
 					// Skip token extraction
@@ -591,7 +591,7 @@ func TestHandleEmailVerifyOTP(t *testing.T) {
 				otp = "INVALID-OTP-123"
 			} else {
 				// Send login link to generate OTP
-				err := emailHandler.SendLoginLink(tt.email, i18n.English)
+				err := emailHandler.SendLoginLink(tt.email, "/", i18n.English)
 				if err != nil && tt.authzConfig.Emails != nil {
 					// Authorization failed as expected for unauthorized emails
 					// Skip OTP extraction
