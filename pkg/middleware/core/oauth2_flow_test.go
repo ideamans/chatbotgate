@@ -110,14 +110,14 @@ func (p *mockOAuth2Provider) GetUserEmail(ctx context.Context, token *stdoauth2.
 // TestHandleOAuth2Start tests the OAuth2 authentication start flow
 func TestHandleOAuth2Start(t *testing.T) {
 	tests := []struct {
-		name             string
-		provider         string
-		baseURL          string
-		authPrefix       string
-		expectedStatus   int
-		checkCookies     func(*testing.T, []*http.Cookie)
-		checkRedirect    func(*testing.T, string)
-		expectError      bool
+		name           string
+		provider       string
+		baseURL        string
+		authPrefix     string
+		expectedStatus int
+		checkCookies   func(*testing.T, []*http.Cookie)
+		checkRedirect  func(*testing.T, string)
+		expectError    bool
 	}{
 		{
 			name:           "Valid OAuth2 start with google",
@@ -251,6 +251,7 @@ func TestHandleOAuth2Start(t *testing.T) {
 
 			// Create dependencies
 			sessionStore, _ := kvs.NewMemoryStore("test", kvs.MemoryConfig{})
+			defer func() { _ = sessionStore.Close() }()
 			oauthManager := oauth2.NewManager()
 
 			// Add mock provider
@@ -475,6 +476,7 @@ func TestHandleOAuth2Callback(t *testing.T) {
 
 			// Create dependencies
 			sessionStore, _ := kvs.NewMemoryStore("test", kvs.MemoryConfig{})
+			defer func() { _ = sessionStore.Close() }()
 			oauthManager := oauth2.NewManager()
 
 			// Add mock provider

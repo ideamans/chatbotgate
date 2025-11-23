@@ -36,6 +36,7 @@ func TestBuildStyleLinks_DifyDisabled(t *testing.T) {
 	}
 
 	sessionStore := func() kvs.Store { store, _ := kvs.NewMemoryStore("test", kvs.MemoryConfig{}); return store }()
+	defer func() { _ = sessionStore.Close() }()
 	oauthManager := oauth2.NewManager()
 	authzChecker := authz.NewEmailChecker(cfg.AccessControl)
 	translator := i18n.NewTranslator()
@@ -92,6 +93,7 @@ func TestBuildStyleLinks_DifyEnabled(t *testing.T) {
 	}
 
 	sessionStore := func() kvs.Store { store, _ := kvs.NewMemoryStore("test", kvs.MemoryConfig{}); return store }()
+	defer func() { _ = sessionStore.Close() }()
 	oauthManager := oauth2.NewManager()
 	authzChecker := authz.NewEmailChecker(cfg.AccessControl)
 	translator := i18n.NewTranslator()
@@ -147,6 +149,7 @@ func TestBuildStyleLinks_CustomPrefix(t *testing.T) {
 	}
 
 	sessionStore := func() kvs.Store { store, _ := kvs.NewMemoryStore("test", kvs.MemoryConfig{}); return store }()
+	defer func() { _ = sessionStore.Close() }()
 	oauthManager := oauth2.NewManager()
 	authzChecker := authz.NewEmailChecker(cfg.AccessControl)
 	translator := i18n.NewTranslator()
@@ -197,6 +200,7 @@ func TestHandleDifyCSS(t *testing.T) {
 	}
 
 	sessionStore := func() kvs.Store { store, _ := kvs.NewMemoryStore("test", kvs.MemoryConfig{}); return store }()
+	defer func() { _ = sessionStore.Close() }()
 	oauthManager := oauth2.NewManager()
 	authzChecker := authz.NewEmailChecker(cfg.AccessControl)
 	translator := i18n.NewTranslator()
@@ -264,6 +268,7 @@ func TestMiddleware_DifyCSSRoute(t *testing.T) {
 	}
 
 	sessionStore := func() kvs.Store { store, _ := kvs.NewMemoryStore("test", kvs.MemoryConfig{}); return store }()
+	defer func() { _ = sessionStore.Close() }()
 	oauthManager := oauth2.NewManager()
 	authzChecker := authz.NewEmailChecker(cfg.AccessControl)
 	translator := i18n.NewTranslator()
@@ -319,6 +324,7 @@ func TestMiddleware_DifyCSSRoute_CustomPrefix(t *testing.T) {
 	}
 
 	sessionStore := func() kvs.Store { store, _ := kvs.NewMemoryStore("test", kvs.MemoryConfig{}); return store }()
+	defer func() { _ = sessionStore.Close() }()
 	oauthManager := oauth2.NewManager()
 	authzChecker := authz.NewEmailChecker(cfg.AccessControl)
 	translator := i18n.NewTranslator()
@@ -446,6 +452,7 @@ func TestBuildAuthHeader(t *testing.T) {
 			}
 
 			sessionStore := func() kvs.Store { store, _ := kvs.NewMemoryStore("test", kvs.MemoryConfig{}); return store }()
+			defer func() { _ = sessionStore.Close() }()
 			oauthManager := oauth2.NewManager()
 			authzChecker := authz.NewEmailChecker(cfg.AccessControl)
 			translator := i18n.NewTranslator()

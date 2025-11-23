@@ -327,6 +327,7 @@ func TestGetRedirectURL(t *testing.T) {
 	logger := logging.NewSimpleLogger("test", logging.LevelError, false)
 	translator := i18n.NewTranslator()
 	sessionStore, _ := kvs.NewMemoryStore("test", kvs.MemoryConfig{})
+	defer func() { _ = sessionStore.Close() }()
 
 	mw, err := New(cfg, sessionStore, nil, nil, nil, nil, nil, nil, translator, logger)
 	if err != nil {
@@ -430,6 +431,7 @@ func TestSetSecurityHeaders(t *testing.T) {
 			logger := logging.NewSimpleLogger("test", logging.LevelError, false)
 			translator := i18n.NewTranslator()
 			sessionStore, _ := kvs.NewMemoryStore("test", kvs.MemoryConfig{})
+			defer func() { _ = sessionStore.Close() }()
 
 			mw, err := New(cfg, sessionStore, nil, nil, nil, nil, nil, nil, translator, logger)
 			if err != nil {

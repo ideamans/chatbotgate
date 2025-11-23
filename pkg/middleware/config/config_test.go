@@ -2,6 +2,7 @@ package config
 
 import (
 	"errors"
+	"net/http"
 	"testing"
 	"time"
 )
@@ -782,6 +783,360 @@ func TestFileLoggingConfig_Defaults(t *testing.T) {
 			}
 			if tt.cfg.Compress != tt.wantCompress {
 				t.Errorf("Compress = %v, want %v", tt.cfg.Compress, tt.wantCompress)
+			}
+		})
+	}
+}
+
+func TestServerConfig_GetAuthPathPrefix(t *testing.T) {
+	tests := []struct {
+		name   string
+		prefix string
+		want   string
+	}{
+		{
+			name:   "default prefix",
+			prefix: "",
+			want:   "/_auth",
+		},
+		{
+			name:   "custom prefix",
+			prefix: "/_oauth2_proxy",
+			want:   "/_oauth2_proxy",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := ServerConfig{AuthPathPrefix: tt.prefix}
+			got := cfg.GetAuthPathPrefix()
+			if got != tt.want {
+				t.Errorf("GetAuthPathPrefix() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestServerConfig_GetCallbackURL(t *testing.T) {
+	tests := []struct {
+		name    string
+		baseURL string
+		prefix  string
+		host    string
+		port    int
+		want    string
+	}{
+		{
+			name:    "with base URL",
+			baseURL: "https://example.com",
+			prefix:  "",
+			host:    "localhost",
+			port:    4180,
+			want:    "https://example.com/_auth/oauth2/callback",
+		},
+		{
+			name:    "custom prefix with base URL",
+			baseURL: "https://example.com",
+			prefix:  "/_oauth2",
+			host:    "localhost",
+			port:    4180,
+			want:    "https://example.com/_oauth2/oauth2/callback",
+		},
+		{
+			name:    "without base URL (localhost)",
+			baseURL: "",
+			prefix:  "",
+			host:    "localhost",
+			port:    4180,
+			want:    "http://localhost:4180/_auth/oauth2/callback",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := ServerConfig{
+				BaseURL:        tt.baseURL,
+				AuthPathPrefix: tt.prefix,
+			}
+			got := cfg.GetCallbackURL(tt.host, tt.port)
+			if got != tt.want {
+				t.Errorf("GetCallbackURL() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestCookieConfig_GetSameSite(t *testing.T) {
+	tests := []struct {
+		name     string
+		samesite string
+		want     http.SameSite
+	}{
+		{
+			name:     "lax mode",
+			samesite: "lax",
+			want:     http.SameSiteLaxMode,
+		},
+		{
+			name:     "strict mode",
+			samesite: "strict",
+			want:     http.SameSiteStrictMode,
+		},
+		{
+			name:     "none mode",
+			samesite: "none",
+			want:     http.SameSiteNoneMode,
+		},
+		{
+			name:     "default mode (empty)",
+			samesite: "",
+			want:     http.SameSiteLaxMode,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := CookieConfig{SameSite: tt.samesite}
+			got := cfg.GetSameSite()
+			if got != tt.want {
+				t.Errorf("GetSameSite() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestSMTPConfig_GetFromAddress(t *testing.T) {
+	tests := []struct {
+		name        string
+		from        string
+		fromName    string
+		parentEmail string
+		parentName  string
+		wantEmail   string
+		wantName    string
+	}{
+		{
+			name:        "SMTP config overrides",
+			from:        "smtp@example.com",
+			fromName:    "SMTP Service",
+			parentEmail: "parent@example.com",
+			parentName:  "Parent Service",
+			wantEmail:   "smtp@example.com",
+			wantName:    "SMTP Service",
+		},
+		{
+			name:        "fallback to parent",
+			from:        "",
+			fromName:    "",
+			parentEmail: "parent@example.com",
+			parentName:  "Parent Service",
+			wantEmail:   "parent@example.com",
+			wantName:    "Parent Service",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := SMTPConfig{
+				From:     tt.from,
+				FromName: tt.fromName,
+			}
+			gotEmail, gotName := cfg.GetFromAddress(tt.parentEmail, tt.parentName)
+			if gotEmail != tt.wantEmail {
+				t.Errorf("GetFromAddress() email = %v, want %v", gotEmail, tt.wantEmail)
+			}
+			if gotName != tt.wantName {
+				t.Errorf("GetFromAddress() name = %v, want %v", gotName, tt.wantName)
+			}
+		})
+	}
+}
+
+func TestSendGridConfig_GetFromAddress(t *testing.T) {
+	tests := []struct {
+		name        string
+		from        string
+		fromName    string
+		parentEmail string
+		parentName  string
+		wantEmail   string
+		wantName    string
+	}{
+		{
+			name:        "SendGrid config overrides",
+			from:        "sendgrid@example.com",
+			fromName:    "SendGrid Service",
+			parentEmail: "parent@example.com",
+			parentName:  "Parent Service",
+			wantEmail:   "sendgrid@example.com",
+			wantName:    "SendGrid Service",
+		},
+		{
+			name:        "fallback to parent",
+			from:        "",
+			fromName:    "",
+			parentEmail: "parent@example.com",
+			parentName:  "Parent Service",
+			wantEmail:   "parent@example.com",
+			wantName:    "Parent Service",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := SendGridConfig{
+				From:     tt.from,
+				FromName: tt.fromName,
+			}
+			gotEmail, gotName := cfg.GetFromAddress(tt.parentEmail, tt.parentName)
+			if gotEmail != tt.wantEmail {
+				t.Errorf("GetFromAddress() email = %v, want %v", gotEmail, tt.wantEmail)
+			}
+			if gotName != tt.wantName {
+				t.Errorf("GetFromAddress() name = %v, want %v", gotName, tt.wantName)
+			}
+		})
+	}
+}
+
+func TestSendmailConfig_GetFromAddress(t *testing.T) {
+	tests := []struct {
+		name        string
+		from        string
+		fromName    string
+		parentEmail string
+		parentName  string
+		wantEmail   string
+		wantName    string
+	}{
+		{
+			name:        "Sendmail config overrides",
+			from:        "sendmail@example.com",
+			fromName:    "Sendmail Service",
+			parentEmail: "parent@example.com",
+			parentName:  "Parent Service",
+			wantEmail:   "sendmail@example.com",
+			wantName:    "Sendmail Service",
+		},
+		{
+			name:        "fallback to parent",
+			from:        "",
+			fromName:    "",
+			parentEmail: "parent@example.com",
+			parentName:  "Parent Service",
+			wantEmail:   "parent@example.com",
+			wantName:    "Parent Service",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := SendmailConfig{
+				From:     tt.from,
+				FromName: tt.fromName,
+			}
+			gotEmail, gotName := cfg.GetFromAddress(tt.parentEmail, tt.parentName)
+			if gotEmail != tt.wantEmail {
+				t.Errorf("GetFromAddress() email = %v, want %v", gotEmail, tt.wantEmail)
+			}
+			if gotName != tt.wantName {
+				t.Errorf("GetFromAddress() name = %v, want %v", gotName, tt.wantName)
+			}
+		})
+	}
+}
+
+func TestEmailTokenConfig_GetTokenExpireDuration(t *testing.T) {
+	tests := []struct {
+		name    string
+		expire  string
+		want    time.Duration
+		wantErr bool
+	}{
+		{
+			name:    "valid duration",
+			expire:  "15m",
+			want:    15 * time.Minute,
+			wantErr: false,
+		},
+		{
+			name:    "default when empty",
+			expire:  "",
+			want:    15 * time.Minute,
+			wantErr: false,
+		},
+		{
+			name:    "invalid duration",
+			expire:  "invalid",
+			want:    0,
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := EmailTokenConfig{Expire: tt.expire}
+			got, err := cfg.GetTokenExpireDuration()
+			if (err != nil) != tt.wantErr {
+				t.Errorf("GetTokenExpireDuration() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if got != tt.want {
+				t.Errorf("GetTokenExpireDuration() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestNamespaceConfig_SetDefaults(t *testing.T) {
+	tests := []struct {
+		name           string
+		cfg            NamespaceConfig
+		wantSession    string
+		wantToken      string
+		wantEmailQuota string
+	}{
+		{
+			name:           "all empty",
+			cfg:            NamespaceConfig{},
+			wantSession:    "session",
+			wantToken:      "token",
+			wantEmailQuota: "email_quota",
+		},
+		{
+			name: "custom values",
+			cfg: NamespaceConfig{
+				Session:    "custom_session",
+				Token:      "custom_token",
+				EmailQuota: "custom_email_quota",
+			},
+			wantSession:    "custom_session",
+			wantToken:      "custom_token",
+			wantEmailQuota: "custom_email_quota",
+		},
+		{
+			name: "partial custom",
+			cfg: NamespaceConfig{
+				Session: "custom_session",
+			},
+			wantSession:    "custom_session",
+			wantToken:      "token",
+			wantEmailQuota: "email_quota",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := tt.cfg
+			cfg.SetDefaults()
+			if cfg.Session != tt.wantSession {
+				t.Errorf("Session = %v, want %v", cfg.Session, tt.wantSession)
+			}
+			if cfg.Token != tt.wantToken {
+				t.Errorf("Token = %v, want %v", cfg.Token, tt.wantToken)
+			}
+			if cfg.EmailQuota != tt.wantEmailQuota {
+				t.Errorf("EmailQuota = %v, want %v", cfg.EmailQuota, tt.wantEmailQuota)
 			}
 		})
 	}

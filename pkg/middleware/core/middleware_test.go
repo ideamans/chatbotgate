@@ -109,6 +109,7 @@ func TestMiddleware_RequiresEmail(t *testing.T) {
 			}
 
 			sessionStore := func() session.Store { store, _ := kvs.NewMemoryStore("test", kvs.MemoryConfig{}); return store }()
+			defer func() { _ = sessionStore.Close() }()
 
 			oauthManager := oauth2.NewManager()
 			oauthManager.AddProvider(&mockProvider{
@@ -166,6 +167,7 @@ func TestMiddleware_Authorization_NoWhitelist(t *testing.T) {
 	}
 
 	sessionStore := func() session.Store { store, _ := kvs.NewMemoryStore("test", kvs.MemoryConfig{}); return store }()
+	defer func() { _ = sessionStore.Close() }()
 
 	oauthManager := oauth2.NewManager()
 	authzChecker := authz.NewEmailChecker(cfg.AccessControl)
@@ -268,6 +270,7 @@ func TestMiddleware_Authorization_WithWhitelist(t *testing.T) {
 	}
 
 	sessionStore := func() session.Store { store, _ := kvs.NewMemoryStore("test", kvs.MemoryConfig{}); return store }()
+	defer func() { _ = sessionStore.Close() }()
 
 	oauthManager := oauth2.NewManager()
 	authzChecker := authz.NewEmailChecker(cfg.AccessControl)
@@ -407,6 +410,7 @@ func TestHandleLogin_DividerDisplay(t *testing.T) {
 			}
 
 			sessionStore := func() kvs.Store { store, _ := kvs.NewMemoryStore("test", kvs.MemoryConfig{}); return store }()
+			defer func() { _ = sessionStore.Close() }()
 			oauthManager := oauth2.NewManager()
 
 			// Add OAuth2 provider if needed
