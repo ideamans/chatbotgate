@@ -109,13 +109,18 @@ test.describe('Whitelist Authorization - OAuth2', () => {
       page.locator('[data-test="authorize-allow"]').click(),
     ]);
 
-    // Should show forbidden error page
-    await expect(page.locator('body')).toContainText(/Access Denied|Forbidden|アクセスが拒否されました/i);
-    await expect(page.locator('body')).toContainText(/not authorized|pre-authorized|許可されていません/i);
+    // Should show specific forbidden/access denied error (not just any mention of these words)
+    const mainContent = page.locator('main, [role="main"], body');
+    await expect(mainContent).toContainText(/Access Denied|Forbidden|アクセスが拒否されました/i);
+    await expect(mainContent).toContainText(/(not |pre-)authorized|(not.*)?whitelist|許可されていません/i);
 
     // Should show link back to login
     const backLink = page.getByRole('link', { name: /Back to login|ログイン/ });
     await expect(backLink).toBeVisible();
+
+    // CRITICAL: Verify user is NOT granted access (still on error page or redirected to login)
+    const currentUrl = page.url();
+    expect(currentUrl).not.toMatch(/localhost:4181\/?$/); // Not on home page
   });
 });
 
@@ -188,9 +193,10 @@ test.describe('Whitelist Authorization - Email Authentication', () => {
     // Wait for page to load (might redirect or show error inline)
     await page.waitForLoadState('networkidle');
 
-    // Should show forbidden error because email is not in whitelist
-    await expect(page.locator('body')).toContainText(/Access Denied|Forbidden|アクセスが拒否されました/i);
-    await expect(page.locator('body')).toContainText(/not authorized|pre-authorized|許可されていません/i);
+    // Should show specific forbidden error because email is not in whitelist
+    const mainContent = page.locator('main, [role="main"], body');
+    await expect(mainContent).toContainText(/Access Denied|Forbidden|not.*whitelist|アクセスが拒否されました/i);
+    await expect(mainContent).toContainText(/(not |pre-)authorized|(not.*)?whitelist|許可されていません/i);
 
     // Should show link back to login
     const backLink = page.getByRole('link', { name: /Back to login|ログイン/ });

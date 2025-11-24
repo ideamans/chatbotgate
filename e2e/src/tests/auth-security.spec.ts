@@ -30,40 +30,65 @@ test.describe('Authentication security', () => {
     // Try to access callback with different state (CSRF attack simulation)
     await page.goto('/_auth/oauth2/callback?state=attacker-state-99999&code=valid-code');
 
-    // Should reject with error (either "Invalid state" or "Invalid redirect URL")
-    await expect(page.locator('body')).toContainText(/invalid (state|redirect url)/i);
+    // Should reject with specific error about state validation
+    const mainContent = page.locator('main, [role="main"], body');
+    await expect(mainContent).toContainText(/invalid (state|redirect url)/i);
+
+    // CRITICAL: Verify user is NOT authenticated after CSRF attempt
+    await page.goto('/');
+    await expect(page).toHaveURL(/\/_auth\/login$/);
   });
 
   test('should reject invalid email token', async ({ page }) => {
     // Try to access verify endpoint with invalid token
     await page.goto('/_auth/email/verify?token=invalid-token-12345');
 
-    // Should show error message
-    await expect(page.locator('body')).toContainText('Invalid or Expired Token');
+    // Should show specific error message
+    const mainContent = page.locator('main, [role="main"], body');
+    await expect(mainContent).toContainText('Invalid or Expired Token');
+
+    // CRITICAL: Verify user is NOT authenticated with invalid token
+    await page.goto('/');
+    await expect(page).toHaveURL(/\/_auth\/login$/);
   });
 
   test('should reject empty email token', async ({ page }) => {
     // Try to access verify endpoint without token
     await page.goto('/_auth/email/verify');
 
-    // Should show error (400 Bad Request or similar)
-    await expect(page.locator('body')).toContainText(/invalid|error|bad request/i);
+    // Should show specific error about missing/invalid token
+    const mainContent = page.locator('main, [role="main"], body');
+    await expect(mainContent).toContainText(/invalid.*(token|request)|missing.*token|token.*required|bad request/i);
+
+    // Verify user is NOT authenticated
+    await page.goto('/');
+    await expect(page).toHaveURL(/\/_auth\/login$/);
   });
 
   test('should handle OAuth2 callback without state', async ({ page }) => {
     // Try to access callback without state parameter
     await page.goto('/_auth/oauth2/callback?code=test-code');
 
-    // Should show error
-    await expect(page.locator('body')).toContainText(/invalid|error/i);
+    // Should show specific error about missing/invalid state
+    const mainContent = page.locator('main, [role="main"], body');
+    await expect(mainContent).toContainText(/invalid.*state|missing.*state|state.*required/i);
+
+    // Verify user is NOT authenticated
+    await page.goto('/');
+    await expect(page).toHaveURL(/\/_auth\/login$/);
   });
 
   test('should handle OAuth2 callback without code', async ({ page }) => {
     // Try to access callback without code parameter
     await page.goto('/_auth/oauth2/callback?state=test-state');
 
-    // Should show error
-    await expect(page.locator('body')).toContainText(/invalid|error|not found/i);
+    // Should show specific error about missing/invalid code
+    const mainContent = page.locator('main, [role="main"], body');
+    await expect(mainContent).toContainText(/invalid.*(code|request|state)|missing.*(code|state)|code.*required/i);
+
+    // Verify user is NOT authenticated
+    await page.goto('/');
+    await expect(page).toHaveURL(/\/_auth\/login$/);
   });
 
   test('should prevent open redirect attacks', async ({ page }) => {
@@ -99,10 +124,23 @@ test.describe('Authentication security', () => {
 
     await page.locator('[data-test="authorize-allow"]').click();
 
-    // Should redirect to home (/) instead of malicious URL
+    // CRITICAL: Should redirect to safe default (/) instead of malicious URL
     await page.waitForURL(/localhost:4180\/?$/);
     await expect(page).toHaveURL(/localhost:4180\/?$/);
+
+    // Negative check: absolutely should NOT redirect to evil.com
     await expect(page).not.toHaveURL(/evil\.com/);
+
+    // CRITICAL: Verify malicious redirect cookie was rejected/cleared
+    const cookies = await page.context().cookies();
+    const redirectCookie = cookies.find(c => c.name === '_oauth2_redirect');
+    // Cookie should either not exist or not contain the malicious URL
+    if (redirectCookie) {
+      expect(redirectCookie.value).not.toContain('evil.com');
+    }
+
+    // Verify user is successfully authenticated (not on error page)
+    await expect(page.locator('[data-test="auth-status"]')).toContainText('true');
   });
 
   test('should prevent protocol-relative URL redirects', async ({ page }) => {
@@ -137,9 +175,24 @@ test.describe('Authentication security', () => {
 
     await page.locator('[data-test="authorize-allow"]').click();
 
-    // Should redirect to home (/) instead of protocol-relative URL
+    // CRITICAL: Should redirect to safe default (/) instead of protocol-relative URL
     await page.waitForURL(/localhost:4180\/?$/);
     await expect(page).toHaveURL(/localhost:4180\/?$/);
+
+    // Negative check: absolutely should NOT redirect to evil.com
+    await expect(page).not.toHaveURL(/evil\.com/);
+
+    // CRITICAL: Verify protocol-relative redirect cookie was rejected/cleared
+    const cookies = await page.context().cookies();
+    const redirectCookie = cookies.find(c => c.name === '_oauth2_redirect');
+    // Cookie should either not exist or not contain the malicious URL
+    if (redirectCookie) {
+      expect(redirectCookie.value).not.toContain('evil.com');
+      expect(redirectCookie.value).not.toContain('//'); // No protocol-relative URLs
+    }
+
+    // Verify user is successfully authenticated (not on error page)
+    await expect(page.locator('[data-test="auth-status"]')).toContainText('true');
   });
 
   test('should set HttpOnly flag on session cookie', async ({ page }) => {
@@ -161,14 +214,24 @@ test.describe('Authentication security', () => {
     await page.locator('[data-test="authorize-allow"]').click();
     await page.waitForURL(/localhost:4180\/?$/);
 
-    // Try to access session cookie from JavaScript (should fail due to HttpOnly)
+    // CRITICAL: Verify cookie flags using context API
+    const cookies = await page.context().cookies();
+    const sessionCookie = cookies.find(c => c.name === 'mop-e2e');
+
+    // Verify cookie exists and has proper security flags
+    expect(sessionCookie).toBeDefined();
+    expect(sessionCookie?.httpOnly).toBe(true);  // CRITICAL: HttpOnly flag must be set
+    expect(sessionCookie?.sameSite).toBe('Lax'); // CRITICAL: SameSite protection
+    expect(sessionCookie?.secure).toBe(false);   // Expected false in localhost E2E tests
+
+    // Additional check: Verify cookie is NOT accessible from JavaScript (confirms HttpOnly works)
     const canAccessCookie = await page.evaluate(() => {
       // Try to find session cookie in document.cookie
       const cookies = document.cookie;
       return cookies.includes('mop-e2e');
     });
 
-    // Session cookie should NOT be accessible from JavaScript
+    // Session cookie should NOT be accessible from JavaScript due to HttpOnly flag
     expect(canAccessCookie).toBe(false);
   });
 

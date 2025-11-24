@@ -1,6 +1,8 @@
 import express from 'express';
 import morgan from 'morgan';
 import crypto from 'crypto';
+import { WebSocketServer, WebSocket } from 'ws';
+import http from 'http';
 
 const app = express();
 
@@ -281,13 +283,108 @@ app.get('*', (req, res) => {
   res.send(renderPage(APP_NAME, body));
 });
 
-const server = app.listen(PORT, HOST, () => {
+// Create HTTP server
+const server = http.createServer(app);
+
+// Create WebSocket server on /ws path
+const wss = new WebSocketServer({
+  server,
+  path: '/ws'
+});
+
+// WebSocket connection handler
+wss.on('connection', (ws: WebSocket, request: http.IncomingMessage) => {
+  // Log connection with authentication info from headers
+  const isAuthenticated = request.headers['x-authenticated'] === 'true';
+  const authProvider = request.headers['x-auth-provider'] || 'unknown';
+  const userEmail = request.headers['x-chatbotgate-email'] || 'unknown';
+
+  console.log(`WebSocket client connected - Auth: ${isAuthenticated}, Provider: ${authProvider}, User: ${userEmail}`);
+
+  // Send welcome message with authentication info
+  const welcomeMsg = JSON.stringify({
+    type: 'welcome',
+    message: 'Connected to ChatbotGate target app WebSocket',
+    authenticated: isAuthenticated,
+    provider: authProvider,
+    email: userEmail,
+    timestamp: new Date().toISOString()
+  });
+  ws.send(welcomeMsg);
+
+  // Handle incoming messages
+  ws.on('message', (data: Buffer) => {
+    try {
+      const message = data.toString('utf8');
+      console.log(`WebSocket received: ${message}`);
+
+      // Parse message as JSON
+      let parsedMsg: any;
+      try {
+        parsedMsg = JSON.parse(message);
+      } catch (e) {
+        // If not JSON, treat as plain text
+        parsedMsg = { type: 'text', content: message };
+      }
+
+      // Echo back with metadata
+      const response = JSON.stringify({
+        type: 'echo',
+        original: parsedMsg,
+        authenticated: isAuthenticated,
+        provider: authProvider,
+        email: userEmail,
+        timestamp: new Date().toISOString()
+      });
+      ws.send(response);
+    } catch (error) {
+      console.error('WebSocket message error:', error);
+      ws.send(JSON.stringify({
+        type: 'error',
+        message: 'Failed to process message'
+      }));
+    }
+  });
+
+  // Handle ping/pong for connection testing
+  ws.on('ping', () => {
+    console.log('WebSocket ping received');
+  });
+
+  ws.on('pong', () => {
+    console.log('WebSocket pong received');
+  });
+
+  // Handle close
+  ws.on('close', () => {
+    console.log(`WebSocket client disconnected - User: ${userEmail}`);
+  });
+
+  // Handle errors
+  ws.on('error', (error) => {
+    console.error('WebSocket error:', error);
+  });
+});
+
+wss.on('error', (error) => {
+  console.error('WebSocket server error:', error);
+});
+
+server.listen(PORT, HOST, () => {
   console.log(`Target app listening on http://${HOST}:${PORT}`);
+  console.log(`WebSocket server available at ws://${HOST}:${PORT}/ws`);
 });
 
 // Graceful shutdown handler
 const shutdown = (signal: string) => {
   console.log(`\n${signal} received. Shutting down gracefully...`);
+
+  // Close WebSocket server first
+  wss.close(() => {
+    console.log('WebSocket server closed');
+  });
+
+  // Then close HTTP server
   server.close(() => {
     console.log('HTTP server closed');
     process.exit(0);
