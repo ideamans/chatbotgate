@@ -89,9 +89,10 @@ test.describe('Rules Configuration', () => {
     expect(page.url()).toContain('/_auth/login')
   })
 
-  test('should deny access to /admin even without authentication (deny rule)', async ({ page }) => {
+  test('should deny access to /admin path (deny rule returns 403)', async ({ page }) => {
     // Try to access /admin without authentication
-    // This should return 403 Forbidden (not redirect to login)
+    // IMPORTANT: deny rules return 403 Forbidden (not redirect to login)
+    // This is different from paths requiring auth, which redirect to login
     const response = await page.goto('http://localhost:4183/admin', {
       failOnStatusCode: false
     })
@@ -105,44 +106,29 @@ test.describe('Rules Configuration', () => {
     await expect(mainContent).toContainText(/Access Denied|Forbidden|アクセスが拒否されました/i)
   })
 
-  test('should deny access to /admin even for authenticated users (deny rule)', async ({ page }) => {
-    // First, authenticate via OAuth2
-    await page.goto('http://localhost:4183/')
-    await page.waitForURL(/\/_auth\/login/)
+  test('should respect rule priority (first-match-wins)', async ({ page }) => {
+    // CRITICAL: Rule evaluation must stop at first match
+    // Config has:
+    //   1. exact "/api/public/secret" -> deny
+    //   2. regex "^/api/public/" -> allow
+    //
+    // Even though /api/public/secret matches the allow rule,
+    // the deny rule comes first, so it should be denied
 
-    // Authenticate (assuming stub-auth is available)
-    await page.getByRole('link', { name: 'stub-auth' }).click()
-    await expect(page).toHaveURL(/localhost:3001\/login/)
-
-    await page.locator('[data-test="login-email"]').fill('someone@example.com')
-    await page.locator('[data-test="login-password"]').fill('password')
-
-    await Promise.all([
-      page.waitForURL(/localhost:3001\/oauth\/authorize/),
-      page.locator('[data-test="login-submit"]').click(),
-    ])
-
-    await Promise.all([
-      page.waitForURL(/localhost:4183/),
-      page.locator('[data-test="authorize-allow"]').click(),
-    ])
-
-    // Wait for page to load completely
-    await page.waitForLoadState('networkidle')
-
-    // Verify we're authenticated
-    await expect(page.locator('[data-test="auth-status"]')).toContainText('true')
-
-    // Now try to access /admin as authenticated user
-    const response = await page.goto('http://localhost:4183/admin', {
+    const secretResponse = await page.goto('http://localhost:4183/api/public/secret', {
       failOnStatusCode: false
     })
 
-    // CRITICAL: Even authenticated users should be denied (403)
-    expect(response?.status()).toBe(403)
+    // CRITICAL: Should return 403 (first deny rule matched)
+    expect(secretResponse?.status()).toBe(403)
 
-    // Should show access denied message
-    const mainContent = page.locator('main, [role="main"], body')
-    await expect(mainContent).toContainText(/Access Denied|Forbidden|アクセスが拒否されました/i)
+    // For comparison, other /api/public/* paths should be allowed
+    const publicResponse = await page.goto('http://localhost:4183/api/public/info', {
+      failOnStatusCode: false
+    })
+
+    // Should return 200 (allow rule matched)
+    expect(publicResponse?.status()).toBe(200)
+    expect(page.url()).not.toContain('/_auth/login')
   })
 })

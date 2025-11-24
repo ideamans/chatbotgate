@@ -60,6 +60,12 @@ access_control:
       action: deny
       description: "Admin area - access denied"
 
+    # Test rule priority: specific deny before general allow
+    # This /api/public/secret should be denied (first match wins)
+    - exact: "/api/public/secret"
+      action: deny
+      description: "Secret endpoint - denied even though /api/public/* is allowed below"
+
     # Allow embed.js without authentication
     - prefix: "/embed.js"
       action: allow
@@ -70,7 +76,7 @@ access_control:
       action: allow
       description: "Public directory"
 
-    # Allow public API endpoints
+    # Allow public API endpoints (but /api/public/secret is denied above)
     - regex: "^/api/public/"
       action: allow
       description: "Public API endpoints"
