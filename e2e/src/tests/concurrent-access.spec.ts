@@ -190,7 +190,11 @@ test.describe('Concurrent access and session isolation', () => {
     }
   });
 
-  test('session isolation: user A cannot see user B session data', async ({ browser }) => {
+  test('stolen session cookie grants access (demonstrates cookie-based auth security model)', async ({ browser }) => {
+    // EDUCATIONAL TEST: This demonstrates that cookie-based authentication means
+    // cookie theft = session theft. This is EXPECTED HTTP behavior, not a vulnerability.
+    // ChatbotGate uses HttpOnly and SameSite flags to mitigate cookie theft risks.
+
     // Create two separate contexts
     const context1 = await browser!.newContext();
     const context2 = await browser!.newContext();
@@ -207,21 +211,24 @@ test.describe('Concurrent access and session isolation', () => {
       expect(cookieB).toBeDefined();
       expect(cookieA).not.toBe(cookieB);
 
-      // Try to use userB's cookie in userA's context (session hijacking attempt)
+      // Simulate cookie theft: Use userB's cookie in userA's context
       await context1.addCookies([
         {
-          name: '_oauth2_proxy',
+          name: 'mop-e2e',  // Correct E2E cookie name (not _oauth2_proxy)
           value: cookieB!,
           domain: 'localhost',
           path: '/',
         },
       ]);
 
-      // Navigate with hijacked cookie
+      // Navigate with stolen cookie
       await userA.goto(BASE_URL + '/');
 
-      // Should be authenticated (with userB's session)
-      // This tests that sessions are properly isolated but cookies work correctly
+      // EXPECTED: Authentication works with stolen cookie (standard HTTP cookie behavior)
+      // ChatbotGate cannot prevent this without additional measures like:
+      // - IP address binding (breaks mobile users)
+      // - Device fingerprinting (privacy concerns)
+      // - Token rotation (complex implementation)
       await expect(userA.locator('[data-test="auth-status"]')).toContainText('true');
 
       await userA.close();
