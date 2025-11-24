@@ -321,24 +321,48 @@ test.describe('OAuth2 error handling', () => {
   });
 
   test('XSS in error_description is sanitized', async ({ page }) => {
-    // Try to inject XSS via error_description parameter
-    // Note: Without valid state, this will be rejected with "Invalid state"
-    // But we can still verify XSS is not executed in the error page
-    const xssPayload = '<script>alert("xss")</script>';
-    const encodedPayload = encodeURIComponent(xssPayload);
-    const callbackUrl = `${BASE_URL}/_auth/oauth2/callback?error=access_denied&error_description=${encodedPayload}`;
+    // CRITICAL: Test multiple XSS attack vectors, not just <script> tags
+    const xssPayloads = [
+      '<script>alert("xss")</script>',
+      '<img src=x onerror="alert(1)">',
+      '<iframe src="javascript:alert(1)">',
+      '"><script>alert(1)</script>',
+      '\'><script>alert(1)</script>',
+      '<svg onload="alert(1)">',
+      '<body onload="alert(1)">',
+      'javascript:alert(1)',
+      '<a href="javascript:alert(1)">click</a>',
+    ];
 
-    await page.goto(callbackUrl);
+    for (const xssPayload of xssPayloads) {
+      const encodedPayload = encodeURIComponent(xssPayload);
+      const callbackUrl = `${BASE_URL}/_auth/oauth2/callback?error=access_denied&error_description=${encodedPayload}`;
 
-    // Should show error page
-    await expect(page.locator('body')).toBeVisible();
+      await page.goto(callbackUrl);
 
-    // XSS should be sanitized (script should not execute)
-    // If XSS was not sanitized, this would fail
-    const bodyContent = await page.locator('body').innerHTML();
-    expect(bodyContent).not.toContain('<script>alert');
+      // Should show error page
+      await expect(page.locator('body')).toBeVisible();
 
-    // Error message should be displayed safely (state error in this case)
-    await expect(page.locator('body')).toContainText(/invalid.*state|state|error/i);
+      // CRITICAL: XSS payload must be sanitized (HTML-encoded or removed)
+      const bodyContent = await page.locator('body').innerHTML();
+
+      // Verify NO executable script elements
+      expect(bodyContent.toLowerCase()).not.toContain('<script');
+      expect(bodyContent.toLowerCase()).not.toContain('onerror=');
+      expect(bodyContent.toLowerCase()).not.toContain('onload=');
+      expect(bodyContent.toLowerCase()).not.toContain('javascript:');
+      expect(bodyContent.toLowerCase()).not.toContain('<iframe');
+      expect(bodyContent.toLowerCase()).not.toContain('<svg');
+
+      // Payload should be either HTML-encoded or completely removed
+      // If encoded, it appears as &lt;script&gt; which is safe
+      if (bodyContent.includes(xssPayload)) {
+        throw new Error(`XSS payload not sanitized: ${xssPayload}`);
+      }
+    }
+
+    // Final check: Error message should still be displayed (confirms functionality works)
+    const mainContent = page.locator('main, [role="main"], body');
+    await expect(mainContent).toContainText(/invalid.*state|access.*denied/i);
   });
 });
