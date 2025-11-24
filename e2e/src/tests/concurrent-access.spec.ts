@@ -34,7 +34,8 @@ async function createAuthenticatedUser(
  */
 async function getSessionCookie(page: Page): Promise<string | undefined> {
   const cookies = await page.context().cookies();
-  const sessionCookie = cookies.find((c) => c.name === '_oauth2_proxy');
+  // E2E environment uses 'mop-e2e' as cookie name (see config/proxy.e2e.yaml)
+  const sessionCookie = cookies.find((c) => c.name === 'mop-e2e');
   return sessionCookie?.value;
 }
 
