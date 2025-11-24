@@ -1,22 +1,6 @@
 # chatbotgate configuration example
 # Copy this file to config.yaml and customize for your environment
 
-# Environment Variable Expansion:
-# You can reference environment variables in this configuration file using the following formats:
-#   ${VAR}         - Replaces with the value of VAR, or empty string if not set
-#   ${VAR:-default} - Replaces with the value of VAR, or "default" if VAR is not set or empty
-#
-# Examples:
-#   secret: "${COOKIE_SECRET}"                    # Uses environment variable COOKIE_SECRET
-#   port: ${PORT:-4180}                           # Uses PORT env var, defaults to 4180
-#   url: "${UPSTREAM_URL:-http://localhost:8080}" # Uses UPSTREAM_URL, defaults to http://localhost:8080
-#
-# This is especially useful for:
-#   - Secrets and passwords (store in environment, not in config file)
-#   - Container deployments (Docker, Kubernetes)
-#   - CI/CD pipelines
-#   - Multi-environment configurations (dev, staging, production)
-
 # Service information
 service:
   name: "ChatbotGate"
@@ -63,23 +47,20 @@ server:
 proxy:
   # Main upstream backend (required)
   upstream:
-    # You can use environment variables for dynamic configuration
-    url: "${UPSTREAM_URL:-http://localhost:8080}"
+    url: "http://localhost:8080"
     # Optional: Secret header for upstream authentication
     # This header will be added to all requests to the upstream
     # Use this to protect your upstream from direct access
     secret:
       header: "X-Chatbotgate-Secret"
-      # Using environment variable for secrets (recommended for production)
-      value: "${UPSTREAM_SECRET:-YOUR-SECRET-TOKEN-HERE}"
+      value: "YOUR-SECRET-TOKEN-HERE"
 
 # Session configuration
 session:
   cookie:
     name: "_oauth2_proxy"
     # Generate a random secret: openssl rand -base64 32
-    # RECOMMENDED: Use environment variable for secrets (do not commit secrets to git)
-    secret: "${COOKIE_SECRET:-CHANGE-THIS-TO-A-RANDOM-SECRET-AT-LEAST-32-CHARACTERS-LONG}"
+    secret: "CHANGE-THIS-TO-A-RANDOM-SECRET-AT-LEAST-32-CHARACTERS-LONG"
     expire: "168h"  # 7 days
     secure: false   # Set to true when using HTTPS
     httponly: true
@@ -92,9 +73,8 @@ oauth2:
     - id: "google"
       type: "google"
       display_name: "Google"
-      # Using environment variables for OAuth2 credentials (recommended)
-      client_id: "${GOOGLE_CLIENT_ID:-YOUR-GOOGLE-CLIENT-ID}"
-      client_secret: "${GOOGLE_CLIENT_SECRET:-YOUR-GOOGLE-CLIENT-SECRET}"
+      client_id: "YOUR-GOOGLE-CLIENT-ID"
+      client_secret: "YOUR-GOOGLE-CLIENT-SECRET"
       # Disabled by default for initial setup (requires OAuth2 client configuration)
       # Set to false after configuring client_id and client_secret
       disabled: true
@@ -114,9 +94,8 @@ oauth2:
     - id: "github"
       type: "github"
       display_name: "GitHub"
-      # Using environment variables for OAuth2 credentials (recommended)
-      client_id: "${GITHUB_CLIENT_ID:-YOUR-GITHUB-CLIENT-ID}"
-      client_secret: "${GITHUB_CLIENT_SECRET:-YOUR-GITHUB-CLIENT-SECRET}"
+      client_id: "YOUR-GITHUB-CLIENT-ID"
+      client_secret: "YOUR-GITHUB-CLIENT-SECRET"
       disabled: true  # Set to false to enable
       # Optional: Custom icon URL (if not set, uses default GitHub icon)
       # icon_url: "https://example.com/custom-github-icon.svg"
@@ -133,9 +112,8 @@ oauth2:
     - id: "microsoft"
       type: "microsoft"
       display_name: "Microsoft"
-      # Using environment variables for OAuth2 credentials (recommended)
-      client_id: "${MICROSOFT_CLIENT_ID:-YOUR-MICROSOFT-CLIENT-ID}"
-      client_secret: "${MICROSOFT_CLIENT_SECRET:-YOUR-MICROSOFT-CLIENT-SECRET}"
+      client_id: "YOUR-MICROSOFT-CLIENT-ID"
+      client_secret: "YOUR-MICROSOFT-CLIENT-SECRET"
       disabled: true  # Set to false to enable
       # Optional: Custom icon URL (if not set, uses default Microsoft icon)
       # icon_url: "https://example.com/custom-microsoft-icon.svg"
@@ -185,11 +163,10 @@ email_auth:
 
   # SMTP configuration (when sender_type: "smtp")
   smtp:
-    host: "${SMTP_HOST:-smtp.gmail.com}"
-    port: ${SMTP_PORT:-587}
-    # Using environment variables for credentials (recommended)
-    username: "${SMTP_USERNAME:-your-email@gmail.com}"
-    password: "${SMTP_PASSWORD:-your-app-password}"
+    host: "smtp.gmail.com"
+    port: 587
+    username: "your-email@gmail.com"
+    password: "your-app-password"
     # Optional: Override shared from/from_name for SMTP only
     # from: "noreply@example.com"
     # from_name: "ChatbotGate"
@@ -198,8 +175,7 @@ email_auth:
 
   # SendGrid configuration (when sender_type: "sendgrid")
   # sendgrid:
-  #   # Using environment variable for API key (recommended)
-  #   api_key: "${SENDGRID_API_KEY:-SG.xxxxxxxxxxxxxxxxxxxx}"
+  #   api_key: "SG.xxxxxxxxxxxxxxxxxxxx"
   #   # Optional: Override shared from/from_name for SendGrid only
   #   # from: "noreply@example.com"
   #   # from_name: "ChatbotGate"
@@ -221,6 +197,11 @@ email_auth:
   token:
     expire: "15m"  # 15 minutes
 
+  # Rate limiting: Maximum number of login emails per minute per email address
+  # Prevents abuse by limiting how many times a user can request login links
+  # Default: 5 (if not specified or set to 0)
+  limit_per_minute: 5
+
 # Password authentication
 # Simple authentication requiring a password
 # Useful for initial setup and testing without requiring email or OAuth2 configuration
@@ -232,8 +213,7 @@ password_auth:
 
   # Password for authentication
   # CHANGE THIS: Use a strong password for production
-  # Using environment variable (recommended for production)
-  password: "${AUTH_PASSWORD:-P@ssW0rd}"  # <-- CHANGE THIS
+  password: "P@ssW0rd"  # <-- CHANGE THIS
 
 # Authorization configuration
 authorization:
@@ -295,9 +275,9 @@ kvs:
 
     # Redis-specific config (used when type: "redis")
     # redis:
-    #   addr: "${REDIS_ADDR:-localhost:6379}"
-    #   password: "${REDIS_PASSWORD:-}"
-    #   db: ${REDIS_DB:-0}
+    #   addr: "localhost:6379"
+    #   password: ""
+    #   db: 0
     #   pool_size: 0  # 0 = default (10 * CPU cores)
 
   # Namespace names for logical isolation (optional, defaults shown below)
@@ -306,9 +286,9 @@ kvs:
   # - LevelDB: separate directory per namespace
   # - Redis: key prefix (namespace:key format)
   namespaces:
-    session: "session"        # Namespace name for sessions
-    token: "token"            # Namespace name for OTP tokens
-    ratelimit: "ratelimit"    # Namespace name for rate limits
+    session: "session"            # Namespace name for sessions
+    token: "token"                # Namespace name for email auth tokens
+    email_quota: "email_quota"    # Namespace name for email send quota (rate limiting)
 
   # Optional: Override session storage with dedicated backend
   # If not specified, uses default KVS with "session" namespace
@@ -326,20 +306,19 @@ kvs:
   #   memory:
   #     cleanup_interval: "1m"
 
-  # Optional: Override rate limit storage with dedicated backend
-  # If not specified, uses default KVS with "ratelimit:" prefix
-  # ratelimit:
+  # Optional: Override email quota storage with dedicated backend
+  # If not specified, uses default KVS with "email_quota:" prefix
+  # email_quota:
   #   type: "leveldb"
   #   leveldb:
-  #     path: "/var/lib/chatbotgate/ratelimit"
+  #     path: "/var/lib/chatbotgate/email_quota"
 
 # User information forwarding configuration
 # Forward authenticated user information to upstream applications
 forwarding:
   # Optional: Encryption settings (required if any field uses 'encrypt' filter)
   # encryption:
-  #   # Using environment variable for encryption key (recommended)
-  #   key: "${FORWARDING_ENCRYPTION_KEY:-CHANGE-THIS-TO-A-RANDOM-KEY-AT-LEAST-32-CHARACTERS}"  # Must be at least 32 characters
+  #   key: "CHANGE-THIS-TO-A-RANDOM-KEY-AT-LEAST-32-CHARACTERS"  # Must be at least 32 characters
   #   algorithm: "aes-256-gcm"  # Default: "aes-256-gcm"
 
   # Field forwarding definitions
@@ -432,9 +411,11 @@ rules:
   #   description: "Public static files"
 
   # Allow specific file (exact match)
+  # Example: Allow upstream application's health check endpoint
+  # Note: ChatbotGate's own health check is at /_auth/health (no rule needed)
   # - exact: "/health"
   #   action: allow
-  #   description: "Health check endpoint"
+  #   description: "Upstream health check endpoint"
 
   # Regex pattern matching
   # - regex: "^/api/public/"

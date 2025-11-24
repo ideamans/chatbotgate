@@ -1,3 +1,8 @@
+// Package ratelimit provides rate limiting functionality for email authentication.
+//
+// This package implements a token bucket algorithm to prevent abuse of magic link emails
+// by limiting how many times a user can request login links within a time window.
+// Currently used exclusively for email authentication send rate limiting.
 package ratelimit
 
 import (
@@ -9,6 +14,7 @@ import (
 )
 
 // Limiter implements a simple token bucket rate limiter backed by KVS
+// Currently used to rate limit email authentication magic link sends.
 type Limiter struct {
 	kvs      kvs.Store
 	rate     int // tokens per interval
@@ -34,7 +40,9 @@ func NewLimiter(rate int, interval time.Duration, kvsStore kvs.Store) *Limiter {
 
 // Allow checks if a request is allowed for the given key
 func (l *Limiter) Allow(key string) bool {
-	ctx := context.Background()
+	// Use context with timeout to prevent hanging on slow KVS operations
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+	defer cancel()
 
 	// Handle zero rate case
 	if l.rate <= 0 {
@@ -51,9 +59,14 @@ func (l *Limiter) Allow(key string) bool {
 			Tokens:     l.rate - 1,
 			LastRefill: time.Now(),
 		}
-		// Store and return true
+		// Store the new bucket
 		if jsonData, err := json.Marshal(b); err == nil {
-			_ = l.kvs.Set(ctx, key, jsonData, 0) // No TTL
+			//nolint:staticcheck // SA9003: Empty branch is intentional for fail-safe behavior
+			if setErr := l.kvs.Set(ctx, key, jsonData, 0); setErr != nil {
+				// KVS write failed, but we still allow the request
+				// The bucket won't persist, so next request will be treated as first request
+				// This is fail-safe: we prefer to allow traffic over blocking it on KVS errors
+			}
 		}
 		return true
 	}
@@ -66,7 +79,10 @@ func (l *Limiter) Allow(key string) bool {
 			LastRefill: time.Now(),
 		}
 		if jsonData, err := json.Marshal(b); err == nil {
-			_ = l.kvs.Set(ctx, key, jsonData, 0)
+			//nolint:staticcheck // SA9003: Empty branch is intentional for fail-safe behavior
+			if setErr := l.kvs.Set(ctx, key, jsonData, 0); setErr != nil {
+				// Same fail-safe behavior as above
+			}
 		}
 		return true
 	}
@@ -87,7 +103,13 @@ func (l *Limiter) Allow(key string) bool {
 		b.Tokens--
 		// Update bucket
 		if jsonData, err := json.Marshal(b); err == nil {
-			_ = l.kvs.Set(ctx, key, jsonData, 0) // No TTL
+			//nolint:staticcheck // SA9003: Empty branch is intentional for fail-safe behavior
+			if setErr := l.kvs.Set(ctx, key, jsonData, 0); setErr != nil {
+				// Write failed. The token was already consumed in memory,
+				// so we return true to allow the request.
+				// Consequence: if this persists, rate limit may not work properly,
+				// but this is better than blocking all traffic on KVS errors.
+			}
 		}
 		return true
 	}
@@ -97,13 +119,16 @@ func (l *Limiter) Allow(key string) bool {
 
 // Reset clears the rate limit for a specific key
 func (l *Limiter) Reset(key string) {
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+	defer cancel()
 	_ = l.kvs.Delete(ctx, key)
 }
 
 // Cleanup removes old buckets that haven't been used recently
 func (l *Limiter) Cleanup(maxAge time.Duration) {
-	ctx := context.Background()
+	// Use a longer timeout for cleanup as it processes multiple keys
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
 
 	// Get all keys
 	keys, err := l.kvs.List(ctx, "")
@@ -113,6 +138,13 @@ func (l *Limiter) Cleanup(maxAge time.Duration) {
 
 	now := time.Now()
 	for _, key := range keys {
+		// Check if context is cancelled (timeout or shutdown)
+		select {
+		case <-ctx.Done():
+			return
+		default:
+		}
+
 		// Get bucket data
 		data, err := l.kvs.Get(ctx, key)
 		if err != nil {

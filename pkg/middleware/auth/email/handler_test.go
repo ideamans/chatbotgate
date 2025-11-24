@@ -33,9 +33,9 @@ func createTestTokenKVS() kvs.Store {
 	return kvsStore
 }
 
-// createTestRateLimitKVS creates a memory-based rate limit KVS for testing
-func createTestRateLimitKVS() kvs.Store {
-	kvsStore, _ := kvs.NewMemoryStore("ratelimit:", kvs.MemoryConfig{
+// createTestEmailQuotaKVS creates a memory-based email quota KVS for testing
+func createTestEmailQuotaKVS() kvs.Store {
+	kvsStore, _ := kvs.NewMemoryStore("email_quota:", kvs.MemoryConfig{
 		CleanupInterval: 1 * time.Minute,
 	})
 	return kvsStore
@@ -72,7 +72,7 @@ func TestNewHandler(t *testing.T) {
 
 	authzChecker := &MockAuthzChecker{allowed: true}
 
-	handler, err := NewHandler(cfg, testServiceConfig(), "http://localhost:4180", "/_auth", authzChecker, testTranslator(), "test-secret", createTestTokenKVS(), createTestRateLimitKVS())
+	handler, err := NewHandler(cfg, testServiceConfig(), "http://localhost:4180", "/_auth", authzChecker, testTranslator(), "test-secret", createTestTokenKVS(), createTestEmailQuotaKVS())
 	if err != nil {
 		t.Fatalf("NewHandler() error = %v", err)
 	}
@@ -90,7 +90,7 @@ func TestNewHandler_InvalidSenderType(t *testing.T) {
 
 	authzChecker := &MockAuthzChecker{allowed: true}
 
-	_, err := NewHandler(cfg, testServiceConfig(), "http://localhost:4180", "/_auth", authzChecker, testTranslator(), "test-secret", createTestTokenKVS(), createTestRateLimitKVS())
+	_, err := NewHandler(cfg, testServiceConfig(), "http://localhost:4180", "/_auth", authzChecker, testTranslator(), "test-secret", createTestTokenKVS(), createTestEmailQuotaKVS())
 	if err == nil {
 		t.Error("NewHandler() should return error for invalid sender type")
 	}
@@ -113,12 +113,12 @@ func TestHandler_SendLoginLink(t *testing.T) {
 	authzChecker := &MockAuthzChecker{allowed: true}
 	mockSender := &MockSender{}
 
-	handler, _ := NewHandler(cfg, testServiceConfig(), "http://localhost:4180", "/_auth", authzChecker, testTranslator(), "test-secret", createTestTokenKVS(), createTestRateLimitKVS())
+	handler, _ := NewHandler(cfg, testServiceConfig(), "http://localhost:4180", "/_auth", authzChecker, testTranslator(), "test-secret", createTestTokenKVS(), createTestEmailQuotaKVS())
 	handler.sender = mockSender // Replace with mock
 
 	email := "user@example.com"
 
-	err := handler.SendLoginLink(email, i18n.English)
+	err := handler.SendLoginLink(email, "/dashboard?foo=bar", i18n.English)
 	if err != nil {
 		t.Fatalf("SendLoginLink() error = %v", err)
 	}
@@ -160,12 +160,12 @@ func TestHandler_SendLoginLink_NotAuthorized(t *testing.T) {
 	authzChecker := &MockAuthzChecker{allowed: false}
 	mockSender := &MockSender{}
 
-	handler, _ := NewHandler(cfg, testServiceConfig(), "http://localhost:4180", "/_auth", authzChecker, testTranslator(), "test-secret", createTestTokenKVS(), createTestRateLimitKVS())
+	handler, _ := NewHandler(cfg, testServiceConfig(), "http://localhost:4180", "/_auth", authzChecker, testTranslator(), "test-secret", createTestTokenKVS(), createTestEmailQuotaKVS())
 	handler.sender = mockSender
 
 	email := "unauthorized@example.com"
 
-	err := handler.SendLoginLink(email, i18n.English)
+	err := handler.SendLoginLink(email, "/", i18n.English)
 	if err == nil {
 		t.Error("SendLoginLink() should return error for unauthorized email")
 	}
@@ -185,27 +185,62 @@ func TestHandler_SendLoginLink_RateLimit(t *testing.T) {
 			Port: 587,
 			From: "noreply@example.com",
 		},
+		// Use default limit (5 per minute)
 	}
 
 	authzChecker := &MockAuthzChecker{allowed: true}
 	mockSender := &MockSender{}
 
-	handler, _ := NewHandler(cfg, testServiceConfig(), "http://localhost:4180", "/_auth", authzChecker, testTranslator(), "test-secret", createTestTokenKVS(), createTestRateLimitKVS())
+	handler, _ := NewHandler(cfg, testServiceConfig(), "http://localhost:4180", "/_auth", authzChecker, testTranslator(), "test-secret", createTestTokenKVS(), createTestEmailQuotaKVS())
 	handler.sender = mockSender
 
 	email := "user@example.com"
 
-	// Send 3 emails (should succeed)
-	for i := 0; i < 3; i++ {
-		if err := handler.SendLoginLink(email, i18n.English); err != nil {
+	// Send 5 emails (should succeed with default limit)
+	for i := 0; i < 5; i++ {
+		if err := handler.SendLoginLink(email, "/", i18n.English); err != nil {
 			t.Fatalf("request %d should succeed", i+1)
 		}
 	}
 
-	// 4th should be rate limited
-	err := handler.SendLoginLink(email, i18n.English)
+	// 6th should be rate limited
+	err := handler.SendLoginLink(email, "/", i18n.English)
 	if err == nil {
-		t.Error("4th request should be rate limited")
+		t.Error("6th request should be rate limited")
+	}
+}
+
+func TestHandler_SendLoginLink_CustomRateLimit(t *testing.T) {
+	cfg := config.EmailAuthConfig{
+		Enabled:        true,
+		SenderType:     "smtp",
+		LimitPerMinute: 2, // Custom limit: 2 per minute
+		SMTP: config.SMTPConfig{
+			Host: "smtp.example.com",
+			Port: 587,
+			From: "noreply@example.com",
+		},
+	}
+
+	authzChecker := &MockAuthzChecker{allowed: true}
+	mockSender := &MockSender{}
+
+	handler, _ := NewHandler(cfg, testServiceConfig(), "http://localhost:4180", "/_auth", authzChecker, testTranslator(), "test-secret", createTestTokenKVS(), createTestEmailQuotaKVS())
+	handler.sender = mockSender
+
+	email := "user@example.com"
+
+	// Send 2 emails (should succeed with custom limit)
+	for i := 0; i < 2; i++ {
+		if err := handler.SendLoginLink(email, "/", i18n.English); err != nil {
+			t.Fatalf("request %d should succeed", i+1)
+		}
+	}
+
+	// 3rd should be rate limited
+	err := handler.SendLoginLink(email, "/", i18n.English)
+	if err == nil {
+		t.Error("3rd request should be rate limited with custom limit of 2")
 	}
 }
 
@@ -227,12 +262,12 @@ func TestHandler_SendLoginLink_SendFails(t *testing.T) {
 		},
 	}
 
-	handler, _ := NewHandler(cfg, testServiceConfig(), "http://localhost:4180", "/_auth", authzChecker, testTranslator(), "test-secret", createTestTokenKVS(), createTestRateLimitKVS())
+	handler, _ := NewHandler(cfg, testServiceConfig(), "http://localhost:4180", "/_auth", authzChecker, testTranslator(), "test-secret", createTestTokenKVS(), createTestEmailQuotaKVS())
 	handler.sender = mockSender
 
 	email := "user@example.com"
 
-	err := handler.SendLoginLink(email, i18n.English)
+	err := handler.SendLoginLink(email, "/", i18n.English)
 	if err == nil {
 		t.Error("SendLoginLink() should return error when send fails")
 	}
@@ -252,13 +287,14 @@ func TestHandler_VerifyToken(t *testing.T) {
 	authzChecker := &MockAuthzChecker{allowed: true}
 	mockSender := &MockSender{}
 
-	handler, _ := NewHandler(cfg, testServiceConfig(), "http://localhost:4180", "/_auth", authzChecker, testTranslator(), "test-secret", createTestTokenKVS(), createTestRateLimitKVS())
+	handler, _ := NewHandler(cfg, testServiceConfig(), "http://localhost:4180", "/_auth", authzChecker, testTranslator(), "test-secret", createTestTokenKVS(), createTestEmailQuotaKVS())
 	handler.sender = mockSender
 
 	email := "user@example.com"
+	expectedRedirectURL := "/dashboard?foo=bar"
 
-	// Send login link
-	if err := handler.SendLoginLink(email, i18n.English); err != nil {
+	// Send login link with redirect URL
+	if err := handler.SendLoginLink(email, expectedRedirectURL, i18n.English); err != nil {
 		t.Fatalf("SendLoginLink() error = %v", err)
 	}
 
@@ -274,7 +310,7 @@ func TestHandler_VerifyToken(t *testing.T) {
 	token := body[tokenStart : tokenStart+tokenEnd]
 
 	// Verify token
-	verifiedEmail, err := handler.VerifyToken(token)
+	verifiedEmail, redirectURL, err := handler.VerifyToken(token)
 	if err != nil {
 		t.Fatalf("VerifyToken() error = %v", err)
 	}
@@ -283,8 +319,12 @@ func TestHandler_VerifyToken(t *testing.T) {
 		t.Errorf("VerifyToken() email = %s, want %s", verifiedEmail, email)
 	}
 
+	if redirectURL != expectedRedirectURL {
+		t.Errorf("VerifyToken() redirectURL = %s, want %s", redirectURL, expectedRedirectURL)
+	}
+
 	// Second verification should fail (one-time use)
-	_, err = handler.VerifyToken(token)
+	_, _, err = handler.VerifyToken(token)
 	if err == nil {
 		t.Error("second VerifyToken() should fail")
 	}

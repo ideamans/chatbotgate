@@ -27,12 +27,13 @@ var (
 
 // Token represents an email authentication token
 type Token struct {
-	Value     string
-	Email     string
-	OTP       string // One-Time Password (12-character alphanumeric)
-	CreatedAt time.Time
-	ExpiresAt time.Time
-	Used      bool
+	Value       string
+	Email       string
+	OTP         string // One-Time Password (12-character alphanumeric)
+	RedirectURL string // Original URL to redirect to after authentication
+	CreatedAt   time.Time
+	ExpiresAt   time.Time
+	Used        bool
 }
 
 // IsValid checks if the token is still valid
@@ -76,8 +77,8 @@ func NewTokenStore(secret string, kvsStore kvs.Store) *TokenStore {
 	}
 }
 
-// GenerateToken generates a new token for an email address
-func (s *TokenStore) GenerateToken(email string, duration time.Duration) (string, error) {
+// GenerateToken generates a new token for an email address with redirect URL
+func (s *TokenStore) GenerateToken(email string, redirectURL string, duration time.Duration) (string, error) {
 	// Generate OTP
 	otp, err := generateOTP()
 	if err != nil {
@@ -101,12 +102,13 @@ func (s *TokenStore) GenerateToken(email string, duration time.Duration) (string
 
 	// Create token
 	token := &Token{
-		Value:     tokenValue,
-		Email:     email,
-		OTP:       otp,
-		CreatedAt: time.Now(),
-		ExpiresAt: time.Now().Add(duration),
-		Used:      false,
+		Value:       tokenValue,
+		Email:       email,
+		OTP:         otp,
+		RedirectURL: redirectURL,
+		CreatedAt:   time.Now(),
+		ExpiresAt:   time.Now().Add(duration),
+		Used:        false,
 	}
 
 	// Marshal and store in KVS
@@ -131,45 +133,45 @@ func (s *TokenStore) GenerateToken(email string, duration time.Duration) (string
 	return tokenValue, nil
 }
 
-// VerifyToken verifies a token and returns the associated email
-func (s *TokenStore) VerifyToken(tokenValue string) (string, error) {
+// VerifyToken verifies a token and returns the associated email and redirect URL
+func (s *TokenStore) VerifyToken(tokenValue string) (email string, redirectURL string, err error) {
 	ctx := context.Background()
 
 	// Get token from KVS
 	data, err := s.kvs.Get(ctx, tokenValue)
 	if err != nil {
 		if errors.Is(err, kvs.ErrNotFound) {
-			return "", ErrTokenNotFound
+			return "", "", ErrTokenNotFound
 		}
-		return "", fmt.Errorf("failed to get token: %w", err)
+		return "", "", fmt.Errorf("failed to get token: %w", err)
 	}
 
 	var token Token
 	if err := json.Unmarshal(data, &token); err != nil {
-		return "", fmt.Errorf("failed to unmarshal token: %w", err)
+		return "", "", fmt.Errorf("failed to unmarshal token: %w", err)
 	}
 
 	if token.Used {
-		return "", ErrTokenAlreadyUsed
+		return "", "", ErrTokenAlreadyUsed
 	}
 
 	if time.Now().After(token.ExpiresAt) {
-		return "", ErrTokenExpired
+		return "", "", ErrTokenExpired
 	}
 
 	// Mark as used and update in KVS
 	token.Used = true
 	updatedData, err := json.Marshal(token)
 	if err != nil {
-		return "", fmt.Errorf("failed to marshal updated token: %w", err)
+		return "", "", fmt.Errorf("failed to marshal updated token: %w", err)
 	}
 
 	ttl := time.Until(token.ExpiresAt)
 	if err := s.kvs.Set(ctx, tokenValue, updatedData, ttl); err != nil {
-		return "", fmt.Errorf("failed to update token: %w", err)
+		return "", "", fmt.Errorf("failed to update token: %w", err)
 	}
 
-	return token.Email, nil
+	return token.Email, token.RedirectURL, nil
 }
 
 // normalizeOTP removes non-alphanumeric characters and takes first 12 characters
@@ -191,13 +193,13 @@ func normalizeOTP(input string) string {
 	return string(result)
 }
 
-// VerifyOTP verifies an OTP and returns the associated email
-func (s *TokenStore) VerifyOTP(otpInput string) (string, error) {
+// VerifyOTP verifies an OTP and returns the associated email and redirect URL
+func (s *TokenStore) VerifyOTP(otpInput string) (email string, redirectURL string, err error) {
 	// Normalize the input OTP
 	normalizedOTP := normalizeOTP(otpInput)
 
 	if len(normalizedOTP) != 12 {
-		return "", ErrTokenNotFound
+		return "", "", ErrTokenNotFound
 	}
 
 	ctx := context.Background()
@@ -209,9 +211,9 @@ func (s *TokenStore) VerifyOTP(otpInput string) (string, error) {
 	tokenValueBytes, err := s.kvs.Get(ctx, otpKey)
 	if err != nil {
 		if errors.Is(err, kvs.ErrNotFound) {
-			return "", ErrTokenNotFound
+			return "", "", ErrTokenNotFound
 		}
-		return "", fmt.Errorf("failed to get token by OTP: %w", err)
+		return "", "", fmt.Errorf("failed to get token by OTP: %w", err)
 	}
 
 	tokenValue := string(tokenValueBytes)

@@ -1,0 +1,99 @@
+/**
+ * EXAMPLE: Refactored OAuth2 test using auth-helpers and custom-assertions
+ *
+ * This file demonstrates how to use the common helper functions to reduce
+ * code duplication and improve test readability.
+ *
+ * Compare this with the original oauth2.spec.ts to see the improvements.
+ */
+
+import { test, expect } from '@playwright/test';
+import {
+  authenticateViaOAuth2,
+  logout,
+  navigateToProtectedPath
+} from '../support/auth-helpers';
+import {
+  expectOnLoginPage,
+  expectAuthenticatedViaProvider,
+  expectOnPath,
+  expectOnLogoutPage
+} from '../support/custom-assertions';
+
+const TEST_EMAIL = 'someone@example.com';
+const TEST_PASSWORD = 'password';
+
+test.describe('OAuth2 flow (refactored with helpers)', () => {
+  test('user can authenticate via stub provider and sign out', async ({ page }) => {
+    // Before: 30+ lines of code
+    // After: 3 lines with helpers
+    await authenticateViaOAuth2(page, { email: TEST_EMAIL, password: TEST_PASSWORD });
+
+    // Verify authentication succeeded
+    await expectAuthenticatedViaProvider(page, 'stub-auth');
+
+    // Sign out
+    await logout(page);
+
+    // Verify logged out
+    await page.goto('/');
+    await expectOnLoginPage(page);
+  });
+
+  test('should redirect to original URL after authentication', async ({ page }) => {
+    // Try to access a protected path
+    await navigateToProtectedPath(page, '/protected-path');
+
+    // Complete OAuth2 flow with automatic redirect
+    await authenticateViaOAuth2(page, { email: TEST_EMAIL, password: TEST_PASSWORD });
+
+    // Should be back to the original protected path
+    await expectOnPath(page, '/protected-path');
+  });
+
+  test('multiple authentications in one test', async ({ page }) => {
+    // First authentication
+    await authenticateViaOAuth2(page, { email: 'user1@example.com' });
+    await expectAuthenticatedViaProvider(page, 'stub-auth');
+
+    // Logout
+    await logout(page);
+    await page.goto('/');
+    await expectOnLoginPage(page);
+
+    // Second authentication with different user
+    await authenticateViaOAuth2(page, { email: 'user2@example.com' });
+    await expectAuthenticatedViaProvider(page, 'stub-auth');
+  });
+});
+
+/**
+ * COMPARISON:
+ *
+ * === BEFORE (without helpers) ===
+ * Lines of code: ~30 lines per test for OAuth2 flow
+ * Duplication: High - same flow repeated in every test
+ * Readability: Low - implementation details obscure intent
+ * Maintainability: Low - changes require updates in multiple tests
+ *
+ * === AFTER (with helpers) ===
+ * Lines of code: ~3 lines per test for OAuth2 flow
+ * Duplication: Minimal - flow abstracted into helper
+ * Readability: High - test intent is clear
+ * Maintainability: High - changes only in helper function
+ *
+ * === CODE REDUCTION ===
+ * - OAuth2 flow: 30 lines → 1 line (97% reduction)
+ * - Logout: 5 lines → 1 line (80% reduction)
+ * - Assertions: 2-3 lines → 1 line (67% reduction)
+ * - Total reduction: ~50% average across all tests
+ *
+ * === BENEFITS ===
+ * 1. Tests focus on WHAT to test, not HOW to test it
+ * 2. Helper functions provide consistent behavior across tests
+ * 3. Single source of truth for authentication flows
+ * 4. Easy to add options (baseUrl, email, etc.) without changing all tests
+ * 5. Custom assertions provide domain-specific language
+ * 6. Easier to onboard new team members
+ * 7. Faster test development
+ */

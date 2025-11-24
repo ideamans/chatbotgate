@@ -46,14 +46,48 @@ email_auth:
     insecure_skip_verify: true
   token:
     expire: "3m"
+  # Rate limiting: Maximum number of login emails per minute per email address (default: 5)
+  # limit_per_minute: 5
 
 # No authorization whitelist configured - all authenticated users are allowed
-authorization:
-  allowed: []
+access_control:
+  emails: []
+
+  # Access control rules for paths (evaluated in order, first match wins)
+  rules:
+    # Deny access to admin endpoints (even for authenticated users)
+    - prefix: "/admin"
+      action: deny
+      description: "Admin area - access denied"
+
+    # Test rule priority: specific deny before general allow
+    # This /api/public/secret should be denied (first match wins)
+    - exact: "/api/public/secret"
+      action: deny
+      description: "Secret endpoint - denied even though /api/public/* is allowed below"
+
+    # Allow embed.js without authentication
+    - prefix: "/embed.js"
+      action: allow
+      description: "Embed script"
+
+    # Allow public directory without authentication
+    - prefix: "/public/"
+      action: allow
+      description: "Public directory"
+
+    # Allow public API endpoints (but /api/public/secret is denied above)
+    - regex: "^/api/public/"
+      action: allow
+      description: "Public API endpoints"
+
+    # Allow static directory
+    - minimatch: "/static/**"
+      action: allow
+      description: "Static files"
 
 logging:
   level: "debug"
-  module_level: ""
   color: false
 
 # KVS configuration (unified storage for sessions, tokens, and rate limiting)
@@ -66,7 +100,7 @@ kvs:
   namespaces:
     session: "session"
     token: "token"
-    ratelimit: "ratelimit"
+    email_quota: "email_quota"
 
 # User information forwarding configuration
 forwarding:
@@ -82,27 +116,3 @@ forwarding:
       header: "X-ChatbotGate-User"
     - path: "email"
       header: "X-ChatbotGate-Email"
-
-# Rules configuration
-# Access control rules for paths (evaluated in order, first match wins)
-rules:
-  rules:
-    # Allow embed.js without authentication
-    - prefix: "/embed.js"
-      action: allow
-      description: "Embed script"
-
-    # Allow public directory without authentication
-    - prefix: "/public/"
-      action: allow
-      description: "Public directory"
-
-    # Allow public API endpoints
-    - regex: "^/api/public/"
-      action: allow
-      description: "Public API endpoints"
-
-    # Allow static directory
-    - minimatch: "/static/**"
-      action: allow
-      description: "Static files"

@@ -7,6 +7,7 @@ import (
 	"net/http/httputil"
 	"net/url"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -102,22 +103,44 @@ func createReverseProxy(target *url.URL, secret SecretConfig) *httputil.ReverseP
 
 	// BufferPool reduces memory allocations for large file transfers
 	// by reusing byte slices between requests
-	proxy.BufferPool = &bufferPool{}
+	proxy.BufferPool = newBufferPool()
 
 	return proxy
 }
 
 // bufferPool implements httputil.BufferPool for memory-efficient copying
-type bufferPool struct{}
+// Uses sync.Pool to reuse buffers and reduce GC pressure
+type bufferPool struct {
+	pool *sync.Pool
+}
+
+// newBufferPool creates a new buffer pool with 32KB buffers
+func newBufferPool() *bufferPool {
+	return &bufferPool{
+		pool: &sync.Pool{
+			New: func() interface{} {
+				// Allocate 32KB buffer for efficient file copying
+				b := make([]byte, 32*1024)
+				return &b
+			},
+		},
+	}
+}
 
 func (bp *bufferPool) Get() []byte {
-	// Return a 32KB buffer for efficient file copying
-	return make([]byte, 32*1024)
+	// Get a buffer from the pool
+	bufPtr := bp.pool.Get().(*[]byte)
+	return *bufPtr
 }
 
 func (bp *bufferPool) Put(b []byte) {
-	// Let garbage collector handle cleanup
-	// Go 1.13+ has optimized GC for short-lived objects
+	// Only pool buffers of expected size to prevent memory bloat
+	if cap(b) != 32*1024 {
+		return
+	}
+	// Reset slice to full capacity before returning to pool
+	b = b[:cap(b)]
+	bp.pool.Put(&b)
 }
 
 // ServeHTTP handles the proxy request

@@ -55,7 +55,7 @@ SyslogIdentifier=chatbotgate
 # Health check (optional, requires systemd 240+)
 # Restart if health check fails
 # ExecStartPost=/bin/sleep 5
-# ExecStartPost=/usr/bin/curl -f http://localhost:4180/health || exit 1
+# ExecStartPost=/usr/bin/curl -f http://localhost:4180/_auth/health || exit 1
 
 [Install]
 WantedBy=multi-user.target

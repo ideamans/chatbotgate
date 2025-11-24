@@ -11,17 +11,15 @@ func boolPtr(b bool) *bool {
 
 func TestEvaluator_BasicRules(t *testing.T) {
 	allTrue := true
-	config := &Config{
-		Rules: []RuleConfig{
-			{Prefix: "/static/", Action: ActionAllow},
-			{Exact: "/health", Action: ActionAllow},
-			{Prefix: "/api/", Action: ActionAuth},
-			{Regex: "^/admin/", Action: ActionDeny},
-			{All: &allTrue, Action: ActionAuth},
-		},
+	config := Config{
+		{Prefix: "/static/", Action: ActionAllow},
+		{Exact: "/health", Action: ActionAllow},
+		{Prefix: "/api/", Action: ActionAuth},
+		{Regex: "^/admin/", Action: ActionDeny},
+		{All: &allTrue, Action: ActionAuth},
 	}
 
-	evaluator, err := NewEvaluator(config)
+	evaluator, err := NewEvaluator(&config)
 	if err != nil {
 		t.Fatalf("Failed to create evaluator: %v", err)
 	}
@@ -54,14 +52,12 @@ func TestEvaluator_BasicRules(t *testing.T) {
 
 func TestEvaluator_Minimatch(t *testing.T) {
 	allTrue := true
-	config := &Config{
-		Rules: []RuleConfig{
-			{Minimatch: "**/*.{js,css}", Action: ActionAllow},
-			{All: &allTrue, Action: ActionAuth},
-		},
+	config := Config{
+		{Minimatch: "**/*.{js,css}", Action: ActionAllow},
+		{All: &allTrue, Action: ActionAuth},
 	}
 
-	evaluator, err := NewEvaluator(config)
+	evaluator, err := NewEvaluator(&config)
 	if err != nil {
 		t.Fatalf("Failed to create evaluator: %v", err)
 	}
@@ -105,14 +101,12 @@ func TestEvaluator_DefaultConfig(t *testing.T) {
 
 func TestEvaluator_OrderMatters(t *testing.T) {
 	// First matching rule wins
-	config := &Config{
-		Rules: []RuleConfig{
-			{Prefix: "/api/", Action: ActionAuth},
-			{Prefix: "/api/public/", Action: ActionAllow}, // This won't match because /api/ matches first
-		},
+	config := Config{
+		{Prefix: "/api/", Action: ActionAuth},
+		{Prefix: "/api/public/", Action: ActionAllow}, // This won't match because /api/ matches first
 	}
 
-	evaluator, err := NewEvaluator(config)
+	evaluator, err := NewEvaluator(&config)
 	if err != nil {
 		t.Fatalf("Failed to create evaluator: %v", err)
 	}
@@ -127,67 +121,53 @@ func TestEvaluator_OrderMatters(t *testing.T) {
 func TestConfig_Validate(t *testing.T) {
 	tests := []struct {
 		name        string
-		config      *Config
+		config      Config
 		expectError bool
 	}{
 		{
 			name: "valid config",
-			config: &Config{
-				Rules: []RuleConfig{
-					{Prefix: "/static/", Action: ActionAllow},
-				},
+			config: Config{
+				{Prefix: "/static/", Action: ActionAllow},
 			},
 			expectError: false,
 		},
 		{
 			name: "no matcher",
-			config: &Config{
-				Rules: []RuleConfig{
-					{Action: ActionAllow},
-				},
+			config: Config{
+				{Action: ActionAllow},
 			},
 			expectError: true,
 		},
 		{
 			name: "multiple matchers",
-			config: &Config{
-				Rules: []RuleConfig{
-					{Prefix: "/api/", Regex: "^/api/", Action: ActionAuth},
-				},
+			config: Config{
+				{Prefix: "/api/", Regex: "^/api/", Action: ActionAuth},
 			},
 			expectError: true,
 		},
 		{
 			name: "invalid action",
-			config: &Config{
-				Rules: []RuleConfig{
-					{Prefix: "/api/", Action: "invalid"},
-				},
+			config: Config{
+				{Prefix: "/api/", Action: "invalid"},
 			},
 			expectError: true,
 		},
 		{
 			name: "invalid regex",
-			config: &Config{
-				Rules: []RuleConfig{
-					{Regex: "[invalid(", Action: ActionAuth},
-				},
+			config: Config{
+				{Regex: "[invalid(", Action: ActionAuth},
 			},
 			expectError: true,
 		},
 		{
-			name: "empty rules",
-			config: &Config{
-				Rules: []RuleConfig{},
-			},
+			name:        "empty rules",
+			config:      Config{},
 			expectError: false, // Empty rules is OK (uses default)
 		},
 		{
 			name: "all: false explicitly set",
-			config: &Config{
-				Rules: []RuleConfig{
-					{All: boolPtr(false), Action: ActionAuth},
-				},
+			config: Config{
+				{All: boolPtr(false), Action: ActionAuth},
 			},
 			expectError: true,
 		},
@@ -205,15 +185,13 @@ func TestConfig_Validate(t *testing.T) {
 
 func TestEvaluator_HelperMethods(t *testing.T) {
 	allTrue := true
-	config := &Config{
-		Rules: []RuleConfig{
-			{Prefix: "/static/", Action: ActionAllow},
-			{Prefix: "/admin/", Action: ActionDeny},
-			{All: &allTrue, Action: ActionAuth},
-		},
+	config := Config{
+		{Prefix: "/static/", Action: ActionAllow},
+		{Prefix: "/admin/", Action: ActionDeny},
+		{All: &allTrue, Action: ActionAuth},
 	}
 
-	evaluator, err := NewEvaluator(config)
+	evaluator, err := NewEvaluator(&config)
 	if err != nil {
 		t.Fatalf("Failed to create evaluator: %v", err)
 	}

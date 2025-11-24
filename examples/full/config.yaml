@@ -373,10 +373,11 @@ rules:
       action: allow
       description: "Public assets directory"
 
-    # Allow health check endpoint
+    # Allow upstream application's health check endpoint
+    # Note: ChatbotGate's own health check is at /_auth/health (no rule needed)
     - exact: "/health"
       action: allow
-      description: "Health check endpoint for load balancer"
+      description: "Upstream health check endpoint for load balancer"
 
     - exact: "/metrics"
       action: allow

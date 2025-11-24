@@ -71,7 +71,7 @@ sudo nano /etc/chatbotgate/config.yaml
 - Update `session.cookie_secret` to a random 32+ character string
 - Configure your upstream URL in `proxy.upstream.url`
 - Set up OAuth2 providers or email authentication
-- Configure authorization rules if needed
+- Configure access control rules if needed
 
 ### 5. Install systemd Service
 
@@ -101,7 +101,7 @@ sudo systemctl status chatbotgate
 journalctl -u chatbotgate -f
 
 # Test endpoint
-curl http://localhost:4180/health
+curl http://localhost:4180/_auth/health
 ```
 
 ## Log Management

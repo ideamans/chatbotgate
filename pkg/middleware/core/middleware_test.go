@@ -64,27 +64,27 @@ func (p *mockProvider) GetUserEmail(ctx context.Context, token *stdoauth2.Token)
 func TestMiddleware_RequiresEmail(t *testing.T) {
 	tests := []struct {
 		name           string
-		authzConfig    config.AuthorizationConfig
+		authzConfig    config.AccessControlConfig
 		expectRequired bool
 	}{
 		{
 			name: "no whitelist - email not required",
-			authzConfig: config.AuthorizationConfig{
-				Allowed: []string{},
+			authzConfig: config.AccessControlConfig{
+				Emails: []string{},
 			},
 			expectRequired: false,
 		},
 		{
 			name: "with allowed emails - email required",
-			authzConfig: config.AuthorizationConfig{
-				Allowed: []string{"user@example.com"},
+			authzConfig: config.AccessControlConfig{
+				Emails: []string{"user@example.com"},
 			},
 			expectRequired: true,
 		},
 		{
 			name: "with allowed domains - email required",
-			authzConfig: config.AuthorizationConfig{
-				Allowed: []string{"@example.com"},
+			authzConfig: config.AccessControlConfig{
+				Emails: []string{"@example.com"},
 			},
 			expectRequired: true,
 		},
@@ -105,10 +105,11 @@ func TestMiddleware_RequiresEmail(t *testing.T) {
 						Secure: false,
 					},
 				},
-				Authorization: tt.authzConfig,
+				AccessControl: tt.authzConfig,
 			}
 
 			sessionStore := func() session.Store { store, _ := kvs.NewMemoryStore("test", kvs.MemoryConfig{}); return store }()
+			defer func() { _ = sessionStore.Close() }()
 
 			oauthManager := oauth2.NewManager()
 			oauthManager.AddProvider(&mockProvider{
@@ -120,7 +121,7 @@ func TestMiddleware_RequiresEmail(t *testing.T) {
 			translator := i18n.NewTranslator()
 			logger := logging.NewTestLogger()
 
-			middleware := New(
+			middleware, err := New(
 				cfg,
 				sessionStore,
 				oauthManager,
@@ -132,6 +133,9 @@ func TestMiddleware_RequiresEmail(t *testing.T) {
 				translator,
 				logger,
 			)
+			if err != nil {
+				t.Fatalf("Failed to create middleware: %v", err)
+			}
 
 			if middleware.authzChecker.RequiresEmail() != tt.expectRequired {
 				t.Errorf("RequiresEmail() = %v, want %v", middleware.authzChecker.RequiresEmail(), tt.expectRequired)
@@ -157,19 +161,20 @@ func TestMiddleware_Authorization_NoWhitelist(t *testing.T) {
 				HTTPOnly: true,
 			},
 		},
-		Authorization: config.AuthorizationConfig{
-			Allowed: []string{}, // No whitelist
+		AccessControl: config.AccessControlConfig{
+			Emails: []string{}, // No whitelist
 		},
 	}
 
 	sessionStore := func() session.Store { store, _ := kvs.NewMemoryStore("test", kvs.MemoryConfig{}); return store }()
+	defer func() { _ = sessionStore.Close() }()
 
 	oauthManager := oauth2.NewManager()
-	authzChecker := authz.NewEmailChecker(cfg.Authorization)
+	authzChecker := authz.NewEmailChecker(cfg.AccessControl)
 	translator := i18n.NewTranslator()
 	logger := logging.NewTestLogger()
 
-	middleware := New(
+	middleware, err := New(
 		cfg,
 		sessionStore,
 		oauthManager,
@@ -181,6 +186,9 @@ func TestMiddleware_Authorization_NoWhitelist(t *testing.T) {
 		translator,
 		logger,
 	)
+	if err != nil {
+		t.Fatalf("Failed to create middleware: %v", err)
+	}
 
 	// When no whitelist is configured, RequiresEmail should return false
 	if middleware.authzChecker.RequiresEmail() {
@@ -207,7 +215,7 @@ func TestMiddleware_Authorization_NoWhitelist(t *testing.T) {
 		Authenticated: true,
 	}
 
-	err := session.Set(sessionStore, sessionID, sess)
+	err = session.Set(sessionStore, sessionID, sess)
 	if err != nil {
 		t.Fatalf("Failed to create session: %v", err)
 	}
@@ -259,19 +267,20 @@ func TestMiddleware_Authorization_WithWhitelist(t *testing.T) {
 				Secure: false,
 			},
 		},
-		Authorization: config.AuthorizationConfig{
-			Allowed: []string{"authorized@example.com"}, // Whitelist configured
+		AccessControl: config.AccessControlConfig{
+			Emails: []string{"authorized@example.com"}, // Whitelist configured
 		},
 	}
 
 	sessionStore := func() session.Store { store, _ := kvs.NewMemoryStore("test", kvs.MemoryConfig{}); return store }()
+	defer func() { _ = sessionStore.Close() }()
 
 	oauthManager := oauth2.NewManager()
-	authzChecker := authz.NewEmailChecker(cfg.Authorization)
+	authzChecker := authz.NewEmailChecker(cfg.AccessControl)
 	translator := i18n.NewTranslator()
 	logger := logging.NewTestLogger()
 
-	middleware := New(
+	middleware, err := New(
 		cfg,
 		sessionStore,
 		oauthManager,
@@ -283,6 +292,9 @@ func TestMiddleware_Authorization_WithWhitelist(t *testing.T) {
 		translator,
 		logger,
 	)
+	if err != nil {
+		t.Fatalf("Failed to create middleware: %v", err)
+	}
 
 	// When whitelist is configured, RequiresEmail should return true
 	if !middleware.authzChecker.RequiresEmail() {
@@ -315,7 +327,7 @@ func TestMiddleware_Authorization_WithWhitelist(t *testing.T) {
 		Authenticated: true,
 	}
 
-	err := session.Set(sessionStore, authorizedSessionID, authorizedSess)
+	err = session.Set(sessionStore, authorizedSessionID, authorizedSess)
 	if err != nil {
 		t.Fatalf("Failed to create authorized session: %v", err)
 	}
@@ -404,6 +416,7 @@ func TestHandleLogin_DividerDisplay(t *testing.T) {
 			}
 
 			sessionStore := func() kvs.Store { store, _ := kvs.NewMemoryStore("test", kvs.MemoryConfig{}); return store }()
+			defer func() { _ = sessionStore.Close() }()
 			oauthManager := oauth2.NewManager()
 
 			// Add OAuth2 provider if needed
@@ -414,7 +427,7 @@ func TestHandleLogin_DividerDisplay(t *testing.T) {
 				})
 			}
 
-			authzChecker := authz.NewEmailChecker(cfg.Authorization)
+			authzChecker := authz.NewEmailChecker(cfg.AccessControl)
 			translator := i18n.NewTranslator()
 			logger := logging.NewTestLogger()
 
@@ -426,7 +439,7 @@ func TestHandleLogin_DividerDisplay(t *testing.T) {
 				emailHandler = &email.Handler{}
 			}
 
-			middleware := New(
+			middleware, err := New(
 				cfg,
 				sessionStore,
 				oauthManager,
@@ -438,6 +451,9 @@ func TestHandleLogin_DividerDisplay(t *testing.T) {
 				translator,
 				logger,
 			)
+			if err != nil {
+				t.Fatalf("Failed to create middleware: %v", err)
+			}
 
 			req := httptest.NewRequest("GET", "/_auth/login", nil)
 			w := httptest.NewRecorder()

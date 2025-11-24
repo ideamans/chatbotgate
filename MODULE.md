@@ -655,11 +655,7 @@ import (
 )
 
 // Create logger
-logger := logging.New(logging.Config{
-    Level:       "info",
-    ModuleLevel: "debug",
-    Color:       true,
-})
+logger := logging.NewSimpleLogger("myapp", logging.LevelInfo, true)
 
 // Log messages
 logger.Info("Server started", "port", 4180)
@@ -1538,9 +1534,8 @@ if mw.IsReady() {
 **Health Check Endpoints:**
 
 The middleware automatically handles these endpoints:
-- `GET /health` - Readiness probe (200 when ready, 503 when starting/draining)
-- `GET /health?probe=live` - Liveness probe (always 200 if process alive)
-- `GET /ready` - Legacy endpoint (backward compatibility)
+- `GET /_auth/health` - Readiness probe (200 when ready, 503 when starting/draining)
+- `GET /_auth/health?probe=live` - Liveness probe (always 200 if process alive)
 
 **JSON Response Format:**
 

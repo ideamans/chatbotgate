@@ -130,15 +130,11 @@
     }
   },
 
-  "authorization": {
-    "_comment_emails": "Individual email addresses",
-    "allowed_emails": [
+  "access_control": {
+    "_comment": "Allowed email addresses and domains (entries starting with @ are domains)",
+    "emails": [
       "user@example.com",
-      "admin@company.com"
-    ],
-
-    "_comment_domains": "Allow all users from these domains",
-    "allowed_domains": [
+      "admin@company.com",
       "@example.org",
       "@company.com"
     ]
@@ -147,8 +143,6 @@
   "logging": {
     "_comment_level": "Log level: debug, info, warn, error",
     "level": "info",
-    "module_level": "debug",
-    "_comment_module": "Log level for sub-modules",
     "format": "text",
     "_comment_format": "Log format: text or json",
     "color": true,

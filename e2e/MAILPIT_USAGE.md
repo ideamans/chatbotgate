@@ -169,6 +169,22 @@ const loginUrl = extractLoginUrl(detail.Text);
 const loginUrl = extractLoginUrl(detail.HTML);
 ```
 
+## レート制限
+
+メール送信には、スパム防止のためのレート制限が適用されます：
+
+- デフォルト: **5回/分** (同じメールアドレスあたり)
+- E2E環境では十分な設定ですが、必要に応じて `email_auth.limit_per_minute` で変更可能
+
+**テスト時の注意:**
+- 短時間に同じメールアドレスで複数回ログインリンクを要求すると、レート制限エラーが発生する可能性があります
+- テスト間で待機するか、異なるメールアドレスを使用してください
+
+```yaml
+email_auth:
+  limit_per_minute: 10  # より高い値に設定（テスト用）
+```
+
 ## トラブルシューティング
 
 ### メールが届かない
@@ -177,6 +193,7 @@ const loginUrl = extractLoginUrl(detail.HTML);
 2. プロキシのログを確認: `docker logs e2e-proxy-app`
 3. Mailpitのログを確認: `docker logs e2e-mailpit`
 4. 設定ファイルで `otp_output_file` がコメントアウトされているか確認
+5. **レート制限エラー**: ログで "rate limit exceeded" を確認し、待機してから再試行
 
 ### URLが抽出できない
 

@@ -29,10 +29,13 @@ func TestHealthCheck_Liveness(t *testing.T) {
 	}
 
 	logger := logging.NewSimpleLogger("test", logging.LevelError, false)
-	mw := New(cfg, nil, nil, nil, nil, nil, nil, nil, nil, logger)
+	mw, err := New(cfg, nil, nil, nil, nil, nil, nil, nil, nil, logger)
+	if err != nil {
+		t.Fatalf("Failed to create middleware: %v", err)
+	}
 
 	// Create test request
-	req := httptest.NewRequest("GET", "/health?probe=live", nil)
+	req := httptest.NewRequest("GET", "/_auth/health?probe=live", nil)
 	rec := httptest.NewRecorder()
 
 	// Handle request
@@ -82,12 +85,15 @@ func TestHealthCheck_Readiness_NotReady(t *testing.T) {
 	}
 
 	logger := logging.NewSimpleLogger("test", logging.LevelError, false)
-	mw := New(cfg, nil, nil, nil, nil, nil, nil, nil, nil, logger)
+	mw, err := New(cfg, nil, nil, nil, nil, nil, nil, nil, nil, logger)
+	if err != nil {
+		t.Fatalf("Failed to create middleware: %v", err)
+	}
 
 	// DON'T call SetReady() - middleware should be in "starting" state
 
 	// Create test request
-	req := httptest.NewRequest("GET", "/health", nil)
+	req := httptest.NewRequest("GET", "/_auth/health", nil)
 	rec := httptest.NewRecorder()
 
 	// Handle request
@@ -148,13 +154,16 @@ func TestHealthCheck_Readiness_Ready(t *testing.T) {
 	}
 
 	logger := logging.NewSimpleLogger("test", logging.LevelError, false)
-	mw := New(cfg, nil, nil, nil, nil, nil, nil, nil, nil, logger)
+	mw, err := New(cfg, nil, nil, nil, nil, nil, nil, nil, nil, logger)
+	if err != nil {
+		t.Fatalf("Failed to create middleware: %v", err)
+	}
 
 	// Mark middleware as ready
 	mw.SetReady()
 
 	// Create test request
-	req := httptest.NewRequest("GET", "/health", nil)
+	req := httptest.NewRequest("GET", "/_auth/health", nil)
 	rec := httptest.NewRecorder()
 
 	// Handle request
@@ -207,7 +216,10 @@ func TestHealthCheck_Draining(t *testing.T) {
 	}
 
 	logger := logging.NewSimpleLogger("test", logging.LevelError, false)
-	mw := New(cfg, nil, nil, nil, nil, nil, nil, nil, nil, logger)
+	mw, err := New(cfg, nil, nil, nil, nil, nil, nil, nil, nil, logger)
+	if err != nil {
+		t.Fatalf("Failed to create middleware: %v", err)
+	}
 
 	// Mark middleware as ready first
 	mw.SetReady()
@@ -216,7 +228,7 @@ func TestHealthCheck_Draining(t *testing.T) {
 	mw.SetDraining()
 
 	// Create test request
-	req := httptest.NewRequest("GET", "/health", nil)
+	req := httptest.NewRequest("GET", "/_auth/health", nil)
 	rec := httptest.NewRecorder()
 
 	// Handle request
@@ -267,11 +279,11 @@ func TestHealthCheck_SinceTimestamp(t *testing.T) {
 
 	logger := logging.NewSimpleLogger("test", logging.LevelError, false)
 	beforeCreate := time.Now().UTC()
-	mw := New(cfg, nil, nil, nil, nil, nil, nil, nil, nil, logger)
+	mw, _ := New(cfg, nil, nil, nil, nil, nil, nil, nil, nil, logger)
 	afterCreate := time.Now().UTC().Add(1 * time.Second) // Add 1 second buffer
 
 	// Create test request
-	req := httptest.NewRequest("GET", "/health?probe=live", nil)
+	req := httptest.NewRequest("GET", "/_auth/health?probe=live", nil)
 	rec := httptest.NewRecorder()
 
 	// Handle request
@@ -298,56 +310,4 @@ func TestHealthCheck_SinceTimestamp(t *testing.T) {
 	if response.Since == "" {
 		t.Error("since timestamp should not be empty")
 	}
-}
-
-func TestHealthCheck_BackwardCompatibility(t *testing.T) {
-	// Create minimal middleware for testing
-	cfg := &config.Config{
-		Service: config.ServiceConfig{
-			Name: "Test Service",
-		},
-		Session: config.SessionConfig{
-			Cookie: config.CookieConfig{
-				Name:   "test_session",
-				Secret: "test-secret-key-32-bytes-long!",
-			},
-		},
-		Server: config.ServerConfig{
-			AuthPathPrefix: "/_auth",
-		},
-	}
-
-	logger := logging.NewSimpleLogger("test", logging.LevelError, false)
-	mw := New(cfg, nil, nil, nil, nil, nil, nil, nil, nil, logger)
-
-	// Test /ready endpoint (backward compatibility)
-	t.Run("ready endpoint - not ready", func(t *testing.T) {
-		req := httptest.NewRequest("GET", "/ready", nil)
-		rec := httptest.NewRecorder()
-
-		mw.handleReady(rec, req)
-
-		if rec.Code != http.StatusServiceUnavailable {
-			t.Errorf("expected status 503, got %d", rec.Code)
-		}
-		if rec.Body.String() != "NOT READY" {
-			t.Errorf("expected body 'NOT READY', got '%s'", rec.Body.String())
-		}
-	})
-
-	t.Run("ready endpoint - ready", func(t *testing.T) {
-		mw.SetReady()
-
-		req := httptest.NewRequest("GET", "/ready", nil)
-		rec := httptest.NewRecorder()
-
-		mw.handleReady(rec, req)
-
-		if rec.Code != http.StatusOK {
-			t.Errorf("expected status 200, got %d", rec.Code)
-		}
-		if rec.Body.String() != "READY" {
-			t.Errorf("expected body 'READY', got '%s'", rec.Body.String())
-		}
-	})
 }

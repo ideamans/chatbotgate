@@ -41,15 +41,13 @@ oauth2:
       client_secret: "test-client-secret"
       enabled: true
 
-authorization:
-  allowed_emails:
+access_control:
+  emails:
     - "user@example.com"
-  allowed_domains:
     - "@example.org"
 
 logging:
   level: "debug"
-  module_level: "info"
   color: true
 `,
 			wantErr: false,
@@ -84,8 +82,8 @@ oauth2:
     - type: "google"
       enabled: true
 
-authorization:
-  allowed_emails:
+access_control:
+  emails:
     - "user@example.com"
 `,
 			wantErr: false,
@@ -210,13 +208,11 @@ func TestFileLoader_Load_JSON(t *testing.T) {
       }
     ]
   },
-  "authorization": {
-    "allowed_emails": ["user@example.com"],
-    "allowed_domains": ["@example.org"]
+  "access_control": {
+    "emails": ["user@example.com", "@example.org"]
   },
   "logging": {
     "level": "debug",
-    "module_level": "info",
     "color": true
   }
 }`,
@@ -247,8 +243,8 @@ func TestFileLoader_Load_JSON(t *testing.T) {
   "oauth2": {
     "providers": [{"type": "google", "enabled": true}]
   },
-  "authorization": {
-    "allowed_emails": ["user@example.com"]
+  "access_control": {
+    "emails": ["user@example.com"]
   }
 }`,
 			wantErr: false,

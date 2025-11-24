@@ -154,7 +154,7 @@ proxy:
 docker logs -f chatbotgate
 
 # Check health
-curl http://localhost:4180/health
+curl http://localhost:4180/_auth/health
 
 # Access application
 open http://localhost:4180
@@ -266,7 +266,7 @@ services:
       - TZ=Asia/Tokyo
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:4180/health"]
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:4180/_auth/health"]
       interval: 30s
       timeout: 3s
       retries: 3
