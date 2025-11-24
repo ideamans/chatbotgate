@@ -193,4 +193,78 @@ test.describe('Email authentication forwarding', () => {
 
     console.log('Email authentication forwarding test completed: Email and username (userpart) are forwarded');
   });
+
+  test('Encrypted querystring parameters do not expose plaintext data', async ({ page }) => {
+    // CRITICAL SECURITY TEST: Verify encrypted data is actually encrypted
+    // Encrypted parameters should NOT contain plaintext sensitive information
+
+    const testEmail = 'encryption-test@example.com';
+    const expectedUsername = 'encryption-test'; // userpart
+
+    await page.goto(FORWARDING_BASE_URL + '/');
+    await expect(page).toHaveURL(/\/_auth\/login$/);
+
+    // Use email login
+    await page.getByLabel('Email Address').fill(testEmail);
+
+    await Promise.all([
+      page.waitForURL(/\/_auth\/email\/sent/),
+      page.getByRole('button', { name: 'Send Login Link' }).click(),
+    ]);
+
+    // Wait for email and get login URL
+    console.log(`Waiting for email to ${testEmail}...`);
+    const loginUrl = await waitForLoginEmail(testEmail, {
+      timeoutMs: 10_000,
+      pollIntervalMs: 500,
+    });
+
+    // Rewrite to use forwarding proxy
+    const url = new URL(loginUrl);
+    url.port = '4182';
+    const forwardingLoginUrl = url.toString();
+
+    await page.goto(forwardingLoginUrl);
+    await page.waitForURL(/localhost:4182/);
+
+    // Get the final URL with query parameters
+    const finalUrl = page.url();
+    console.log('Final URL with encrypted parameters:', finalUrl);
+
+    // CRITICAL: Verify sensitive data is NOT in plaintext in the URL
+    // The URL may contain 'chatbotgate.user=' and 'chatbotgate.email=' parameters
+    // but the VALUES should be encrypted (base64 encoded encrypted data)
+
+    if (finalUrl.includes('chatbotgate.user=') || finalUrl.includes('chatbotgate.email=')) {
+      // Extract query string
+      const urlObj = new URL(finalUrl);
+      const queryString = urlObj.search;
+
+      // CRITICAL CHECKS: Plaintext sensitive data must NOT appear in query string
+      expect(queryString).not.toContain(testEmail); // Email should not be in plaintext
+      expect(queryString).not.toContain(expectedUsername); // Username should not be in plaintext
+      expect(queryString).not.toContain('@'); // No @ symbol (indicates unencrypted email)
+
+      // Verify the parameters look encrypted (base64-like, long random strings)
+      const userParam = urlObj.searchParams.get('chatbotgate.user');
+      const emailParam = urlObj.searchParams.get('chatbotgate.email');
+
+      if (userParam) {
+        // Encrypted data should be base64 encoded and reasonably long
+        expect(userParam.length).toBeGreaterThan(20); // Encrypted data is longer than plaintext
+        expect(userParam).toMatch(/^[A-Za-z0-9+/=_-]+$/); // Base64-like characters
+        console.log(`✓ chatbotgate.user is encrypted (length: ${userParam.length})`);
+      }
+
+      if (emailParam) {
+        expect(emailParam.length).toBeGreaterThan(20);
+        expect(emailParam).toMatch(/^[A-Za-z0-9+/=_-]+$/);
+        console.log(`✓ chatbotgate.email is encrypted (length: ${emailParam.length})`);
+      }
+
+      console.log('✓ SECURITY VERIFIED: Sensitive data is encrypted in query parameters');
+    } else {
+      console.log('ℹ QueryString forwarding not present in this flow');
+    }
+  });
 });

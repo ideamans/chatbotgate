@@ -36,12 +36,13 @@ func TestBuildStyleLinks_DifyDisabled(t *testing.T) {
 	}
 
 	sessionStore := func() kvs.Store { store, _ := kvs.NewMemoryStore("test", kvs.MemoryConfig{}); return store }()
+	defer func() { _ = sessionStore.Close() }()
 	oauthManager := oauth2.NewManager()
 	authzChecker := authz.NewEmailChecker(cfg.AccessControl)
 	translator := i18n.NewTranslator()
 	logger := logging.NewTestLogger()
 
-	middleware := New(
+	middleware, err := New(
 		cfg,
 		sessionStore,
 		oauthManager,
@@ -53,6 +54,9 @@ func TestBuildStyleLinks_DifyDisabled(t *testing.T) {
 		translator,
 		logger,
 	)
+	if err != nil {
+		t.Fatalf("Failed to create middleware: %v", err)
+	}
 
 	result := middleware.buildStyleLinks()
 
@@ -89,12 +93,13 @@ func TestBuildStyleLinks_DifyEnabled(t *testing.T) {
 	}
 
 	sessionStore := func() kvs.Store { store, _ := kvs.NewMemoryStore("test", kvs.MemoryConfig{}); return store }()
+	defer func() { _ = sessionStore.Close() }()
 	oauthManager := oauth2.NewManager()
 	authzChecker := authz.NewEmailChecker(cfg.AccessControl)
 	translator := i18n.NewTranslator()
 	logger := logging.NewTestLogger()
 
-	middleware := New(
+	middleware, err := New(
 		cfg,
 		sessionStore,
 		oauthManager,
@@ -106,6 +111,9 @@ func TestBuildStyleLinks_DifyEnabled(t *testing.T) {
 		translator,
 		logger,
 	)
+	if err != nil {
+		t.Fatalf("Failed to create middleware: %v", err)
+	}
 
 	result := middleware.buildStyleLinks()
 
@@ -141,12 +149,13 @@ func TestBuildStyleLinks_CustomPrefix(t *testing.T) {
 	}
 
 	sessionStore := func() kvs.Store { store, _ := kvs.NewMemoryStore("test", kvs.MemoryConfig{}); return store }()
+	defer func() { _ = sessionStore.Close() }()
 	oauthManager := oauth2.NewManager()
 	authzChecker := authz.NewEmailChecker(cfg.AccessControl)
 	translator := i18n.NewTranslator()
 	logger := logging.NewTestLogger()
 
-	middleware := New(
+	middleware, err := New(
 		cfg,
 		sessionStore,
 		oauthManager,
@@ -158,6 +167,9 @@ func TestBuildStyleLinks_CustomPrefix(t *testing.T) {
 		translator,
 		logger,
 	)
+	if err != nil {
+		t.Fatalf("Failed to create middleware: %v", err)
+	}
 
 	result := middleware.buildStyleLinks()
 
@@ -188,12 +200,13 @@ func TestHandleDifyCSS(t *testing.T) {
 	}
 
 	sessionStore := func() kvs.Store { store, _ := kvs.NewMemoryStore("test", kvs.MemoryConfig{}); return store }()
+	defer func() { _ = sessionStore.Close() }()
 	oauthManager := oauth2.NewManager()
 	authzChecker := authz.NewEmailChecker(cfg.AccessControl)
 	translator := i18n.NewTranslator()
 	logger := logging.NewTestLogger()
 
-	middleware := New(
+	middleware, err := New(
 		cfg,
 		sessionStore,
 		oauthManager,
@@ -205,6 +218,9 @@ func TestHandleDifyCSS(t *testing.T) {
 		translator,
 		logger,
 	)
+	if err != nil {
+		t.Fatalf("Failed to create middleware: %v", err)
+	}
 
 	req := httptest.NewRequest("GET", "/_auth/assets/dify.css", nil)
 	w := httptest.NewRecorder()
@@ -252,12 +268,13 @@ func TestMiddleware_DifyCSSRoute(t *testing.T) {
 	}
 
 	sessionStore := func() kvs.Store { store, _ := kvs.NewMemoryStore("test", kvs.MemoryConfig{}); return store }()
+	defer func() { _ = sessionStore.Close() }()
 	oauthManager := oauth2.NewManager()
 	authzChecker := authz.NewEmailChecker(cfg.AccessControl)
 	translator := i18n.NewTranslator()
 	logger := logging.NewTestLogger()
 
-	middleware := New(
+	middleware, err := New(
 		cfg,
 		sessionStore,
 		oauthManager,
@@ -269,6 +286,9 @@ func TestMiddleware_DifyCSSRoute(t *testing.T) {
 		translator,
 		logger,
 	)
+	if err != nil {
+		t.Fatalf("Failed to create middleware: %v", err)
+	}
 
 	req := httptest.NewRequest("GET", "/_auth/assets/dify.css", nil)
 	w := httptest.NewRecorder()
@@ -304,12 +324,13 @@ func TestMiddleware_DifyCSSRoute_CustomPrefix(t *testing.T) {
 	}
 
 	sessionStore := func() kvs.Store { store, _ := kvs.NewMemoryStore("test", kvs.MemoryConfig{}); return store }()
+	defer func() { _ = sessionStore.Close() }()
 	oauthManager := oauth2.NewManager()
 	authzChecker := authz.NewEmailChecker(cfg.AccessControl)
 	translator := i18n.NewTranslator()
 	logger := logging.NewTestLogger()
 
-	middleware := New(
+	middleware, err := New(
 		cfg,
 		sessionStore,
 		oauthManager,
@@ -321,6 +342,9 @@ func TestMiddleware_DifyCSSRoute_CustomPrefix(t *testing.T) {
 		translator,
 		logger,
 	)
+	if err != nil {
+		t.Fatalf("Failed to create middleware: %v", err)
+	}
 
 	req := httptest.NewRequest("GET", "/_custom/assets/dify.css", nil)
 	w := httptest.NewRecorder()
@@ -428,12 +452,13 @@ func TestBuildAuthHeader(t *testing.T) {
 			}
 
 			sessionStore := func() kvs.Store { store, _ := kvs.NewMemoryStore("test", kvs.MemoryConfig{}); return store }()
+			defer func() { _ = sessionStore.Close() }()
 			oauthManager := oauth2.NewManager()
 			authzChecker := authz.NewEmailChecker(cfg.AccessControl)
 			translator := i18n.NewTranslator()
 			logger := logging.NewTestLogger()
 
-			middleware := New(
+			middleware, err := New(
 				cfg,
 				sessionStore,
 				oauthManager,
@@ -445,6 +470,9 @@ func TestBuildAuthHeader(t *testing.T) {
 				translator,
 				logger,
 			)
+			if err != nil {
+				t.Fatalf("Failed to create middleware: %v", err)
+			}
 
 			result := middleware.buildAuthHeader("/_auth")
 

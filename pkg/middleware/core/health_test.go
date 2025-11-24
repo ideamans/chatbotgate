@@ -29,7 +29,10 @@ func TestHealthCheck_Liveness(t *testing.T) {
 	}
 
 	logger := logging.NewSimpleLogger("test", logging.LevelError, false)
-	mw := New(cfg, nil, nil, nil, nil, nil, nil, nil, nil, logger)
+	mw, err := New(cfg, nil, nil, nil, nil, nil, nil, nil, nil, logger)
+	if err != nil {
+		t.Fatalf("Failed to create middleware: %v", err)
+	}
 
 	// Create test request
 	req := httptest.NewRequest("GET", "/_auth/health?probe=live", nil)
@@ -82,7 +85,10 @@ func TestHealthCheck_Readiness_NotReady(t *testing.T) {
 	}
 
 	logger := logging.NewSimpleLogger("test", logging.LevelError, false)
-	mw := New(cfg, nil, nil, nil, nil, nil, nil, nil, nil, logger)
+	mw, err := New(cfg, nil, nil, nil, nil, nil, nil, nil, nil, logger)
+	if err != nil {
+		t.Fatalf("Failed to create middleware: %v", err)
+	}
 
 	// DON'T call SetReady() - middleware should be in "starting" state
 
@@ -148,7 +154,10 @@ func TestHealthCheck_Readiness_Ready(t *testing.T) {
 	}
 
 	logger := logging.NewSimpleLogger("test", logging.LevelError, false)
-	mw := New(cfg, nil, nil, nil, nil, nil, nil, nil, nil, logger)
+	mw, err := New(cfg, nil, nil, nil, nil, nil, nil, nil, nil, logger)
+	if err != nil {
+		t.Fatalf("Failed to create middleware: %v", err)
+	}
 
 	// Mark middleware as ready
 	mw.SetReady()
@@ -207,7 +216,10 @@ func TestHealthCheck_Draining(t *testing.T) {
 	}
 
 	logger := logging.NewSimpleLogger("test", logging.LevelError, false)
-	mw := New(cfg, nil, nil, nil, nil, nil, nil, nil, nil, logger)
+	mw, err := New(cfg, nil, nil, nil, nil, nil, nil, nil, nil, logger)
+	if err != nil {
+		t.Fatalf("Failed to create middleware: %v", err)
+	}
 
 	// Mark middleware as ready first
 	mw.SetReady()
@@ -267,7 +279,7 @@ func TestHealthCheck_SinceTimestamp(t *testing.T) {
 
 	logger := logging.NewSimpleLogger("test", logging.LevelError, false)
 	beforeCreate := time.Now().UTC()
-	mw := New(cfg, nil, nil, nil, nil, nil, nil, nil, nil, logger)
+	mw, err := New(cfg, nil, nil, nil, nil, nil, nil, nil, nil, logger)
 	afterCreate := time.Now().UTC().Add(1 * time.Second) // Add 1 second buffer
 
 	// Create test request
@@ -299,4 +311,3 @@ func TestHealthCheck_SinceTimestamp(t *testing.T) {
 		t.Error("since timestamp should not be empty")
 	}
 }
-

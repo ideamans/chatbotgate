@@ -1,6 +1,10 @@
 import { test, expect } from '@playwright/test'
+import { routeStubAuthRequests } from '../support/stub-auth-route'
 
 test.describe('Rules Configuration', () => {
+  test.beforeEach(async ({ page }) => {
+    await routeStubAuthRequests(page)
+  })
   test('should allow access to /embed.js without authentication (prefix match)', async ({ page }) => {
     // Try to access /embed.js without authentication
     // This should work because /embed.js matches a rule with allow action
@@ -83,5 +87,48 @@ test.describe('Rules Configuration', () => {
     // Should redirect to login
     await page.waitForURL(/\/_auth\/login/)
     expect(page.url()).toContain('/_auth/login')
+  })
+
+  test('should deny access to /admin path (deny rule returns 403)', async ({ page }) => {
+    // Try to access /admin without authentication
+    // IMPORTANT: deny rules return 403 Forbidden (not redirect to login)
+    // This is different from paths requiring auth, which redirect to login
+    const response = await page.goto('http://localhost:4183/admin', {
+      failOnStatusCode: false
+    })
+
+    // CRITICAL: Should return 403 Forbidden, NOT redirect to login
+    expect(response?.status()).toBe(403)
+    expect(page.url()).not.toContain('/_auth/login')
+
+    // Should show access denied message
+    const mainContent = page.locator('main, [role="main"], body')
+    await expect(mainContent).toContainText(/Access Denied|Forbidden|アクセスが拒否されました/i)
+  })
+
+  test('should respect rule priority (first-match-wins)', async ({ page }) => {
+    // CRITICAL: Rule evaluation must stop at first match
+    // Config has:
+    //   1. exact "/api/public/secret" -> deny
+    //   2. regex "^/api/public/" -> allow
+    //
+    // Even though /api/public/secret matches the allow rule,
+    // the deny rule comes first, so it should be denied
+
+    const secretResponse = await page.goto('http://localhost:4183/api/public/secret', {
+      failOnStatusCode: false
+    })
+
+    // CRITICAL: Should return 403 (first deny rule matched)
+    expect(secretResponse?.status()).toBe(403)
+
+    // For comparison, other /api/public/* paths should be allowed
+    const publicResponse = await page.goto('http://localhost:4183/api/public/info', {
+      failOnStatusCode: false
+    })
+
+    // Should return 200 (allow rule matched)
+    expect(publicResponse?.status()).toBe(200)
+    expect(page.url()).not.toContain('/_auth/login')
   })
 })

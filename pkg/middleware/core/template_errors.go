@@ -1,0 +1,120 @@
+package middleware
+
+// forbiddenTemplate is the HTML template for 403 Forbidden error page
+const forbiddenTemplate = `<!DOCTYPE html>
+<html lang="{{.Lang}}"{{if eq .Theme "dark"}} class="dark"{{else if eq .Theme "light"}} class="light"{{end}}>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{.Title}} - {{.ServiceName}}</title>
+{{.StyleLinks}}
+</head>
+<body>
+<div class="auth-container">
+  <div style="width: 100%; max-width: 28rem;">
+    <div class="card auth-card">
+      {{.Header}}
+      {{if .Subtitle}}
+      <h2 class="auth-subtitle">{{.Subtitle}}</h2>
+      {{end}}
+      <div class="alert alert-error" style="text-align: left; margin-bottom: var(--spacing-md);">{{.Message}}</div>
+      <a href="{{.ActionURL}}" class="btn btn-ghost" style="width: 100%; margin-top: var(--spacing-md);">{{.ActionLabel}}</a>
+    </div>
+    <a href="https://github.com/ideamans/chatbotgate" class="auth-credit">
+      <img src="{{.CreditIcon}}" alt="ChatbotGate Logo">
+      Protected by ChatbotGate
+    </a>
+  </div>
+</div>
+</body>
+</html>`
+
+// emailRequiredTemplate is the HTML template for email required error page
+const emailRequiredTemplate = `<!DOCTYPE html>
+<html lang="{{.Lang}}"{{if eq .Theme "dark"}} class="dark"{{else if eq .Theme "light"}} class="light"{{end}}>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{.Title}} - {{.ServiceName}}</title>
+{{.StyleLinks}}
+</head>
+<body>
+<div class="auth-container">
+  <div style="width: 100%; max-width: 28rem;">
+    <div class="card auth-card">
+      {{.Header}}
+      {{if .Subtitle}}
+      <h2 class="auth-subtitle">{{.Subtitle}}</h2>
+      {{end}}
+      <div class="alert alert-error" style="text-align: left; margin-bottom: var(--spacing-md);">{{.Message}}</div>
+      <a href="{{.ActionURL}}" class="btn btn-ghost" style="width: 100%; margin-top: var(--spacing-md);">{{.ActionLabel}}</a>
+    </div>
+    <a href="https://github.com/ideamans/chatbotgate" class="auth-credit">
+      <img src="{{.CreditIcon}}" alt="ChatbotGate Logo">
+      Protected by ChatbotGate
+    </a>
+  </div>
+</div>
+</body>
+</html>`
+
+// notFoundTemplate is the HTML template for 404 Not Found error page
+const notFoundTemplate = `<!DOCTYPE html>
+<html lang="{{.Lang}}"{{if eq .Theme "dark"}} class="dark"{{else if eq .Theme "light"}} class="light"{{end}}>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{.Title}} - {{.ServiceName}}</title>
+{{.StyleLinks}}
+</head>
+<body>
+<div class="auth-container">
+  <div style="width: 100%; max-width: 28rem;">
+    <div class="card auth-card">
+      {{.Header}}
+      {{if .Subtitle}}
+      <h2 class="auth-subtitle">{{.Subtitle}}</h2>
+      {{end}}
+      <div class="alert alert-error" style="text-align: left; margin-bottom: var(--spacing-md);">{{.Message}}</div>
+      <a href="{{.ActionURL}}" class="btn btn-primary" style="width: 100%; margin-top: var(--spacing-md);">{{.ActionLabel}}</a>
+    </div>
+    <a href="https://github.com/ideamans/chatbotgate" class="auth-credit">
+      <img src="{{.CreditIcon}}" alt="ChatbotGate Logo">
+      Protected by ChatbotGate
+    </a>
+  </div>
+</div>
+</body>
+</html>`
+
+// serverErrorTemplate is the HTML template for 500 Internal Server Error page
+const serverErrorTemplate = `<!DOCTYPE html>
+<html lang="{{.Lang}}"{{if eq .Theme "dark"}} class="dark"{{else if eq .Theme "light"}} class="light"{{end}}>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{.Title}} - {{.ServiceName}}</title>
+{{.StyleLinks}}
+</head>
+<body>
+<div class="auth-container">
+  <div style="width: 100%; max-width: 28rem;">
+    <div class="card auth-card">
+      {{.Header}}
+      {{if .Subtitle}}
+      <h2 class="auth-subtitle">{{.Subtitle}}</h2>
+      {{end}}
+      <div class="alert alert-error" style="text-align: left; margin-bottom: var(--spacing-md);">{{.Message}}</div>
+      {{if .ErrorDetails}}
+      {{.ErrorDetails}}
+      {{end}}
+      <a href="{{.ActionURL}}" class="btn btn-ghost" style="width: 100%; margin-top: var(--spacing-md);">{{.ActionLabel}}</a>
+    </div>
+    <a href="https://github.com/ideamans/chatbotgate" class="auth-credit">
+      <img src="{{.CreditIcon}}" alt="ChatbotGate Logo">
+      Protected by ChatbotGate
+    </a>
+  </div>
+</div>
+</body>
+</html>`

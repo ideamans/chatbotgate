@@ -73,7 +73,7 @@ func TestTokenStore_GenerateToken(t *testing.T) {
 	email := "user@example.com"
 	duration := 15 * time.Minute
 
-	token, err := store.GenerateToken(email, duration)
+	token, err := store.GenerateToken(email, "/", duration)
 	if err != nil {
 		t.Fatalf("GenerateToken() error = %v", err)
 	}
@@ -92,13 +92,13 @@ func TestTokenStore_VerifyToken(t *testing.T) {
 	store := createTestTokenStore("test-secret")
 
 	email := "user@example.com"
-	token, err := store.GenerateToken(email, 15*time.Minute)
+	token, err := store.GenerateToken(email, "/test", 15*time.Minute)
 	if err != nil {
 		t.Fatalf("GenerateToken() error = %v", err)
 	}
 
 	// Verify valid token
-	verifiedEmail, err := store.VerifyToken(token)
+	verifiedEmail, _, err := store.VerifyToken(token)
 	if err != nil {
 		t.Fatalf("VerifyToken() error = %v", err)
 	}
@@ -108,7 +108,7 @@ func TestTokenStore_VerifyToken(t *testing.T) {
 	}
 
 	// Try to verify again - should fail (one-time use)
-	_, err = store.VerifyToken(token)
+	_, _, err = store.VerifyToken(token)
 	if err != ErrTokenAlreadyUsed {
 		t.Errorf("VerifyToken() second call error = %v, want ErrTokenAlreadyUsed", err)
 	}
@@ -117,7 +117,7 @@ func TestTokenStore_VerifyToken(t *testing.T) {
 func TestTokenStore_VerifyToken_NotFound(t *testing.T) {
 	store := createTestTokenStore("test-secret")
 
-	_, err := store.VerifyToken("nonexistent-token")
+	_, _, err := store.VerifyToken("nonexistent-token")
 	if err != ErrTokenNotFound {
 		t.Errorf("VerifyToken() error = %v, want ErrTokenNotFound", err)
 	}
@@ -127,7 +127,7 @@ func TestTokenStore_VerifyToken_Expired(t *testing.T) {
 	store := createTestTokenStore("test-secret")
 
 	email := "user@example.com"
-	token, err := store.GenerateToken(email, 1*time.Millisecond)
+	token, err := store.GenerateToken(email, "/", 1*time.Millisecond)
 	if err != nil {
 		t.Fatalf("GenerateToken() error = %v", err)
 	}
@@ -135,7 +135,7 @@ func TestTokenStore_VerifyToken_Expired(t *testing.T) {
 	// Wait for token to expire (KVS will auto-delete)
 	time.Sleep(10 * time.Millisecond)
 
-	_, err = store.VerifyToken(token)
+	_, _, err = store.VerifyToken(token)
 	// With KVS, expired tokens are auto-deleted by TTL, so we get ErrTokenNotFound
 	if err != ErrTokenNotFound {
 		t.Errorf("VerifyToken() error = %v, want ErrTokenNotFound (expired tokens are auto-deleted by KVS TTL)", err)
@@ -146,7 +146,7 @@ func TestTokenStore_DeleteToken(t *testing.T) {
 	store := createTestTokenStore("test-secret")
 
 	email := "user@example.com"
-	token, err := store.GenerateToken(email, 15*time.Minute)
+	token, err := store.GenerateToken(email, "/", 15*time.Minute)
 	if err != nil {
 		t.Fatalf("GenerateToken() error = %v", err)
 	}
@@ -155,7 +155,7 @@ func TestTokenStore_DeleteToken(t *testing.T) {
 	store.DeleteToken(token)
 
 	// Verify token is gone
-	_, err = store.VerifyToken(token)
+	_, _, err = store.VerifyToken(token)
 	if err != ErrTokenNotFound {
 		t.Errorf("VerifyToken() after delete error = %v, want ErrTokenNotFound", err)
 	}
@@ -165,12 +165,12 @@ func TestTokenStore_CleanupExpired(t *testing.T) {
 	store := createTestTokenStore("test-secret")
 
 	// Create an expired token
-	if _, err := store.GenerateToken("expired@example.com", 1*time.Millisecond); err != nil {
+	if _, err := store.GenerateToken("expired@example.com", "/", 1*time.Millisecond); err != nil {
 		t.Fatalf("GenerateToken() error = %v", err)
 	}
 
 	// Create a valid token
-	if _, err := store.GenerateToken("valid@example.com", 15*time.Minute); err != nil {
+	if _, err := store.GenerateToken("valid@example.com", "/", 15*time.Minute); err != nil {
 		t.Fatalf("GenerateToken() error = %v", err)
 	}
 
@@ -190,8 +190,8 @@ func TestTokenStore_MultipleTokens(t *testing.T) {
 	store := createTestTokenStore("test-secret")
 
 	// Generate multiple tokens
-	token1, _ := store.GenerateToken("user1@example.com", 15*time.Minute)
-	token2, _ := store.GenerateToken("user2@example.com", 15*time.Minute)
+	token1, _ := store.GenerateToken("user1@example.com", "/path1", 15*time.Minute)
+	token2, _ := store.GenerateToken("user2@example.com", "/path2", 15*time.Minute)
 
 	// Verify they are different
 	if token1 == token2 {
@@ -199,13 +199,13 @@ func TestTokenStore_MultipleTokens(t *testing.T) {
 	}
 
 	// Verify both work
-	email1, err := store.VerifyToken(token1)
-	if err != nil || email1 != "user1@example.com" {
-		t.Error("token1 verification failed")
+	email1, redirectURL1, err := store.VerifyToken(token1)
+	if err != nil || email1 != "user1@example.com" || redirectURL1 != "/path1" {
+		t.Errorf("token1 verification failed: email=%s, redirect=%s, err=%v", email1, redirectURL1, err)
 	}
 
-	email2, err := store.VerifyToken(token2)
-	if err != nil || email2 != "user2@example.com" {
-		t.Error("token2 verification failed")
+	email2, redirectURL2, err := store.VerifyToken(token2)
+	if err != nil || email2 != "user2@example.com" || redirectURL2 != "/path2" {
+		t.Errorf("token2 verification failed: email=%s, redirect=%s, err=%v", email2, redirectURL2, err)
 	}
 }

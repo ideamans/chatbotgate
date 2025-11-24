@@ -134,9 +134,9 @@ type OAuth2Provider struct {
 // EmailAuthConfig contains email authentication settings
 type EmailAuthConfig struct {
 	Enabled        bool             `yaml:"enabled" json:"enabled"`
-	SenderType     string           `yaml:"sender_type" json:"sender_type"`         // "smtp", "sendgrid", or "sendmail"
-	From           string           `yaml:"from" json:"from"`                       // From email address (can be RFC 5322 format: "Name <email@example.com>" or just "email@example.com")
-	FromName       string           `yaml:"from_name" json:"from_name"`             // From display name (optional, used if From doesn't contain name)
+	SenderType     string           `yaml:"sender_type" json:"sender_type"`           // "smtp", "sendgrid", or "sendmail"
+	From           string           `yaml:"from" json:"from"`                         // From email address (can be RFC 5322 format: "Name <email@example.com>" or just "email@example.com")
+	FromName       string           `yaml:"from_name" json:"from_name"`               // From display name (optional, used if From doesn't contain name)
 	LimitPerMinute int              `yaml:"limit_per_minute" json:"limit_per_minute"` // Maximum number of emails per minute per address (default: 5)
 	SMTP           SMTPConfig       `yaml:"smtp" json:"smtp"`
 	SendGrid       SendGridConfig   `yaml:"sendgrid" json:"sendgrid"`

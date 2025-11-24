@@ -204,4 +204,56 @@ test.describe('QueryString merging with forwarding (:4182)', () => {
 
     console.log('✓ Original parameters preserved and chatbotgate.* parameters added (username is userpart for email auth)');
   });
+
+  test('should preserve special characters in query parameters', async ({ page }) => {
+    // IMPORTANT: Test URL encoding/decoding of special characters
+    // Special chars like &, =, ?, #, +, spaces must be properly encoded/decoded
+
+    const specialChars = {
+      space: 'hello world',
+      ampersand: 'foo&bar',
+      equals: 'key=value',
+      plus: 'one+two',
+      hash: 'tag#123',
+      percent: '50%off',
+      japanese: '日本語',
+    };
+
+    // Build query string with special characters (properly encoded)
+    const params = new URLSearchParams(specialChars);
+    const queryString = params.toString();
+
+    await page.goto(`${FORWARDING_BASE_URL}/test?${queryString}`);
+    await expect(page).toHaveURL(/\/_auth\/login$/);
+
+    // Complete OAuth2 flow
+    await page.getByRole('link', { name: 'stub-auth' }).click();
+    await expect(page).toHaveURL(/localhost:3001\/login/);
+
+    await page.locator('[data-test="login-email"]').fill(TEST_EMAIL);
+    await page.locator('[data-test="login-password"]').fill(TEST_PASSWORD);
+
+    await Promise.all([
+      page.waitForURL(/localhost:3001\/oauth\/authorize/),
+      page.locator('[data-test="login-submit"]').click(),
+    ]);
+
+    await page.locator('[data-test="authorize-allow"]').click();
+    await page.waitForURL(/localhost:4182\/test/);
+
+    // Parse final URL parameters
+    const finalUrl = new URL(page.url());
+    const finalParams = finalUrl.searchParams;
+
+    // CRITICAL: Verify all special characters are preserved correctly
+    expect(finalParams.get('space')).toBe(specialChars.space);
+    expect(finalParams.get('ampersand')).toBe(specialChars.ampersand);
+    expect(finalParams.get('equals')).toBe(specialChars.equals);
+    expect(finalParams.get('plus')).toBe(specialChars.plus);
+    expect(finalParams.get('hash')).toBe(specialChars.hash);
+    expect(finalParams.get('percent')).toBe(specialChars.percent);
+    expect(finalParams.get('japanese')).toBe(specialChars.japanese);
+
+    console.log('✓ All special characters preserved correctly after authentication');
+  });
 });

@@ -109,6 +109,7 @@ func TestMiddleware_RequiresEmail(t *testing.T) {
 			}
 
 			sessionStore := func() session.Store { store, _ := kvs.NewMemoryStore("test", kvs.MemoryConfig{}); return store }()
+			defer func() { _ = sessionStore.Close() }()
 
 			oauthManager := oauth2.NewManager()
 			oauthManager.AddProvider(&mockProvider{
@@ -120,7 +121,7 @@ func TestMiddleware_RequiresEmail(t *testing.T) {
 			translator := i18n.NewTranslator()
 			logger := logging.NewTestLogger()
 
-			middleware := New(
+			middleware, err := New(
 				cfg,
 				sessionStore,
 				oauthManager,
@@ -132,6 +133,9 @@ func TestMiddleware_RequiresEmail(t *testing.T) {
 				translator,
 				logger,
 			)
+			if err != nil {
+				t.Fatalf("Failed to create middleware: %v", err)
+			}
 
 			if middleware.authzChecker.RequiresEmail() != tt.expectRequired {
 				t.Errorf("RequiresEmail() = %v, want %v", middleware.authzChecker.RequiresEmail(), tt.expectRequired)
@@ -163,13 +167,14 @@ func TestMiddleware_Authorization_NoWhitelist(t *testing.T) {
 	}
 
 	sessionStore := func() session.Store { store, _ := kvs.NewMemoryStore("test", kvs.MemoryConfig{}); return store }()
+	defer func() { _ = sessionStore.Close() }()
 
 	oauthManager := oauth2.NewManager()
 	authzChecker := authz.NewEmailChecker(cfg.AccessControl)
 	translator := i18n.NewTranslator()
 	logger := logging.NewTestLogger()
 
-	middleware := New(
+	middleware, err := New(
 		cfg,
 		sessionStore,
 		oauthManager,
@@ -207,7 +212,7 @@ func TestMiddleware_Authorization_NoWhitelist(t *testing.T) {
 		Authenticated: true,
 	}
 
-	err := session.Set(sessionStore, sessionID, sess)
+	err = session.Set(sessionStore, sessionID, sess)
 	if err != nil {
 		t.Fatalf("Failed to create session: %v", err)
 	}
@@ -265,13 +270,14 @@ func TestMiddleware_Authorization_WithWhitelist(t *testing.T) {
 	}
 
 	sessionStore := func() session.Store { store, _ := kvs.NewMemoryStore("test", kvs.MemoryConfig{}); return store }()
+	defer func() { _ = sessionStore.Close() }()
 
 	oauthManager := oauth2.NewManager()
 	authzChecker := authz.NewEmailChecker(cfg.AccessControl)
 	translator := i18n.NewTranslator()
 	logger := logging.NewTestLogger()
 
-	middleware := New(
+	middleware, err := New(
 		cfg,
 		sessionStore,
 		oauthManager,
@@ -315,7 +321,7 @@ func TestMiddleware_Authorization_WithWhitelist(t *testing.T) {
 		Authenticated: true,
 	}
 
-	err := session.Set(sessionStore, authorizedSessionID, authorizedSess)
+	err = session.Set(sessionStore, authorizedSessionID, authorizedSess)
 	if err != nil {
 		t.Fatalf("Failed to create authorized session: %v", err)
 	}
@@ -404,6 +410,7 @@ func TestHandleLogin_DividerDisplay(t *testing.T) {
 			}
 
 			sessionStore := func() kvs.Store { store, _ := kvs.NewMemoryStore("test", kvs.MemoryConfig{}); return store }()
+			defer func() { _ = sessionStore.Close() }()
 			oauthManager := oauth2.NewManager()
 
 			// Add OAuth2 provider if needed
@@ -426,7 +433,7 @@ func TestHandleLogin_DividerDisplay(t *testing.T) {
 				emailHandler = &email.Handler{}
 			}
 
-			middleware := New(
+			middleware, err := New(
 				cfg,
 				sessionStore,
 				oauthManager,
@@ -438,6 +445,9 @@ func TestHandleLogin_DividerDisplay(t *testing.T) {
 				translator,
 				logger,
 			)
+			if err != nil {
+				t.Fatalf("Failed to create middleware: %v", err)
+			}
 
 			req := httptest.NewRequest("GET", "/_auth/login", nil)
 			w := httptest.NewRecorder()

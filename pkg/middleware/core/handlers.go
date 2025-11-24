@@ -5,7 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"html"
+	"html/template"
 	"net/http"
 	"strings"
 	"time"
@@ -16,6 +16,279 @@ import (
 	"github.com/ideamans/chatbotgate/pkg/middleware/session"
 	"github.com/ideamans/chatbotgate/pkg/shared/i18n"
 )
+
+// handleLogin displays the login page using html/template
+func (m *Middleware) handleLogin(w http.ResponseWriter, r *http.Request) {
+	lang := i18n.DetectLanguage(r)
+	theme := i18n.DetectTheme(r)
+	t := func(key string) string { return m.translator.T(lang, key) }
+	prefix := m.config.Server.GetAuthPathPrefix()
+
+	// Build common page data
+	pageData := m.buildPageData(lang, theme, "login.title")
+
+	// Build provider data
+	var providerDataList []ProviderData
+	providers := m.oauthManager.GetProviders()
+	for _, p := range providers {
+		providerName := p.Name()
+
+		// Find icon URL from config
+		var iconPath string
+		for _, providerCfg := range m.config.OAuth2.Providers {
+			if providerCfg.Type == providerName && providerCfg.IconURL != "" {
+				// Use custom icon URL from config
+				iconPath = providerCfg.IconURL
+				break
+			}
+		}
+
+		// If no custom icon URL, use default embedded icon
+		if iconPath == "" {
+			iconName := providerName
+			knownIcons := map[string]bool{
+				"google":    true,
+				"github":    true,
+				"microsoft": true,
+				"facebook":  true,
+			}
+			if !knownIcons[providerName] {
+				iconName = "oidc" // Default to OIDC icon for custom providers
+			}
+			iconPath = joinAuthPath(prefix, "/assets/icons/"+iconName+".svg")
+		}
+
+		providerDataList = append(providerDataList, ProviderData{
+			Name:     providerName,
+			IconPath: iconPath,
+			URL:      joinAuthPath(prefix, "/oauth2/start/"+providerName),
+			Label:    fmt.Sprintf(t("login.oauth2.continue"), providerName),
+		})
+	}
+
+	// Build login page data
+	data := LoginPageData{
+		PageData:        pageData,
+		Providers:       providerDataList,
+		EmailEnabled:    m.emailHandler != nil,
+		PasswordEnabled: m.passwordHandler != nil,
+		EmailSendPath:   joinAuthPath(prefix, "/email/send"),
+		EmailIconPath:   joinAuthPath(prefix, "/assets/icons/email.svg"),
+		Translations: LoginTranslations{
+			Or:          t("login.or"),
+			EmailLabel:  t("login.email.label"),
+			EmailSave:   t("login.email.save"),
+			EmailSubmit: t("login.email.submit"),
+			ThemeAuto:   t("ui.theme.auto"),
+			ThemeLight:  t("ui.theme.light"),
+			ThemeDark:   t("ui.theme.dark"),
+			LanguageEn:  t("ui.language.en"),
+			LanguageJa:  t("ui.language.ja"),
+		},
+	}
+
+	// Add password form HTML if enabled
+	if m.passwordHandler != nil {
+		data.PasswordFormHTML = template.HTML(m.passwordHandler.RenderPasswordForm(lang))
+	}
+
+	// Render template
+	if err := renderTemplate(w, m.templates.login, data, m); err != nil {
+		m.logger.Error("Failed to render login template", "error", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+}
+
+// handleLogout logs out the user using html/template
+func (m *Middleware) handleLogout(w http.ResponseWriter, r *http.Request) {
+	lang := i18n.DetectLanguage(r)
+	theme := i18n.DetectTheme(r)
+	t := func(key string) string { return m.translator.T(lang, key) }
+	prefix := m.config.Server.GetAuthPathPrefix()
+
+	// Get session cookie
+	cookie, err := r.Cookie(m.config.Session.Cookie.Name)
+	if err == nil {
+		// Delete session (ignore error, proceed with logout anyway)
+		_ = session.Delete(m.sessionStore, cookie.Value)
+	}
+
+	// Clear cookie
+	http.SetCookie(w, &http.Cookie{
+		Name:     m.config.Session.Cookie.Name,
+		Value:    "",
+		Path:     "/",
+		MaxAge:   -1,
+		HttpOnly: true,
+	})
+
+	// Build page data
+	pageData := m.buildPageData(lang, theme, "logout.title")
+	pageData.Subtitle = t("logout.heading")
+
+	data := LogoutPageData{
+		PageData:   pageData,
+		Message:    t("logout.message"),
+		LoginURL:   joinAuthPath(prefix, "/login"),
+		LoginLabel: t("logout.login"),
+	}
+
+	// Render template
+	if err := renderTemplate(w, m.templates.logout, data, m); err != nil {
+		m.logger.Error("Failed to render logout template", "error", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+}
+
+// handleEmailSent shows the email sent confirmation page using html/template
+func (m *Middleware) handleEmailSent(w http.ResponseWriter, r *http.Request) {
+	lang := i18n.DetectLanguage(r)
+	theme := i18n.DetectTheme(r)
+	t := func(key string) string { return m.translator.T(lang, key) }
+	prefix := m.config.Server.GetAuthPathPrefix()
+
+	// Build page data
+	pageData := m.buildPageData(lang, theme, "email.sent.title")
+	pageData.Subtitle = t("email.sent.heading")
+
+	data := EmailSentPageData{
+		PageData:       pageData,
+		Message:        t("email.sent.message"),
+		Detail:         t("email.sent.detail"),
+		OTPLabel:       t("email.sent.otp_label"),
+		OTPPlaceholder: t("email.sent.otp_placeholder"),
+		VerifyButton:   t("email.sent.verify_button"),
+		BackLabel:      t("email.sent.back"),
+		LoginURL:       joinAuthPath(prefix, "/login"),
+		VerifyOTPPath:  joinAuthPath(prefix, "/email/verify-otp"),
+	}
+
+	// Render template
+	if err := renderTemplate(w, m.templates.emailSent, data, m); err != nil {
+		m.logger.Error("Failed to render email sent template", "error", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+}
+
+// handleForbidden displays the access denied page using html/template
+func (m *Middleware) handleForbidden(w http.ResponseWriter, r *http.Request) {
+	lang := i18n.DetectLanguage(r)
+	theme := i18n.DetectTheme(r)
+	t := func(key string) string { return m.translator.T(lang, key) }
+	prefix := m.config.Server.GetAuthPathPrefix()
+
+	// Build page data
+	pageData := m.buildPageData(lang, theme, "error.forbidden.title")
+	pageData.Subtitle = t("error.forbidden.heading")
+
+	data := ErrorPageData{
+		PageData:    pageData,
+		Message:     t("error.forbidden.message"),
+		ActionURL:   joinAuthPath(prefix, "/login"),
+		ActionLabel: t("login.back"),
+	}
+
+	// Render template
+	if err := renderErrorTemplate(w, m.templates.forbidden, data, http.StatusForbidden, m); err != nil {
+		m.logger.Error("Failed to render forbidden template", "error", err)
+		http.Error(w, "Access Denied", http.StatusForbidden)
+		return
+	}
+}
+
+// handleEmailFetchError displays an error page when OAuth2 provider fails to provide email
+func (m *Middleware) handleEmailFetchError(w http.ResponseWriter, r *http.Request) {
+	lang := i18n.DetectLanguage(r)
+	theme := i18n.DetectTheme(r)
+	t := func(key string) string { return m.translator.T(lang, key) }
+	prefix := m.config.Server.GetAuthPathPrefix()
+
+	// Build page data
+	pageData := m.buildPageData(lang, theme, "error.email_required.title")
+	pageData.Subtitle = t("error.email_required.heading")
+
+	data := ErrorPageData{
+		PageData:    pageData,
+		Message:     t("error.email_required.message"),
+		ActionURL:   joinAuthPath(prefix, "/login"),
+		ActionLabel: t("login.back"),
+	}
+
+	// Render template
+	if err := renderErrorTemplate(w, m.templates.emailReq, data, http.StatusBadRequest, m); err != nil {
+		m.logger.Error("Failed to render email required template", "error", err)
+		http.Error(w, "Email required", http.StatusBadRequest)
+		return
+	}
+}
+
+// handle404 displays the 404 Not Found page using html/template
+func (m *Middleware) handle404(w http.ResponseWriter, r *http.Request) {
+	lang := i18n.DetectLanguage(r)
+	theme := i18n.DetectTheme(r)
+	t := func(key string) string { return m.translator.T(lang, key) }
+
+	// Build page data
+	pageData := m.buildPageData(lang, theme, "error.notfound.title")
+	pageData.Subtitle = t("error.notfound.heading")
+
+	data := ErrorPageData{
+		PageData:    pageData,
+		Message:     t("error.notfound.message"),
+		ActionURL:   "/",
+		ActionLabel: t("error.notfound.home"),
+	}
+
+	// Render template
+	if err := renderErrorTemplate(w, m.templates.notFound, data, http.StatusNotFound, m); err != nil {
+		m.logger.Error("Failed to render 404 template", "error", err)
+		http.Error(w, "Not Found", http.StatusNotFound)
+		return
+	}
+}
+
+// handle500 displays the 500 Internal Server Error page with optional error details
+func (m *Middleware) handle500(w http.ResponseWriter, r *http.Request, err error) {
+	lang := i18n.DetectLanguage(r)
+	theme := i18n.DetectTheme(r)
+	t := func(key string) string { return m.translator.T(lang, key) }
+
+	// Build page data
+	pageData := m.buildPageData(lang, theme, "error.server.title")
+	pageData.Subtitle = t("error.server.heading")
+
+	data := ErrorPageData{
+		PageData:    pageData,
+		Message:     t("error.server.message"),
+		ActionURL:   "/",
+		ActionLabel: t("error.server.home"),
+	}
+
+	// Build error details accordion if error is provided
+	if err != nil {
+		errorDetailsHTML := `
+    <div class="accordion" id="error-accordion">
+      <div class="accordion-header" onclick="document.getElementById('error-accordion').classList.toggle('open')">
+        <span class="accordion-header-title">` + template.HTMLEscapeString(t("error.details.title")) + `</span>
+        <span class="accordion-header-icon"></span>
+      </div>
+      <div class="accordion-content">
+        <div class="accordion-body">` + template.HTMLEscapeString(fmt.Sprintf("%+v", err)) + `</div>
+      </div>
+    </div>`
+		data.ErrorDetails = template.HTML(errorDetailsHTML)
+	}
+
+	// Render template
+	if renderErr := renderErrorTemplate(w, m.templates.server, data, http.StatusInternalServerError, m); renderErr != nil {
+		m.logger.Error("Failed to render 500 template", "error", renderErr)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+}
 
 // HealthResponse represents the JSON response for health check
 type HealthResponse struct {
@@ -81,6 +354,20 @@ type HealthResponse struct {
 // Supports both readiness check (default) and liveness check (?probe=live)
 // See: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/
 func (m *Middleware) handleHealth(w http.ResponseWriter, r *http.Request) {
+	// IMPORTANT: Health checks must only accept GET and HEAD methods
+	// This follows HTTP spec and Kubernetes/Docker health check conventions
+	// Health checks are read-only operations and should use safe, idempotent methods
+	if r.Method != http.MethodGet && r.Method != http.MethodHead {
+		w.Header().Set("Allow", "GET, HEAD")
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		_ = json.NewEncoder(w).Encode(map[string]string{
+			"error":  "Method Not Allowed",
+			"detail": "Health check endpoint only accepts GET and HEAD methods",
+		})
+		return
+	}
+
 	probe := r.URL.Query().Get("probe")
 
 	// Liveness probe: just check if process is alive (no dependency checks)
@@ -180,400 +467,6 @@ func (m *Middleware) handleIcon(w http.ResponseWriter, r *http.Request) {
 }
 
 // buildAuthHeader generates the auth header HTML based on configuration
-func (m *Middleware) buildAuthHeader(prefix string) string {
-	serviceName := m.config.Service.Name
-	iconURL := m.config.Service.IconURL
-	logoURL := m.config.Service.LogoURL
-	logoWidth := m.config.Service.LogoWidth
-	if logoWidth == "" {
-		logoWidth = "200px"
-	}
-
-	// Pattern 3: Logo image (if configured)
-	if logoURL != "" {
-		return `<img src="` + logoURL + `" alt="Logo" class="auth-logo" style="--auth-logo-width: ` + logoWidth + `;">
-<h1 class="auth-title">` + serviceName + `</h1>`
-	}
-
-	// Pattern 2: Icon + System name (if configured)
-	if iconURL != "" {
-		return `<div class="auth-header">
-<img src="` + iconURL + `" alt="Icon" class="auth-icon">
-<h1 class="auth-title">` + serviceName + `</h1>
-</div>`
-	}
-
-	// Pattern 1: Text only (default)
-	return `<h1 class="auth-title">` + serviceName + `</h1>`
-}
-
-// buildAuthSubtitle generates subtitle HTML if subtitle is provided
-func (m *Middleware) buildAuthSubtitle(subtitle string) string {
-	if subtitle == "" {
-		return ""
-	}
-	return `<h2 class="auth-subtitle">` + subtitle + `</h2>`
-}
-
-// buildStyleLinks generates stylesheet link tags based on configuration
-func (m *Middleware) buildStyleLinks() string {
-	prefix := m.config.Server.GetAuthPathPrefix()
-	cssPath := joinAuthPath(prefix, "/assets/main.css")
-	links := `<link rel="stylesheet" href="` + cssPath + `">`
-
-	// Add dify.css if optimization is enabled
-	if m.config.Assets.Optimization.Dify {
-		difyCSSPath := joinAuthPath(prefix, "/assets/dify.css")
-		links += `
-<link rel="stylesheet" href="` + difyCSSPath + `">`
-	}
-
-	return links
-}
-
-// handleLogin displays the login page
-func (m *Middleware) handleLogin(w http.ResponseWriter, r *http.Request) {
-	lang := i18n.DetectLanguage(r)
-	theme := i18n.DetectTheme(r)
-	t := func(key string) string { return m.translator.T(lang, key) }
-
-	// Use embedded CSS
-	themeClass := ""
-	switch theme {
-	case i18n.ThemeDark:
-		themeClass = "dark"
-	case i18n.ThemeLight:
-		themeClass = "light"
-	default:
-		// ThemeAuto: no class, let CSS media query handle it
-	}
-
-	html := `<!DOCTYPE html>
-<html lang="` + string(lang) + `" class="` + themeClass + `">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>` + t("login.title") + ` - ` + m.config.Service.Name + `</title>
-` + m.buildStyleLinks() + `
-<style>
-.settings-toggle {
-	position: fixed;
-	top: var(--spacing-md);
-	right: var(--spacing-md);
-	display: flex;
-	flex-direction: row;
-	gap: var(--spacing-md);
-	align-items: center;
-	z-index: 100;
-	background-color: var(--color-bg-elevated);
-	padding: var(--spacing-xs) var(--spacing-md);
-	border-radius: var(--radius-md);
-	border: 1px solid var(--color-border-default);
-}
-.settings-toggle select {
-	padding: var(--spacing-xs) var(--spacing-sm);
-	border: none;
-	background: transparent;
-	color: var(--color-text-secondary);
-	font-size: 0.875rem;
-	cursor: pointer;
-	appearance: none;
-	-webkit-appearance: none;
-	-moz-appearance: none;
-}
-.settings-toggle select:hover {
-	color: var(--color-text-primary);
-}
-.settings-toggle select:focus {
-	outline: none;
-	color: var(--color-text-primary);
-}
-</style>
-</head>
-<body>
-<div class="settings-toggle">
-	<select id="theme-select" onchange="changeTheme(this.value)">
-		<option value="auto" ` + map[bool]string{true: `selected`, false: ``}[theme == i18n.ThemeAuto] + `>` + t("ui.theme.auto") + `</option>
-		<option value="light" ` + map[bool]string{true: `selected`, false: ``}[theme == i18n.ThemeLight] + `>` + t("ui.theme.light") + `</option>
-		<option value="dark" ` + map[bool]string{true: `selected`, false: ``}[theme == i18n.ThemeDark] + `>` + t("ui.theme.dark") + `</option>
-	</select>
-	<select id="lang-select" onchange="changeLanguage(this.value)">
-		<option value="en" ` + map[bool]string{true: `selected`, false: ``}[lang == i18n.English] + `>` + t("ui.language.en") + `</option>
-		<option value="ja" ` + map[bool]string{true: `selected`, false: ``}[lang == i18n.Japanese] + `>` + t("ui.language.ja") + `</option>
-	</select>
-</div>
-
-<div class="auth-container">
-	<div style="width: 100%; max-width: 28rem;">
-		<div class="card auth-card">
-			` + m.buildAuthHeader(m.config.Server.GetAuthPathPrefix()) + `
-			<p class="auth-description">` + m.config.Service.Description + `</p>`
-
-	prefix := m.config.Server.GetAuthPathPrefix()
-	providers := m.oauthManager.GetProviders()
-
-	if len(providers) > 0 {
-		html += `<div style="margin-bottom: var(--spacing-lg);">`
-		for _, p := range providers {
-			providerName := p.Name()
-
-			// Find icon URL from config
-			var iconPath string
-			for _, providerCfg := range m.config.OAuth2.Providers {
-				if providerCfg.Type == providerName && providerCfg.IconURL != "" {
-					// Use custom icon URL from config
-					iconPath = providerCfg.IconURL
-					break
-				}
-			}
-
-			// If no custom icon URL, use default embedded icon
-			if iconPath == "" {
-				iconName := providerName
-				knownIcons := map[string]bool{
-					"google":    true,
-					"github":    true,
-					"microsoft": true,
-					"facebook":  true,
-				}
-				if !knownIcons[providerName] {
-					iconName = "oidc" // Default to OIDC icon for custom providers
-				}
-				iconPath = joinAuthPath(prefix, "/assets/icons/"+iconName+".svg")
-			}
-
-			html += `<a href="` + prefix + `/oauth2/start/` + providerName + `" class="btn btn-secondary provider-btn">`
-			html += `<img src="` + iconPath + `" alt="` + providerName + `">`
-			html += fmt.Sprintf(t("login.oauth2.continue"), providerName) + `</a>`
-		}
-		html += `</div>`
-	}
-
-	// Add email authentication form if enabled
-	if m.emailHandler != nil {
-		emailSendPath := joinAuthPath(m.config.Server.GetAuthPathPrefix(), "/email/send")
-		emailIconPath := joinAuthPath(prefix, "/assets/icons/email.svg")
-
-		if len(providers) > 0 {
-			html += `<div class="auth-divider"><span>` + t("login.or") + `</span></div>`
-		}
-
-		html += `
-		<form method="POST" action="` + emailSendPath + `" id="email-form">
-			<div class="form-group">
-				<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-xs);">
-					<label class="label" for="email" style="margin-bottom: 0;">` + t("login.email.label") + `</label>
-					<label style="display: flex; align-items: center; gap: 0.25rem; cursor: pointer; font-size: 0.875rem; color: var(--color-text-secondary);">
-						<input type="checkbox" id="save-email-checkbox" style="cursor: pointer;">
-						<span>` + t("login.email.save") + `</span>
-					</label>
-				</div>
-				<input type="email" id="email" name="email" class="input" placeholder="you@example.com" required>
-			</div>
-			<button type="submit" class="btn btn-primary provider-btn">
-				<img src="` + emailIconPath + `" alt="Email">
-				` + t("login.email.submit") + `
-			</button>
-		</form>
-		<script>
-		(function() {
-			const emailInput = document.getElementById('email');
-			const saveCheckbox = document.getElementById('save-email-checkbox');
-			const STORAGE_KEY_EMAIL = 'saved_email';
-			const STORAGE_KEY_SAVE = 'save_email_enabled';
-
-			// Load saved settings
-			const savedEmail = localStorage.getItem(STORAGE_KEY_EMAIL);
-			const saveEnabled = localStorage.getItem(STORAGE_KEY_SAVE) === 'true';
-
-			if (savedEmail && saveEnabled) {
-				emailInput.value = savedEmail;
-				saveCheckbox.checked = true;
-			} else if (saveEnabled) {
-				saveCheckbox.checked = true;
-			}
-
-			// Save email on input change (if checkbox is checked)
-			emailInput.addEventListener('input', function() {
-				if (saveCheckbox.checked) {
-					localStorage.setItem(STORAGE_KEY_EMAIL, emailInput.value);
-				}
-			});
-
-			// Handle checkbox changes
-			saveCheckbox.addEventListener('change', function() {
-				if (saveCheckbox.checked) {
-					// Save current email value and remember the checkbox state
-					localStorage.setItem(STORAGE_KEY_EMAIL, emailInput.value);
-					localStorage.setItem(STORAGE_KEY_SAVE, 'true');
-				} else {
-					// Clear saved email and checkbox state
-					localStorage.removeItem(STORAGE_KEY_EMAIL);
-					localStorage.removeItem(STORAGE_KEY_SAVE);
-				}
-			});
-		})();
-		</script>`
-	}
-
-	// Add password authentication if enabled
-	if m.passwordHandler != nil {
-		// Show divider if other auth methods exist
-		if len(providers) > 0 || m.emailHandler != nil {
-			html += `<div class="auth-divider"><span>` + t("login.or") + `</span></div>`
-		}
-
-		passwordHTML := m.passwordHandler.RenderPasswordForm(lang)
-		html += passwordHTML
-	}
-
-	prefix = normalizeAuthPrefix(m.config.Server.GetAuthPathPrefix())
-	iconPath := joinAuthPath(prefix, "/assets/icons/chatbotgate.svg")
-
-	html += `
-		</div>
-		<a href="https://github.com/ideamans/chatbotgate" class="auth-credit">
-			<img src="` + iconPath + `" alt="ChatbotGate Logo">
-			Protected by ChatbotGate
-		</a>
-	</div>
-</div>
-<script>
-function setCookie(name, value, days) {
-	var expires = "";
-	if (days) {
-		var date = new Date();
-		date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
-		expires = "; expires=" + date.toUTCString();
-	}
-	document.cookie = name + "=" + value + expires + "; path=/; SameSite=Lax";
-}
-
-function changeTheme(theme) {
-	setCookie("theme", theme, 365);
-
-	// Apply theme immediately without reload
-	var html = document.documentElement;
-	if (theme === "dark") {
-		html.classList.add("dark");
-	} else if (theme === "light") {
-		html.classList.remove("dark");
-	} else {
-		// Auto - check system preference
-		if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-			html.classList.add("dark");
-		} else {
-			html.classList.remove("dark");
-		}
-	}
-}
-
-function changeLanguage(lang) {
-	setCookie("lang", lang, 365);
-	window.location.reload();
-}
-
-// Listen for system theme changes
-if (window.matchMedia) {
-	window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function(e) {
-		var savedTheme = getCookie("theme");
-		if (!savedTheme || savedTheme === "auto") {
-			document.documentElement.classList.toggle("dark", e.matches);
-		}
-	});
-}
-
-function getCookie(name) {
-	var nameEQ = name + "=";
-	var ca = document.cookie.split(';');
-	for(var i=0; i < ca.length; i++) {
-		var c = ca[i];
-		while (c.charAt(0) == ' ') c = c.substring(1, c.length);
-		if (c.indexOf(nameEQ) == 0) return c.substring(nameEQ.length, c.length);
-	}
-	return null;
-}
-</script>
-</body>
-</html>`
-
-	m.setSecurityHeaders(w)
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	w.WriteHeader(http.StatusOK)
-	_, _ = w.Write([]byte(html))
-}
-
-// handleLogout logs out the user
-func (m *Middleware) handleLogout(w http.ResponseWriter, r *http.Request) {
-	lang := i18n.DetectLanguage(r)
-	theme := i18n.DetectTheme(r)
-	t := func(key string) string { return m.translator.T(lang, key) }
-
-	// Get session cookie
-	cookie, err := r.Cookie(m.config.Session.Cookie.Name)
-	if err == nil {
-		// Delete session (ignore error, proceed with logout anyway)
-		_ = session.Delete(m.sessionStore, cookie.Value)
-	}
-
-	// Clear cookie
-	http.SetCookie(w, &http.Cookie{
-		Name:     m.config.Session.Cookie.Name,
-		Value:    "",
-		Path:     "/",
-		MaxAge:   -1,
-		HttpOnly: true,
-	})
-
-	// Use embedded CSS
-	prefix := m.config.Server.GetAuthPathPrefix()
-	loginPath := joinAuthPath(prefix, "/login")
-
-	themeClass := ""
-	switch theme {
-	case i18n.ThemeDark:
-		themeClass = "dark"
-	case i18n.ThemeLight:
-		themeClass = "light"
-	default:
-		// ThemeAuto: no class
-	}
-
-	iconPath := joinAuthPath(prefix, "/assets/icons/chatbotgate.svg")
-
-	html := `<!DOCTYPE html>
-<html lang="` + string(lang) + `" class="` + themeClass + `">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>` + t("logout.title") + ` - ` + m.config.Service.Name + `</title>
-` + m.buildStyleLinks() + `
-</head>
-<body>
-<div class="auth-container">
-	<div style="width: 100%; max-width: 28rem;">
-		<div class="card auth-card">
-			` + m.buildAuthHeader(prefix) + `
-			` + m.buildAuthSubtitle(t("logout.heading")) + `
-			<div class="alert alert-success" style="text-align: left; margin-bottom: var(--spacing-md);">` + t("logout.message") + `</div>
-			<a href="` + loginPath + `" class="btn btn-primary" style="width: 100%; margin-top: var(--spacing-md);">` + t("logout.login") + `</a>
-		</div>
-		<a href="https://github.com/ideamans/chatbotgate" class="auth-credit">
-			<img src="` + iconPath + `" alt="ChatbotGate Logo">
-			Protected by ChatbotGate
-		</a>
-	</div>
-</div>
-</body>
-</html>`
-
-	m.setSecurityHeaders(w)
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	w.WriteHeader(http.StatusOK)
-	_, _ = w.Write([]byte(html))
-}
-
-// handleOAuth2Start initiates the OAuth2 flow
 func (m *Middleware) handleOAuth2Start(w http.ResponseWriter, r *http.Request) {
 	// Extract provider name from URL path
 	prefix := m.config.Server.GetAuthPathPrefix()
@@ -849,8 +742,13 @@ func (m *Middleware) handleOAuth2Callback(w http.ResponseWriter, r *http.Request
 // generateSessionID generates a random session ID
 func generateSessionID() (string, error) {
 	b := make([]byte, 32)
-	if _, err := rand.Read(b); err != nil {
-		return "", err
+	n, err := rand.Read(b)
+	if err != nil {
+		return "", fmt.Errorf("failed to generate session ID: %w", err)
+	}
+	// Verify we got the expected number of random bytes
+	if n != 32 {
+		return "", fmt.Errorf("insufficient entropy for session ID generation: got %d bytes, expected 32", n)
 	}
 	return base64.URLEncoding.EncodeToString(b), nil
 }
@@ -894,8 +792,16 @@ func (m *Middleware) handleEmailSend(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Send login link
-	err := m.emailHandler.SendLoginLink(email, lang)
+	// Get redirect URL from cookie (where user originally wanted to go)
+	redirectURL := "/"
+	if cookie, err := r.Cookie(redirectCookieName); err == nil && cookie.Value != "" {
+		if isValidRedirectURL(cookie.Value) {
+			redirectURL = cookie.Value
+		}
+	}
+
+	// Send login link with redirect URL embedded in token
+	err := m.emailHandler.SendLoginLink(email, redirectURL, lang)
 	if err != nil {
 		m.logger.Debug("Email send failed", "email", maskEmail(email), "error", err)
 
@@ -919,118 +825,6 @@ func (m *Middleware) handleEmailSend(w http.ResponseWriter, r *http.Request) {
 }
 
 // handleEmailSent shows the email sent confirmation page with OTP input
-func (m *Middleware) handleEmailSent(w http.ResponseWriter, r *http.Request) {
-	lang := i18n.DetectLanguage(r)
-	theme := i18n.DetectTheme(r)
-	t := func(key string) string { return m.translator.T(lang, key) }
-
-	// Use embedded CSS
-	prefix := m.config.Server.GetAuthPathPrefix()
-	loginPath := joinAuthPath(prefix, "/login")
-
-	themeClass := ""
-	switch theme {
-	case i18n.ThemeDark:
-		themeClass = "dark"
-	case i18n.ThemeLight:
-		themeClass = "light"
-	default:
-		// ThemeAuto: no class
-	}
-
-	iconPath := joinAuthPath(prefix, "/assets/icons/chatbotgate.svg")
-
-	verifyOTPPath := joinAuthPath(prefix, "/email/verify-otp")
-
-	html := `<!DOCTYPE html>
-<html lang="` + string(lang) + `" class="` + themeClass + `">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>` + t("email.sent.title") + ` - ` + m.config.Service.Name + `</title>
-` + m.buildStyleLinks() + `
-</head>
-<body>
-<div class="auth-container">
-	<div style="width: 100%; max-width: 28rem;">
-		<div class="card auth-card">
-			` + m.buildAuthHeader(prefix) + `
-			` + m.buildAuthSubtitle(t("email.sent.heading")) + `
-			<div class="alert alert-success" style="text-align: left; margin-bottom: var(--spacing-md);">` + t("email.sent.message") + ` ` + t("email.sent.detail") + `</div>
-
-			<!-- OTP Input Section -->
-			<div style="text-align: center; margin-top: var(--spacing-lg); margin-bottom: var(--spacing-lg);">
-				<div style="margin-bottom: var(--spacing-sm);">
-					<span style="color: var(--color-text-secondary); font-size: 0.875rem;">` + t("email.sent.otp_label") + `</span>
-				</div>
-				<form method="POST" action="` + verifyOTPPath + `" style="display: flex; flex-direction: column; align-items: center; gap: var(--spacing-sm);">
-					<input
-						type="text"
-						name="otp"
-						id="otp-input"
-						class="input"
-						placeholder="` + t("email.sent.otp_placeholder") + `"
-						maxlength="14"
-						autocomplete="off"
-						style="text-align: center; font-family: 'Courier New', monospace; font-size: 1.125rem; font-weight: 600; letter-spacing: 0.05em; background-color: var(--color-bg-muted); border: 2px solid var(--color-border-default); max-width: 16rem; transition: border-color 0.2s ease, background-color 0.2s ease;">
-					<button type="submit" id="verify-button" class="btn btn-primary" disabled style="max-width: 16rem; width: 100%;">
-						` + t("email.sent.verify_button") + `
-					</button>
-				</form>
-			</div>
-
-			<a href="` + loginPath + `" class="btn btn-ghost" style="width: 100%; margin-top: var(--spacing-md);">` + t("email.sent.back") + `</a>
-		</div>
-		<a href="https://github.com/ideamans/chatbotgate" class="auth-credit">
-			<img src="` + iconPath + `" alt="ChatbotGate Logo">
-			Protected by ChatbotGate
-		</a>
-	</div>
-</div>
-<script>
-(function() {
-	const otpInput = document.getElementById('otp-input');
-	const verifyButton = document.getElementById('verify-button');
-	if (!otpInput || !verifyButton) return;
-
-	function validateOTP(value) {
-		const cleaned = value.replace(/[^A-Z0-9]/gi, '').toUpperCase();
-		return cleaned.length === 12 && /^[A-Z0-9]{12}$/.test(cleaned);
-	}
-
-	function updateUI(isValid) {
-		if (isValid) {
-			// Input: Green border and background
-			otpInput.style.borderColor = 'var(--color-success)';
-			otpInput.style.backgroundColor = 'color-mix(in srgb, var(--color-success) 10%, var(--color-bg-muted))';
-
-			// Button: Enable (keep btn-primary style)
-			verifyButton.disabled = false;
-		} else {
-			// Input: Default style
-			otpInput.style.borderColor = 'var(--color-border-default)';
-			otpInput.style.backgroundColor = 'var(--color-bg-muted)';
-
-			// Button: Disable
-			verifyButton.disabled = true;
-		}
-	}
-
-	otpInput.addEventListener('input', function() {
-		updateUI(validateOTP(this.value));
-	});
-})();
-</script>
-</body>
-</html>`
-
-	m.setSecurityHeaders(w)
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	w.WriteHeader(http.StatusOK)
-	_, _ = w.Write([]byte(html))
-}
-
-// handleEmailVerify verifies the email token and creates a session
 func (m *Middleware) handleEmailVerify(w http.ResponseWriter, r *http.Request) {
 	lang := i18n.DetectLanguage(r)
 	t := func(key string) string { return m.translator.T(lang, key) }
@@ -1041,8 +835,8 @@ func (m *Middleware) handleEmailVerify(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Verify token
-	email, err := m.emailHandler.VerifyToken(token)
+	// Verify token and get redirect URL
+	email, redirectURL, err := m.emailHandler.VerifyToken(token)
 	if err != nil {
 		m.logger.Debug("Token verification failed", "error", err)
 		m.logger.Error("Email authentication failed: invalid or expired token")
@@ -1166,8 +960,23 @@ func (m *Middleware) handleEmailVerify(w http.ResponseWriter, r *http.Request) {
 
 	m.logger.Info("Email authentication successful", "email", maskEmail(email))
 
-	// Get redirect URL
-	redirectURL := m.getRedirectURL(w, r)
+	// Use redirect URL from token, or fall back to cookie or home page
+	if redirectURL == "" {
+		redirectURL = m.getRedirectURL(w, r)
+	} else {
+		// Still delete the redirect cookie if it exists
+		http.SetCookie(w, &http.Cookie{
+			Name:   redirectCookieName,
+			Value:  "",
+			Path:   "/",
+			MaxAge: -1,
+		})
+	}
+
+	// Validate redirect URL to prevent open redirect attacks
+	if !isValidRedirectURL(redirectURL) {
+		redirectURL = "/"
+	}
 
 	// Add user info to query string if forwarding is enabled
 	if m.forwarder != nil {
@@ -1210,8 +1019,8 @@ func (m *Middleware) handleEmailVerifyOTP(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	// Verify OTP
-	email, err := m.emailHandler.VerifyOTP(otp)
+	// Verify OTP and get redirect URL
+	email, redirectURL, err := m.emailHandler.VerifyOTP(otp)
 	if err != nil {
 		m.logger.Debug("OTP verification failed", "error", err)
 		m.logger.Error("Email authentication failed: invalid or expired OTP")
@@ -1292,8 +1101,23 @@ func (m *Middleware) handleEmailVerifyOTP(w http.ResponseWriter, r *http.Request
 
 	m.logger.Info("Email authentication successful via OTP", "email", maskEmail(email))
 
-	// Get redirect URL
-	redirectURL := m.getRedirectURL(w, r)
+	// Use redirect URL from token, or fall back to cookie or home page
+	if redirectURL == "" {
+		redirectURL = m.getRedirectURL(w, r)
+	} else {
+		// Still delete the redirect cookie if it exists
+		http.SetCookie(w, &http.Cookie{
+			Name:   redirectCookieName,
+			Value:  "",
+			Path:   "/",
+			MaxAge: -1,
+		})
+	}
+
+	// Validate redirect URL to prevent open redirect attacks
+	if !isValidRedirectURL(redirectURL) {
+		redirectURL = "/"
+	}
 
 	// Add user info to query string if forwarding is enabled
 	if m.forwarder != nil {
@@ -1315,225 +1139,21 @@ func (m *Middleware) handleEmailVerifyOTP(w http.ResponseWriter, r *http.Request
 }
 
 // handleForbidden displays the access denied page
-func (m *Middleware) handleForbidden(w http.ResponseWriter, r *http.Request) {
-	lang := i18n.DetectLanguage(r)
-	theme := i18n.DetectTheme(r)
-	t := func(key string) string { return m.translator.T(lang, key) }
 
-	prefix := normalizeAuthPrefix(m.config.Server.GetAuthPathPrefix())
-	loginPath := joinAuthPath(prefix, "/login")
-
-	themeClass := ""
-	switch theme {
-	case i18n.ThemeDark:
-		themeClass = "dark"
-	case i18n.ThemeLight:
-		themeClass = "light"
-	default:
-		// ThemeAuto: no class, let CSS media query handle it
-	}
-
-	iconPath := joinAuthPath(prefix, "/assets/icons/chatbotgate.svg")
-
-	html := `<!DOCTYPE html>
-<html lang="` + string(lang) + `" class="` + themeClass + `">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>` + t("error.forbidden.title") + ` - ` + m.config.Service.Name + `</title>
-` + m.buildStyleLinks() + `
-</head>
-<body>
-<div class="auth-container">
-  <div style="width: 100%; max-width: 28rem;">
-    <div class="card auth-card">
-      ` + m.buildAuthHeader(prefix) + `
-      ` + m.buildAuthSubtitle(t("error.forbidden.heading")) + `
-      <div class="alert alert-error" style="text-align: left; margin-bottom: var(--spacing-md);">` + t("error.forbidden.message") + `</div>
-      <a href="` + loginPath + `" class="btn btn-ghost" style="width: 100%; margin-top: var(--spacing-md);">` + t("login.back") + `</a>
-    </div>
-    <a href="https://github.com/ideamans/chatbotgate" class="auth-credit">
-      <img src="` + iconPath + `" alt="ChatbotGate Logo">
-      Protected by ChatbotGate
-    </a>
-  </div>
-</div>
-</body>
-</html>`
-
-	m.setSecurityHeaders(w)
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	w.WriteHeader(http.StatusForbidden)
-	_, _ = w.Write([]byte(html))
+// buildStyleLinks generates stylesheet link tags (temporary wrapper for backward compatibility)
+func (m *Middleware) buildStyleLinks() string {
+	return m.buildStyleLinksHTML()
 }
 
-// handleEmailFetchError displays an error page when OAuth2 provider fails to provide email
-func (m *Middleware) handleEmailFetchError(w http.ResponseWriter, r *http.Request) {
-	lang := i18n.DetectLanguage(r)
-	theme := i18n.DetectTheme(r)
-	t := func(key string) string { return m.translator.T(lang, key) }
-
-	prefix := normalizeAuthPrefix(m.config.Server.GetAuthPathPrefix())
-	loginPath := joinAuthPath(prefix, "/login")
-
-	themeClass := ""
-	switch theme {
-	case i18n.ThemeDark:
-		themeClass = "dark"
-	case i18n.ThemeLight:
-		themeClass = "light"
-	default:
-		// ThemeAuto: no class
-	}
-
-	iconPath := joinAuthPath(prefix, "/assets/icons/chatbotgate.svg")
-
-	html := `<!DOCTYPE html>
-<html lang="` + string(lang) + `" class="` + themeClass + `">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>` + t("error.email_required.title") + ` - ` + m.config.Service.Name + `</title>
-` + m.buildStyleLinks() + `
-</head>
-<body>
-<div class="auth-container">
-  <div style="width: 100%; max-width: 28rem;">
-    <div class="card auth-card">
-      ` + m.buildAuthHeader(prefix) + `
-      ` + m.buildAuthSubtitle(t("error.email_required.heading")) + `
-      <div class="alert alert-error" style="text-align: left; margin-bottom: var(--spacing-md);">` + t("error.email_required.message") + `</div>
-      <a href="` + loginPath + `" class="btn btn-ghost" style="width: 100%; margin-top: var(--spacing-md);">` + t("login.back") + `</a>
-    </div>
-    <a href="https://github.com/ideamans/chatbotgate" class="auth-credit">
-      <img src="` + iconPath + `" alt="ChatbotGate Logo">
-      Protected by ChatbotGate
-    </a>
-  </div>
-</div>
-</body>
-</html>`
-
-	m.setSecurityHeaders(w)
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	w.WriteHeader(http.StatusBadRequest)
-	_, _ = w.Write([]byte(html))
+// buildAuthHeader generates auth header HTML (temporary wrapper for backward compatibility)
+func (m *Middleware) buildAuthHeader(prefix string) string {
+	return m.buildAuthHeaderHTML(prefix)
 }
 
-// handle404 displays the 404 Not Found page
-func (m *Middleware) handle404(w http.ResponseWriter, r *http.Request) {
-	lang := i18n.DetectLanguage(r)
-	theme := i18n.DetectTheme(r)
-	t := func(key string) string { return m.translator.T(lang, key) }
-
-	prefix := normalizeAuthPrefix(m.config.Server.GetAuthPathPrefix())
-	iconPath := joinAuthPath(prefix, "/assets/icons/chatbotgate.svg")
-
-	themeClass := ""
-	switch theme {
-	case i18n.ThemeDark:
-		themeClass = "dark"
-	case i18n.ThemeLight:
-		themeClass = "light"
-	default:
-		// ThemeAuto: no class
+// buildAuthSubtitle generates auth subtitle HTML
+func (m *Middleware) buildAuthSubtitle(subtitle string) string {
+	if subtitle == "" {
+		return ""
 	}
-
-	html := `<!DOCTYPE html>
-<html lang="` + string(lang) + `" class="` + themeClass + `">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>` + t("error.notfound.title") + ` - ` + m.config.Service.Name + `</title>
-` + m.buildStyleLinks() + `
-</head>
-<body>
-<div class="auth-container">
-  <div style="width: 100%; max-width: 28rem;">
-    <div class="card auth-card">
-      ` + m.buildAuthHeader(prefix) + `
-      ` + m.buildAuthSubtitle(t("error.notfound.heading")) + `
-      <div class="alert alert-error" style="text-align: left; margin-bottom: var(--spacing-md);">` + t("error.notfound.message") + `</div>
-      <a href="/" class="btn btn-primary" style="width: 100%; margin-top: var(--spacing-md);">` + t("error.notfound.home") + `</a>
-    </div>
-    <a href="https://github.com/ideamans/chatbotgate" class="auth-credit">
-      <img src="` + iconPath + `" alt="ChatbotGate Logo">
-      Protected by ChatbotGate
-    </a>
-  </div>
-</div>
-</body>
-</html>`
-
-	m.setSecurityHeaders(w)
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	w.WriteHeader(http.StatusNotFound)
-	_, _ = w.Write([]byte(html))
-}
-
-// handle500 displays the 500 Internal Server Error page with optional error details
-func (m *Middleware) handle500(w http.ResponseWriter, r *http.Request, err error) {
-	lang := i18n.DetectLanguage(r)
-	theme := i18n.DetectTheme(r)
-	t := func(key string) string { return m.translator.T(lang, key) }
-
-	prefix := normalizeAuthPrefix(m.config.Server.GetAuthPathPrefix())
-	iconPath := joinAuthPath(prefix, "/assets/icons/chatbotgate.svg")
-
-	themeClass := ""
-	switch theme {
-	case i18n.ThemeDark:
-		themeClass = "dark"
-	case i18n.ThemeLight:
-		themeClass = "light"
-	default:
-		// ThemeAuto: no class
-	}
-
-	// Build error details accordion if error is provided
-	errorDetailsHTML := ""
-	if err != nil {
-		errorDetailsHTML = `
-    <div class="accordion" id="error-accordion">
-      <div class="accordion-header" onclick="document.getElementById('error-accordion').classList.toggle('open')">
-        <span class="accordion-header-title">` + t("error.details.title") + `</span>
-        <span class="accordion-header-icon"></span>
-      </div>
-      <div class="accordion-content">
-        <div class="accordion-body">` + html.EscapeString(fmt.Sprintf("%+v", err)) + `</div>
-      </div>
-    </div>`
-	}
-
-	html := `<!DOCTYPE html>
-<html lang="` + string(lang) + `" class="` + themeClass + `">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>` + t("error.server.title") + ` - ` + m.config.Service.Name + `</title>
-` + m.buildStyleLinks() + `
-</head>
-<body>
-<div class="auth-container">
-  <div style="width: 100%; max-width: 28rem;">
-    <div class="card auth-card">
-      ` + m.buildAuthHeader(prefix) + `
-      ` + m.buildAuthSubtitle(t("error.server.heading")) + `
-      <div class="alert alert-error" style="text-align: left; margin-bottom: var(--spacing-md);">` + t("error.server.message") + `</div>
-      ` + errorDetailsHTML + `
-      <a href="/" class="btn btn-ghost" style="width: 100%; margin-top: var(--spacing-md);">` + t("error.server.home") + `</a>
-    </div>
-    <a href="https://github.com/ideamans/chatbotgate" class="auth-credit">
-      <img src="` + iconPath + `" alt="ChatbotGate Logo">
-      Protected by ChatbotGate
-    </a>
-  </div>
-</div>
-</body>
-</html>`
-
-	m.setSecurityHeaders(w)
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	w.WriteHeader(http.StatusInternalServerError)
-	_, _ = w.Write([]byte(html))
+	return `<h2 class="auth-subtitle">` + template.HTMLEscapeString(subtitle) + `</h2>`
 }

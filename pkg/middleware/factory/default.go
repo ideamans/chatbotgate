@@ -91,7 +91,7 @@ func (f *DefaultFactory) CreateMiddleware(
 	}
 
 	// Create middleware
-	mw := middleware.New(
+	mw, err := middleware.New(
 		cfg,
 		sessionStore,
 		oauthManager,
@@ -103,6 +103,9 @@ func (f *DefaultFactory) CreateMiddleware(
 		translator,
 		logger,
 	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create middleware: %w", err)
+	}
 
 	// Wrap with proxy handler if available
 	if proxyHandler != nil {

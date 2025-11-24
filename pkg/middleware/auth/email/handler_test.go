@@ -118,7 +118,7 @@ func TestHandler_SendLoginLink(t *testing.T) {
 
 	email := "user@example.com"
 
-	err := handler.SendLoginLink(email, i18n.English)
+	err := handler.SendLoginLink(email, "/dashboard?foo=bar", i18n.English)
 	if err != nil {
 		t.Fatalf("SendLoginLink() error = %v", err)
 	}
@@ -165,7 +165,7 @@ func TestHandler_SendLoginLink_NotAuthorized(t *testing.T) {
 
 	email := "unauthorized@example.com"
 
-	err := handler.SendLoginLink(email, i18n.English)
+	err := handler.SendLoginLink(email, "/", i18n.English)
 	if err == nil {
 		t.Error("SendLoginLink() should return error for unauthorized email")
 	}
@@ -198,13 +198,13 @@ func TestHandler_SendLoginLink_RateLimit(t *testing.T) {
 
 	// Send 5 emails (should succeed with default limit)
 	for i := 0; i < 5; i++ {
-		if err := handler.SendLoginLink(email, i18n.English); err != nil {
+		if err := handler.SendLoginLink(email, "/", i18n.English); err != nil {
 			t.Fatalf("request %d should succeed", i+1)
 		}
 	}
 
 	// 6th should be rate limited
-	err := handler.SendLoginLink(email, i18n.English)
+	err := handler.SendLoginLink(email, "/", i18n.English)
 	if err == nil {
 		t.Error("6th request should be rate limited")
 	}
@@ -232,13 +232,13 @@ func TestHandler_SendLoginLink_CustomRateLimit(t *testing.T) {
 
 	// Send 2 emails (should succeed with custom limit)
 	for i := 0; i < 2; i++ {
-		if err := handler.SendLoginLink(email, i18n.English); err != nil {
+		if err := handler.SendLoginLink(email, "/", i18n.English); err != nil {
 			t.Fatalf("request %d should succeed", i+1)
 		}
 	}
 
 	// 3rd should be rate limited
-	err := handler.SendLoginLink(email, i18n.English)
+	err := handler.SendLoginLink(email, "/", i18n.English)
 	if err == nil {
 		t.Error("3rd request should be rate limited with custom limit of 2")
 	}
@@ -267,7 +267,7 @@ func TestHandler_SendLoginLink_SendFails(t *testing.T) {
 
 	email := "user@example.com"
 
-	err := handler.SendLoginLink(email, i18n.English)
+	err := handler.SendLoginLink(email, "/", i18n.English)
 	if err == nil {
 		t.Error("SendLoginLink() should return error when send fails")
 	}
@@ -291,9 +291,10 @@ func TestHandler_VerifyToken(t *testing.T) {
 	handler.sender = mockSender
 
 	email := "user@example.com"
+	expectedRedirectURL := "/dashboard?foo=bar"
 
-	// Send login link
-	if err := handler.SendLoginLink(email, i18n.English); err != nil {
+	// Send login link with redirect URL
+	if err := handler.SendLoginLink(email, expectedRedirectURL, i18n.English); err != nil {
 		t.Fatalf("SendLoginLink() error = %v", err)
 	}
 
@@ -309,7 +310,7 @@ func TestHandler_VerifyToken(t *testing.T) {
 	token := body[tokenStart : tokenStart+tokenEnd]
 
 	// Verify token
-	verifiedEmail, err := handler.VerifyToken(token)
+	verifiedEmail, redirectURL, err := handler.VerifyToken(token)
 	if err != nil {
 		t.Fatalf("VerifyToken() error = %v", err)
 	}
@@ -318,8 +319,12 @@ func TestHandler_VerifyToken(t *testing.T) {
 		t.Errorf("VerifyToken() email = %s, want %s", verifiedEmail, email)
 	}
 
+	if redirectURL != expectedRedirectURL {
+		t.Errorf("VerifyToken() redirectURL = %s, want %s", redirectURL, expectedRedirectURL)
+	}
+
 	// Second verification should fail (one-time use)
-	_, err = handler.VerifyToken(token)
+	_, _, err = handler.VerifyToken(token)
 	if err == nil {
 		t.Error("second VerifyToken() should fail")
 	}
