@@ -209,11 +209,10 @@ test.describe('Health check endpoints', () => {
     });
   });
 
-  test.skip('health check with custom auth path prefix', async ({ request }) => {
-    // SKIPPED: Requires port 4183 to be running with custom auth path prefix
-    // Test with custom prefix configuration (port 4183)
-    const customPrefixUrl = 'http://localhost:4183';
-    const customHealthEndpoint = '/_custom_auth/health';
+  test('health check with custom auth path prefix', async ({ request }) => {
+    // Test with custom prefix configuration (port 4185, prefix: /_oauth2_proxy)
+    const customPrefixUrl = 'http://localhost:4185';
+    const customHealthEndpoint = '/_oauth2_proxy/health';
 
     const response = await request.get(customPrefixUrl + customHealthEndpoint);
 
