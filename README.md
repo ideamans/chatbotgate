@@ -6,6 +6,8 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/ideamans/chatbotgate)](https://goreportcard.com/report/github.com/ideamans/chatbotgate)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
+[English](#chatbotgate) | [日本語](README_ja.md)
+
 **ChatbotGate** is a lightweight, flexible authentication reverse proxy that sits in front of your upstream applications and provides unified authentication through multiple OAuth2 providers and passwordless email authentication.
 
 ## Features
@@ -285,203 +287,80 @@ docker-compose up
 
 ## Configuration
 
-See `config.example.yaml` for a complete configuration example with detailed comments.
+ChatbotGate is configured via YAML with support for environment variable expansion (`${VAR:-default}`).
 
-Key configuration sections:
-- **Service**: Service name and branding
-- **Server**: Host, port, and authentication path prefix
-- **Proxy**: Upstream URL and routing rules
-- **Session**: Cookie settings and expiration
-- **OAuth2**: Provider configurations
-- **Email Auth**: SMTP, SendGrid, or sendmail setup
-- **Authorization**: Email/domain whitelisting
-- **KVS**: Storage backend (memory/leveldb/redis)
-- **Forwarding**: User information to upstream
-- **Rules**: Path-based access control
-- **Logging**: Log levels and output
-
-## Logging
-
-ChatbotGate supports multiple logging backends depending on your deployment environment.
-
-### systemd (Recommended for Production)
-
-For modern Linux systems with systemd, simply log to stdout. systemd's journald handles all log management:
+**Basic example:**
 
 ```yaml
-logging:
-  level: "info"
-  color: false  # journalctl provides its own formatting
+service:
+  name: "My App"
+
+server:
+  port: 4180
+
+session:
+  cookie:
+    secret: "${COOKIE_SECRET}"  # Environment variable
+    expire: "168h"
+
+oauth2:
+  providers:
+    - id: "google"
+      type: "google"
+      client_id: "${GOOGLE_CLIENT_ID}"
+      client_secret: "${GOOGLE_CLIENT_SECRET}"
+
+proxy:
+  upstream:
+    url: "http://localhost:8080"
 ```
 
-**View logs:**
-```bash
-# Follow logs in real-time
-journalctl -u chatbotgate -f
-
-# Show logs since 1 hour ago
-journalctl -u chatbotgate --since "1 hour ago"
-
-# Show only error level and above
-journalctl -u chatbotgate -p err
-
-# Export logs to file
-journalctl -u chatbotgate --since today > chatbotgate.log
-```
-
-**Configure retention** in `/etc/systemd/journald.conf`:
-```ini
-[Journal]
-Storage=persistent
-SystemMaxUse=500M        # Max disk space
-SystemMaxFileSize=100M   # Max single journal file size
-MaxRetentionSec=1month   # Keep logs for 1 month
-```
-
-See `examples/systemd/` for complete service unit files.
-
-### File Logging (Non-systemd Environments)
-
-Enable file logging when running without systemd or for specific requirements:
-
-```yaml
-logging:
-  level: "info"
-  file:
-    path: "/var/log/chatbotgate/chatbotgate.log"
-    max_size_mb: 100
-    max_backups: 3
-    max_age: 28
-    compress: false
-```
-
-**Use cases:**
-- Docker containers without systemd
-- Legacy systems (FreeBSD, older Linux)
-- Audit/compliance requirements
-- External log collectors (Fluentd, Logstash)
-
-### Docker
-
-Use `docker logs` for containerized deployments:
-
-```bash
-# Follow logs
-docker logs -f chatbotgate
-
-# View last 100 lines
-docker logs --tail 100 chatbotgate
-
-# View logs since timestamp
-docker logs --since 2024-01-01T00:00:00 chatbotgate
-```
-
-### Log Levels
-
-- `debug`: Detailed debugging information
-- `info`: General informational messages (default)
-- `warn`: Warning messages
-- `error`: Error messages
-
-**For comprehensive logging documentation**, see the [Logging Guide in GUIDE.md](GUIDE.md#logging) for detailed systemd/journald configuration, file logging strategies, and troubleshooting.
-
-## Health Checks
-
-ChatbotGate provides comprehensive health check endpoints for monitoring and orchestration:
-
-### Endpoints
-
-**Readiness Check** (`/_auth/health`)
-- Returns `200 OK` when ready to accept traffic
-- Returns `503 Service Unavailable` when starting up or draining
-- JSON response with status details
-
-**Liveness Check** (`/_auth/health?probe=live`)
-- Returns `200 OK` if the process is alive
-- Lightweight check with no dependency validation
-- Useful for container orchestrators
-
-### Response Format
-
-```json
-{
-  "status": "ready",              // "starting" | "warming" | "ready" | "draining"
-  "live": true,                   // Process is alive
-  "ready": true,                  // Ready to accept traffic
-  "since": "2025-11-10T08:05:12Z", // ISO8601 startup timestamp
-  "detail": "ok",                 // Human-readable message
-  "retry_after": null             // Retry delay in seconds (503 only)
-}
-```
-
-### Container Orchestration
-
-**Docker Compose**
-```yaml
-services:
-  chatbotgate:
-    image: ideamans/chatbotgate:latest
-    ports: ["4180:4180"]
-    healthcheck:
-      test: ["CMD-SHELL", "curl -fsS http://localhost:4180/_auth/health || exit 1"]
-      interval: 5s
-      timeout: 2s
-      retries: 12
-      start_period: 60s
-```
-
-**ECS Task Definition**
-```json
-{
-  "healthCheck": {
-    "command": ["CMD-SHELL", "curl -fsS http://localhost:4180/_auth/health || exit 1"],
-    "interval": 5,
-    "timeout": 2,
-    "retries": 12,
-    "startPeriod": 60
-  }
-}
-```
-
-**Kubernetes**
-```yaml
-livenessProbe:
-  httpGet:
-    path: /_auth/health?probe=live
-    port: 4180
-  initialDelaySeconds: 10
-  periodSeconds: 5
-
-readinessProbe:
-  httpGet:
-    path: /_auth/health
-    port: 4180
-  initialDelaySeconds: 5
-  periodSeconds: 3
-```
-
-### Graceful Shutdown
-
-When receiving SIGTERM, ChatbotGate:
-1. Immediately returns `503` for `/_auth/health` (status: `"draining"`)
-2. Waits for existing requests to complete
-3. Shuts down cleanly
-
-This ensures load balancers remove the instance before terminating connections.
+**For complete configuration:**
+- See [config.example.yaml](config.example.yaml) - Comprehensive example with all options
+- See [GUIDE.md - Configuration](GUIDE.md#configuration) - Detailed configuration guide
+- See [examples/](examples/) - Production-ready deployment examples
 
 ## Use Cases
 
-### Chatbot Widget Authentication
-Protect chatbot interfaces (Dify, Rasa, etc.) with OAuth2 or email authentication.
+- **Chatbot Widget Authentication**: Protect chatbot interfaces (Dify, Rasa, etc.) with OAuth2 or email authentication
+- **Internal Tool Access Control**: Add authentication to internal tools that lack their own auth system
+- **Multi-Tenant Applications**: Route requests to different upstream backends based on hostname
+- **API Gateway with Auth**: Combine reverse proxy and authentication for microservices
 
-### Internal Tool Access Control
-Add authentication to internal tools that lack their own auth system.
+## Logging
 
-### Multi-Tenant Applications
-Route requests to different upstream backends based on hostname.
+ChatbotGate supports structured logging with multiple backends:
 
-### API Gateway with Auth
-Combine reverse proxy and authentication for microservices.
+```bash
+# systemd/journald (recommended for production)
+journalctl -u chatbotgate -f
+
+# Docker logs
+docker logs -f chatbotgate
+
+# File logging (for non-systemd environments)
+# Configured via logging.file in config.yaml
+```
+
+**For complete logging documentation**, see [GUIDE.md - Logging](GUIDE.md#logging)
+
+## Health Checks
+
+ChatbotGate provides health check endpoints for container orchestration:
+
+- **Readiness**: `GET /_auth/health` (200 when ready, 503 when starting/draining)
+- **Liveness**: `GET /_auth/health?probe=live` (200 if process alive)
+
+**Example Docker health check:**
+```yaml
+healthcheck:
+  test: ["CMD-SHELL", "curl -fsS http://localhost:4180/_auth/health || exit 1"]
+  interval: 5s
+  timeout: 2s
+  retries: 12
+```
+
+**For complete health check documentation**, see [GUIDE.md - Health Checks](GUIDE.md#health-check-endpoints)
 
 ## Security Considerations
 
@@ -491,6 +370,8 @@ Combine reverse proxy and authentication for microservices.
 - **Upstream Secret**: Protect your upstream from direct access with secret headers
 - **Whitelisting**: Restrict access by email/domain when possible
 - **Email Rate Limiting**: Configure `email_auth.limit_per_minute` to prevent magic link abuse (default: 5/min)
+
+**For comprehensive security guide**, see [GUIDE.md - Security Best Practices](GUIDE.md#security-best-practices)
 
 ## Contributing
 
@@ -510,6 +391,8 @@ Contributions are welcome! Please:
 - Run `make ci` before committing to ensure all checks pass
 - Format code with `make fmt`
 - Keep commits atomic and write clear commit messages
+
+**For module development**, see [MODULE.md](MODULE.md) - Developer guide for using ChatbotGate as a Go module
 
 ### CI/CD Pipeline
 

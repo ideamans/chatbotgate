@@ -367,18 +367,24 @@ Email/domain-based authorization:
 ```go
 import (
     "github.com/ideamans/chatbotgate/pkg/middleware/authz"
+    "github.com/ideamans/chatbotgate/pkg/middleware/config"
 )
 
-// Create authorizer
-authz := authz.NewAuthorizer([]string{
-    "user@example.com",
-    "@company.com",
+// Create email checker from configuration
+checker := authz.NewEmailChecker(config.AccessControlConfig{
+    Emails: []string{
+        "user@example.com",
+        "@company.com",
+    },
 })
 
+// Check if email whitelist is configured
+requiresEmail := checker.RequiresEmail()  // true if emails configured
+
 // Check authorization
-allowed := authz.IsAllowed("user@example.com")  // true
-allowed = authz.IsAllowed("user@company.com")    // true
-allowed = authz.IsAllowed("other@gmail.com")     // false
+allowed := checker.IsAllowed("user@example.com")  // true
+allowed = checker.IsAllowed("user@company.com")    // true
+allowed = checker.IsAllowed("other@gmail.com")     // false
 ```
 
 #### Session Management (`pkg/middleware/session`)
@@ -708,8 +714,8 @@ func main() {
                 },
             },
         },
-        Authorization: config.AuthorizationConfig{
-            Allowed: []string{"@example.com"},
+        AccessControl: config.AccessControlConfig{
+            Emails: []string{"@example.com"},
         },
         Proxy: config.ProxyConfig{
             Upstream: config.UpstreamConfig{
@@ -1344,12 +1350,12 @@ type Config struct {
     Session       SessionConfig       // Session configuration
     OAuth2        OAuth2Config        // OAuth2 providers
     EmailAuth     EmailAuthConfig     // Email authentication
-    Authorization AuthorizationConfig // Access control
+    PasswordAuth  PasswordAuthConfig  // Password authentication
+    AccessControl AccessControlConfig // Access control (emails + rules)
     KVS           KVSConfig           // Storage backend
     Forwarding    ForwardingConfig    // User info forwarding
-    Rules         rules.Config        // Access control rules (embedded)
+    Assets        AssetsConfig        // Assets configuration
     Logging       LoggingConfig       // Logging settings
-    Proxy         ProxyConfig         // Proxy configuration
 }
 
 type SessionConfig struct {
