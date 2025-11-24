@@ -55,6 +55,11 @@ access_control:
 
   # Access control rules for paths (evaluated in order, first match wins)
   rules:
+    # Deny access to admin endpoints (even for authenticated users)
+    - prefix: "/admin"
+      action: deny
+      description: "Admin area - access denied"
+
     # Allow embed.js without authentication
     - prefix: "/embed.js"
       action: allow
