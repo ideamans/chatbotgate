@@ -124,10 +124,23 @@ test.describe('Authentication security', () => {
 
     await page.locator('[data-test="authorize-allow"]').click();
 
-    // Should redirect to home (/) instead of malicious URL
+    // CRITICAL: Should redirect to safe default (/) instead of malicious URL
     await page.waitForURL(/localhost:4180\/?$/);
     await expect(page).toHaveURL(/localhost:4180\/?$/);
+
+    // Negative check: absolutely should NOT redirect to evil.com
     await expect(page).not.toHaveURL(/evil\.com/);
+
+    // CRITICAL: Verify malicious redirect cookie was rejected/cleared
+    const cookies = await page.context().cookies();
+    const redirectCookie = cookies.find(c => c.name === '_oauth2_redirect');
+    // Cookie should either not exist or not contain the malicious URL
+    if (redirectCookie) {
+      expect(redirectCookie.value).not.toContain('evil.com');
+    }
+
+    // Verify user is successfully authenticated (not on error page)
+    await expect(page.locator('[data-test="auth-status"]')).toContainText('true');
   });
 
   test('should prevent protocol-relative URL redirects', async ({ page }) => {
@@ -162,9 +175,24 @@ test.describe('Authentication security', () => {
 
     await page.locator('[data-test="authorize-allow"]').click();
 
-    // Should redirect to home (/) instead of protocol-relative URL
+    // CRITICAL: Should redirect to safe default (/) instead of protocol-relative URL
     await page.waitForURL(/localhost:4180\/?$/);
     await expect(page).toHaveURL(/localhost:4180\/?$/);
+
+    // Negative check: absolutely should NOT redirect to evil.com
+    await expect(page).not.toHaveURL(/evil\.com/);
+
+    // CRITICAL: Verify protocol-relative redirect cookie was rejected/cleared
+    const cookies = await page.context().cookies();
+    const redirectCookie = cookies.find(c => c.name === '_oauth2_redirect');
+    // Cookie should either not exist or not contain the malicious URL
+    if (redirectCookie) {
+      expect(redirectCookie.value).not.toContain('evil.com');
+      expect(redirectCookie.value).not.toContain('//'); // No protocol-relative URLs
+    }
+
+    // Verify user is successfully authenticated (not on error page)
+    await expect(page.locator('[data-test="auth-status"]')).toContainText('true');
   });
 
   test('should set HttpOnly flag on session cookie', async ({ page }) => {
