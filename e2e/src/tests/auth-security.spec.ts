@@ -30,40 +30,65 @@ test.describe('Authentication security', () => {
     // Try to access callback with different state (CSRF attack simulation)
     await page.goto('/_auth/oauth2/callback?state=attacker-state-99999&code=valid-code');
 
-    // Should reject with error (either "Invalid state" or "Invalid redirect URL")
-    await expect(page.locator('body')).toContainText(/invalid (state|redirect url)/i);
+    // Should reject with specific error about state validation
+    const mainContent = page.locator('main, [role="main"], body');
+    await expect(mainContent).toContainText(/invalid (state|redirect url)/i);
+
+    // CRITICAL: Verify user is NOT authenticated after CSRF attempt
+    await page.goto('/');
+    await expect(page).toHaveURL(/\/_auth\/login$/);
   });
 
   test('should reject invalid email token', async ({ page }) => {
     // Try to access verify endpoint with invalid token
     await page.goto('/_auth/email/verify?token=invalid-token-12345');
 
-    // Should show error message
-    await expect(page.locator('body')).toContainText('Invalid or Expired Token');
+    // Should show specific error message
+    const mainContent = page.locator('main, [role="main"], body');
+    await expect(mainContent).toContainText('Invalid or Expired Token');
+
+    // CRITICAL: Verify user is NOT authenticated with invalid token
+    await page.goto('/');
+    await expect(page).toHaveURL(/\/_auth\/login$/);
   });
 
   test('should reject empty email token', async ({ page }) => {
     // Try to access verify endpoint without token
     await page.goto('/_auth/email/verify');
 
-    // Should show error (400 Bad Request or similar)
-    await expect(page.locator('body')).toContainText(/invalid|error|bad request/i);
+    // Should show specific error about missing/invalid token
+    const mainContent = page.locator('main, [role="main"], body');
+    await expect(mainContent).toContainText(/invalid.*(token|request)|missing.*token|token.*required|bad request/i);
+
+    // Verify user is NOT authenticated
+    await page.goto('/');
+    await expect(page).toHaveURL(/\/_auth\/login$/);
   });
 
   test('should handle OAuth2 callback without state', async ({ page }) => {
     // Try to access callback without state parameter
     await page.goto('/_auth/oauth2/callback?code=test-code');
 
-    // Should show error
-    await expect(page.locator('body')).toContainText(/invalid|error/i);
+    // Should show specific error about missing/invalid state
+    const mainContent = page.locator('main, [role="main"], body');
+    await expect(mainContent).toContainText(/invalid.*state|missing.*state|state.*required/i);
+
+    // Verify user is NOT authenticated
+    await page.goto('/');
+    await expect(page).toHaveURL(/\/_auth\/login$/);
   });
 
   test('should handle OAuth2 callback without code', async ({ page }) => {
     // Try to access callback without code parameter
     await page.goto('/_auth/oauth2/callback?state=test-state');
 
-    // Should show error
-    await expect(page.locator('body')).toContainText(/invalid|error|not found/i);
+    // Should show specific error about missing/invalid code
+    const mainContent = page.locator('main, [role="main"], body');
+    await expect(mainContent).toContainText(/invalid.*(code|request|state)|missing.*(code|state)|code.*required/i);
+
+    // Verify user is NOT authenticated
+    await page.goto('/');
+    await expect(page).toHaveURL(/\/_auth\/login$/);
   });
 
   test('should prevent open redirect attacks', async ({ page }) => {

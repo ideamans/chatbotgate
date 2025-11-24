@@ -36,8 +36,10 @@ test.describe('OAuth2 error handling', () => {
       page.getByRole('button', { name: /拒否/ }).click(),
     ]);
 
-    // Should show error message on the page (various possible error messages)
-    await expect(page.locator('body')).toContainText(/access.*denied|アクセスが拒否|denied|拒否|authorization.*code.*not.*found|error/i);
+    // Should show specific error message (not just any "error" word on page)
+    // Check main content area to avoid false positives from headers/footers
+    const mainContent = page.locator('main, [role="main"], body');
+    await expect(mainContent).toContainText(/access.*denied|アクセスが拒否|denied|拒否|authorization.*code.*not.*found/i);
 
     // Should not be authenticated
     await page.goto(BASE_URL + '/');
@@ -51,8 +53,9 @@ test.describe('OAuth2 error handling', () => {
 
     await page.goto(callbackUrl);
 
-    // Should show error page
-    await expect(page.locator('body')).toContainText(/error|invalid|failed|エラー/i);
+    // Should show specific error about invalid/missing code or state
+    const mainContent = page.locator('main, [role="main"], body');
+    await expect(mainContent).toContainText(/invalid.*(code|state|request)|missing.*state|state.*invalid|エラー/i);
 
     // Should not be authenticated
     await page.goto(BASE_URL + '/');
@@ -65,8 +68,9 @@ test.describe('OAuth2 error handling', () => {
 
     await page.goto(callbackUrl);
 
-    // Should show error page
-    await expect(page.locator('body')).toContainText(/error|invalid|required|必須|エラー/i);
+    // Should show specific error about missing/required code parameter
+    const mainContent = page.locator('main, [role="main"], body');
+    await expect(mainContent).toContainText(/invalid.*(state|request)|missing.*state|state.*(invalid|required)|必須|エラー/i);
 
     // Should not be authenticated
     await page.goto(BASE_URL + '/');
@@ -163,8 +167,9 @@ test.describe('OAuth2 error handling', () => {
     if (callbackUrl) {
       await page.goto(callbackUrl);
 
-      // Should show error (code already used)
-      await expect(page.locator('body')).toContainText(/error|invalid|expired|無効|エラー/i);
+      // Should show specific error about invalid/expired code or state
+      const mainContent = page.locator('main, [role="main"], body');
+      await expect(mainContent).toContainText(/invalid.*(code|grant|state)|expired.*(code|token)|state.*invalid|無効|エラー/i);
 
       // Should not be authenticated
       await page.goto(BASE_URL + '/');
