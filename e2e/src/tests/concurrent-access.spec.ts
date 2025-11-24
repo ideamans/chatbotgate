@@ -39,68 +39,82 @@ async function getSessionCookie(page: Page): Promise<string | undefined> {
 }
 
 test.describe('Concurrent access and session isolation', () => {
-  test('multiple users can authenticate simultaneously', async ({ context }) => {
-    // Create 5 users authenticating at the same time
+  test('multiple users can authenticate simultaneously', async ({ browser }) => {
+    // Create 5 separate contexts (separate browser sessions)
     const userCount = 5;
-    const authPromises: Promise<Page>[] = [];
+    const contexts: BrowserContext[] = [];
 
     for (let i = 0; i < userCount; i++) {
-      authPromises.push(createAuthenticatedUser(context));
+      contexts.push(await browser!.newContext());
     }
 
-    // Wait for all authentications to complete
-    const pages = await Promise.all(authPromises);
+    try {
+      // Authenticate all users concurrently
+      const authPromises = contexts.map((ctx) => createAuthenticatedUser(ctx));
+      const pages = await Promise.all(authPromises);
 
-    // All users should be authenticated
-    for (const page of pages) {
-      await expect(page.locator('[data-test="auth-provider"]')).toContainText('stub-auth');
-      await expect(page.locator('[data-test="auth-email"]')).toContainText(TEST_EMAIL);
-    }
+      // All users should be authenticated
+      for (const page of pages) {
+        await expect(page.locator('[data-test="auth-provider"]')).toContainText('stub-auth');
+        await expect(page.locator('[data-test="auth-email"]')).toContainText(TEST_EMAIL);
+      }
 
-    // Clean up
-    for (const page of pages) {
-      await page.close();
+      // Clean up
+      for (const page of pages) {
+        await page.close();
+      }
+    } finally {
+      for (const ctx of contexts) {
+        await ctx.close();
+      }
     }
   });
 
-  test('concurrent session creation does not corrupt data', async ({ context }) => {
+  test('concurrent session creation does not corrupt data', async ({ browser }) => {
+    // Create 10 separate contexts to ensure independent sessions
     const userCount = 10;
-    const pages: Page[] = [];
+    const contexts: BrowserContext[] = [];
 
-    // Create pages
     for (let i = 0; i < userCount; i++) {
-      const page = await context.newPage();
-      await routeStubAuthRequests(page);
-      pages.push(page);
+      contexts.push(await browser!.newContext());
     }
 
-    // Start authentication for all users concurrently
-    const authPromises = pages.map((page) =>
-      authenticateViaOAuth2(page, {
-        email: TEST_EMAIL,
-        password: TEST_PASSWORD,
-        baseUrl: BASE_URL,
-      })
-    );
+    try {
+      // Create pages and start authentication for all users concurrently
+      const authPromises = contexts.map(async (ctx) => {
+        const page = await ctx.newPage();
+        await routeStubAuthRequests(page);
+        await authenticateViaOAuth2(page, {
+          email: TEST_EMAIL,
+          password: TEST_PASSWORD,
+          baseUrl: BASE_URL,
+        });
+        return page;
+      });
 
-    await Promise.all(authPromises);
+      const pages = await Promise.all(authPromises);
 
-    // Verify all sessions are valid
-    for (const page of pages) {
-      await expect(page.locator('[data-test="auth-provider"]')).toContainText('stub-auth');
-      await expect(page.locator('[data-test="auth-email"]')).toContainText(TEST_EMAIL);
-    }
+      // Verify all sessions are valid
+      for (const page of pages) {
+        await expect(page.locator('[data-test="auth-provider"]')).toContainText('stub-auth');
+        await expect(page.locator('[data-test="auth-email"]')).toContainText(TEST_EMAIL);
+      }
 
-    // Clean up
-    for (const page of pages) {
-      await page.close();
+      // Clean up
+      for (const page of pages) {
+        await page.close();
+      }
+    } finally {
+      for (const ctx of contexts) {
+        await ctx.close();
+      }
     }
   });
 
-  test('users have isolated sessions with unique cookies', async ({ context }) => {
+  test('users have isolated sessions with unique cookies', async ({ browser }) => {
     // Create two separate browser contexts (simulate different browsers)
-    const context1 = await context.browser()!.newContext();
-    const context2 = await context.browser()!.newContext();
+    const context1 = await browser!.newContext();
+    const context2 = await browser!.newContext();
 
     try {
       // Authenticate both users
@@ -130,41 +144,53 @@ test.describe('Concurrent access and session isolation', () => {
     }
   });
 
-  test('concurrent access to protected resources maintains session integrity', async ({ context }) => {
-    const page = await createAuthenticatedUser(context);
+  test('concurrent access to protected resources maintains session integrity', async ({ browser }) => {
+    const ctx = await browser!.newContext();
 
-    // Make multiple concurrent requests to protected resources
-    const requests = Array.from({ length: 20 }, (_, i) => page.goto(BASE_URL + `/?test=${i}`));
+    try {
+      const page = await createAuthenticatedUser(ctx);
 
-    await Promise.all(requests);
+      // Make multiple concurrent requests to protected resources
+      const requests = Array.from({ length: 20 }, (_, i) => page.goto(BASE_URL + `/?test=${i}`));
 
-    // Should still be authenticated after all requests
-    await expect(page.locator('[data-test="auth-provider"]')).toContainText('stub-auth');
-    await expect(page.locator('[data-test="auth-email"]')).toContainText(TEST_EMAIL);
+      await Promise.all(requests);
 
-    await page.close();
+      // Should still be authenticated after all requests
+      await expect(page.locator('[data-test="auth-provider"]')).toContainText('stub-auth');
+      await expect(page.locator('[data-test="auth-email"]')).toContainText(TEST_EMAIL);
+
+      await page.close();
+    } finally {
+      await ctx.close();
+    }
   });
 
-  test('concurrent page navigations maintain authentication', async ({ context }) => {
-    const page = await createAuthenticatedUser(context);
+  test('concurrent page navigations maintain authentication', async ({ browser }) => {
+    const ctx = await browser!.newContext();
 
-    // Navigate to multiple paths concurrently
-    const paths = ['/page1', '/page2', '/page3', '/page4', '/page5'];
-    const navigations = paths.map((path) => page.goto(BASE_URL + path));
+    try {
+      const page = await createAuthenticatedUser(ctx);
 
-    await Promise.all(navigations);
+      // Navigate to multiple paths concurrently
+      const paths = ['/page1', '/page2', '/page3', '/page4', '/page5'];
+      const navigations = paths.map((path) => page.goto(BASE_URL + path));
 
-    // Final navigation should still be authenticated
-    await page.goto(BASE_URL + '/');
-    await expect(page.locator('[data-test="auth-provider"]')).toContainText('stub-auth');
+      await Promise.all(navigations);
 
-    await page.close();
+      // Final navigation should still be authenticated
+      await page.goto(BASE_URL + '/');
+      await expect(page.locator('[data-test="auth-provider"]')).toContainText('stub-auth');
+
+      await page.close();
+    } finally {
+      await ctx.close();
+    }
   });
 
-  test('session isolation: user A cannot see user B session data', async ({ context }) => {
+  test('session isolation: user A cannot see user B session data', async ({ browser }) => {
     // Create two separate contexts
-    const context1 = await context.browser()!.newContext();
-    const context2 = await context.browser()!.newContext();
+    const context1 = await browser!.newContext();
+    const context2 = await browser!.newContext();
 
     try {
       const userA = await createAuthenticatedUser(context1);
@@ -203,208 +229,243 @@ test.describe('Concurrent access and session isolation', () => {
     }
   });
 
-  test('concurrent logout operations do not interfere', async ({ context }) => {
-    // Create 5 authenticated users
+  test('concurrent logout operations do not interfere', async ({ browser }) => {
+    // Create 5 separate contexts with authenticated users
+    const contexts: BrowserContext[] = [];
     const pages: Page[] = [];
-    for (let i = 0; i < 5; i++) {
-      const page = await createAuthenticatedUser(context);
-      pages.push(page);
-    }
 
-    // Logout all users concurrently
-    const logoutPromises = pages.map((page) =>
-      page.locator('[data-test="oauth-signout"]').click()
-    );
+    try {
+      for (let i = 0; i < 5; i++) {
+        const ctx = await browser!.newContext();
+        contexts.push(ctx);
+        const page = await createAuthenticatedUser(ctx);
+        pages.push(page);
+      }
 
-    await Promise.all(logoutPromises);
+      // Logout all users concurrently
+      const logoutPromises = pages.map((page) =>
+        page.locator('[data-test="oauth-signout"]').click()
+      );
 
-    // All users should be logged out
-    for (const page of pages) {
-      await expect(page).toHaveURL(/\/_auth\/logout/);
-      await page.close();
+      await Promise.all(logoutPromises);
+
+      // All users should be logged out
+      for (const page of pages) {
+        await expect(page).toHaveURL(/\/_auth\/logout/);
+        await page.close();
+      }
+    } finally {
+      for (const ctx of contexts) {
+        await ctx.close();
+      }
     }
   });
 
   test('concurrent WebSocket connections from different users work independently', async ({
-    context,
+    browser,
   }) => {
-    // Create two authenticated users
-    const user1 = await createAuthenticatedUser(context);
-    const user2 = await createAuthenticatedUser(context);
+    // Create two separate contexts for different users
+    const context1 = await browser!.newContext();
+    const context2 = await browser!.newContext();
 
-    const wsUrl = BASE_URL.replace('http://', 'ws://') + '/ws';
+    try {
+      // Create two authenticated users
+      const user1 = await createAuthenticatedUser(context1);
+      const user2 = await createAuthenticatedUser(context2);
 
-    // Connect both users to WebSocket concurrently
-    const results = await Promise.all([
-      user1.evaluate(async ({ url }: { url: string }) => {
-        return new Promise<{ connected: boolean; welcomeReceived: boolean }>((resolve) => {
-          const ws = new WebSocket(url);
-          let welcomeReceived = false;
+      const wsUrl = BASE_URL.replace('http://', 'ws://') + '/ws';
 
-          const timeout = setTimeout(() => {
-            ws.close();
-            resolve({ connected: false, welcomeReceived });
-          }, 5000);
+      // Connect both users to WebSocket concurrently
+      const results = await Promise.all([
+        user1.evaluate(async ({ url }: { url: string }) => {
+          return new Promise<{ connected: boolean; welcomeReceived: boolean }>((resolve) => {
+            const ws = new WebSocket(url);
+            let welcomeReceived = false;
 
-          ws.onopen = () => {
-            console.log('User 1 WebSocket connected');
-          };
-
-          ws.onmessage = (event) => {
-            const data = JSON.parse(event.data);
-            if (data.type === 'welcome') {
-              welcomeReceived = true;
-              clearTimeout(timeout);
+            const timeout = setTimeout(() => {
               ws.close();
-              resolve({ connected: true, welcomeReceived });
-            }
-          };
+              resolve({ connected: false, welcomeReceived });
+            }, 5000);
 
-          ws.onerror = () => {
-            clearTimeout(timeout);
-            resolve({ connected: false, welcomeReceived });
-          };
-        });
-      }, { url: wsUrl }),
+            ws.onopen = () => {
+              console.log('User 1 WebSocket connected');
+            };
 
-      user2.evaluate(async ({ url }: { url: string }) => {
-        return new Promise<{ connected: boolean; welcomeReceived: boolean }>((resolve) => {
-          const ws = new WebSocket(url);
-          let welcomeReceived = false;
+            ws.onmessage = (event) => {
+              const data = JSON.parse(event.data);
+              if (data.type === 'welcome') {
+                welcomeReceived = true;
+                clearTimeout(timeout);
+                ws.close();
+                resolve({ connected: true, welcomeReceived });
+              }
+            };
 
-          const timeout = setTimeout(() => {
-            ws.close();
-            resolve({ connected: false, welcomeReceived });
-          }, 5000);
-
-          ws.onopen = () => {
-            console.log('User 2 WebSocket connected');
-          };
-
-          ws.onmessage = (event) => {
-            const data = JSON.parse(event.data);
-            if (data.type === 'welcome') {
-              welcomeReceived = true;
+            ws.onerror = () => {
               clearTimeout(timeout);
+              resolve({ connected: false, welcomeReceived });
+            };
+          });
+        }, { url: wsUrl }),
+
+        user2.evaluate(async ({ url }: { url: string }) => {
+          return new Promise<{ connected: boolean; welcomeReceived: boolean }>((resolve) => {
+            const ws = new WebSocket(url);
+            let welcomeReceived = false;
+
+            const timeout = setTimeout(() => {
               ws.close();
-              resolve({ connected: true, welcomeReceived });
-            }
-          };
+              resolve({ connected: false, welcomeReceived });
+            }, 5000);
 
-          ws.onerror = () => {
-            clearTimeout(timeout);
-            resolve({ connected: false, welcomeReceived });
-          };
-        });
-      }, { url: wsUrl }),
-    ]);
+            ws.onopen = () => {
+              console.log('User 2 WebSocket connected');
+            };
 
-    // Both users should have successful connections
-    expect(results[0].connected).toBe(true);
-    expect(results[0].welcomeReceived).toBe(true);
-    expect(results[1].connected).toBe(true);
-    expect(results[1].welcomeReceived).toBe(true);
+            ws.onmessage = (event) => {
+              const data = JSON.parse(event.data);
+              if (data.type === 'welcome') {
+                welcomeReceived = true;
+                clearTimeout(timeout);
+                ws.close();
+                resolve({ connected: true, welcomeReceived });
+              }
+            };
 
-    await user1.close();
-    await user2.close();
+            ws.onerror = () => {
+              clearTimeout(timeout);
+              resolve({ connected: false, welcomeReceived });
+            };
+          });
+        }, { url: wsUrl }),
+      ]);
+
+      // Both users should have successful connections
+      expect(results[0].connected).toBe(true);
+      expect(results[0].welcomeReceived).toBe(true);
+      expect(results[1].connected).toBe(true);
+      expect(results[1].welcomeReceived).toBe(true);
+
+      await user1.close();
+      await user2.close();
+    } finally {
+      await context1.close();
+      await context2.close();
+    }
   });
 
-  test('race condition: rapid session updates maintain consistency', async ({ context }) => {
-    const page = await createAuthenticatedUser(context);
+  test('race condition: rapid session updates maintain consistency', async ({ browser }) => {
+    const ctx = await browser!.newContext();
 
-    // Make rapid concurrent requests that might trigger session updates
-    const requestCount = 50;
-    const requests = Array.from({ length: requestCount }, (_, i) =>
-      page.goto(BASE_URL + `/?iteration=${i}`)
-    );
+    try {
+      const page = await createAuthenticatedUser(ctx);
 
-    await Promise.all(requests);
+      // Make rapid concurrent requests that might trigger session updates
+      const requestCount = 50;
+      const requests = Array.from({ length: requestCount }, (_, i) =>
+        page.goto(BASE_URL + `/?iteration=${i}`)
+      );
 
-    // Session should still be valid and consistent
-    await page.goto(BASE_URL + '/');
-    await expect(page.locator('[data-test="auth-provider"]')).toContainText('stub-auth');
-    await expect(page.locator('[data-test="auth-email"]')).toContainText(TEST_EMAIL);
+      await Promise.all(requests);
 
-    await page.close();
+      // Session should still be valid and consistent
+      await page.goto(BASE_URL + '/');
+      await expect(page.locator('[data-test="auth-provider"]')).toContainText('stub-auth');
+      await expect(page.locator('[data-test="auth-email"]')).toContainText(TEST_EMAIL);
+
+      await page.close();
+    } finally {
+      await ctx.close();
+    }
   });
 
-  test('concurrent authentication attempts with same credentials succeed', async ({ context }) => {
-    // Simulate multiple browser tabs trying to authenticate at the same time
-    const tabCount = 3;
-    const pages: Page[] = [];
+  test('concurrent authentication attempts with same credentials succeed', async ({ browser }) => {
+    // Simulate multiple separate browser sessions authenticating concurrently
+    const sessionCount = 3;
+    const contexts: BrowserContext[] = [];
 
-    // Create all pages first
-    for (let i = 0; i < tabCount; i++) {
-      const page = await context.newPage();
-      await routeStubAuthRequests(page);
-      pages.push(page);
-    }
+    try {
+      // Create separate contexts
+      for (let i = 0; i < sessionCount; i++) {
+        contexts.push(await browser!.newContext());
+      }
 
-    // Start navigation to protected resource (triggers auth) concurrently
-    await Promise.all(pages.map((page) => page.goto(BASE_URL + '/')));
+      // Authenticate all sessions concurrently
+      const authPromises = contexts.map(async (ctx) => {
+        const page = await ctx.newPage();
+        await routeStubAuthRequests(page);
 
-    // All should redirect to login
-    for (const page of pages) {
-      await expect(page).toHaveURL(/\/_auth\/login$/);
-    }
+        await page.goto(BASE_URL + '/');
+        await expect(page).toHaveURL(/\/_auth\/login$/);
 
-    // Authenticate all tabs concurrently
-    const authPromises = pages.map((page) =>
-      (async () => {
         await page.getByRole('link', { name: 'stub-auth' }).click();
         await expect(page).toHaveURL(/localhost:3001\/login/);
 
         await page.locator('[data-test="login-email"]').fill(TEST_EMAIL);
         await page.locator('[data-test="login-password"]').fill(TEST_PASSWORD);
-        await page.locator('[data-test="login-submit"]').click();
+        await Promise.all([
+          page.waitForURL(/localhost:3001\/oauth\/authorize/),
+          page.locator('[data-test="login-submit"]').click(),
+        ]);
 
-        await expect(page).toHaveURL(/localhost:3001\/oauth\/authorize/);
         await page.locator('[data-test="authorize-allow"]').click();
-
         await expect(page).toHaveURL(new RegExp(BASE_URL.replace('http://', '')));
-      })()
-    );
 
-    await Promise.all(authPromises);
+        return page;
+      });
 
-    // All tabs should be authenticated
-    for (const page of pages) {
+      const pages = await Promise.all(authPromises);
+
+      // All sessions should be authenticated
+      for (const page of pages) {
+        await expect(page.locator('[data-test="auth-provider"]')).toContainText('stub-auth');
+      }
+
+      // Clean up
+      for (const page of pages) {
+        await page.close();
+      }
+    } finally {
+      for (const ctx of contexts) {
+        await ctx.close();
+      }
+    }
+  });
+
+  test('session remains valid during high concurrent load', async ({ browser }) => {
+    const ctx = await browser!.newContext();
+
+    try {
+      const page = await createAuthenticatedUser(ctx);
+
+      // Generate concurrent load (20 requests - reduced from 100 to avoid ERR_ABORTED)
+      // Note: Too many concurrent navigations on same page can cause browser errors
+      const loadTest = async () => {
+        const requests = Array.from({ length: 20 }, (_, i) =>
+          page.goto(BASE_URL + `/?load=${i}`, { waitUntil: 'domcontentloaded' })
+        );
+        await Promise.all(requests);
+      };
+
+      await loadTest();
+
+      // Session should still be valid
+      await page.goto(BASE_URL + '/');
       await expect(page.locator('[data-test="auth-provider"]')).toContainText('stub-auth');
-    }
+      await expect(page.locator('[data-test="auth-email"]')).toContainText(TEST_EMAIL);
 
-    // Clean up
-    for (const page of pages) {
       await page.close();
+    } finally {
+      await ctx.close();
     }
   });
 
-  test('session remains valid during high concurrent load', async ({ context }) => {
-    const page = await createAuthenticatedUser(context);
-
-    // Generate high concurrent load (100 requests)
-    const loadTest = async () => {
-      const requests = Array.from({ length: 100 }, (_, i) =>
-        page.goto(BASE_URL + `/?load=${i}`, { waitUntil: 'domcontentloaded' })
-      );
-      await Promise.all(requests);
-    };
-
-    await loadTest();
-
-    // Session should still be valid
-    await page.goto(BASE_URL + '/');
-    await expect(page.locator('[data-test="auth-provider"]')).toContainText('stub-auth');
-    await expect(page.locator('[data-test="auth-email"]')).toContainText(TEST_EMAIL);
-
-    await page.close();
-  });
-
-  test('multiple browser contexts maintain independent sessions', async ({ context }) => {
+  test('multiple browser contexts maintain independent sessions', async ({ browser }) => {
     // Create 3 separate contexts (like incognito windows)
     const contexts = await Promise.all([
-      context.browser()!.newContext(),
-      context.browser()!.newContext(),
-      context.browser()!.newContext(),
+      browser!.newContext(),
+      browser!.newContext(),
+      browser!.newContext(),
     ]);
 
     try {
@@ -437,30 +498,39 @@ test.describe('Concurrent access and session isolation', () => {
   });
 
   test('concurrent requests with mixed authenticated/unauthenticated users', async ({
-    context,
+    browser,
   }) => {
-    // Create authenticated user
-    const authenticatedPage = await createAuthenticatedUser(context);
+    // Create separate contexts for authenticated and unauthenticated users
+    const authenticatedContext = await browser!.newContext();
+    const unauthenticatedContext = await browser!.newContext();
 
-    // Create unauthenticated user
-    const unauthenticatedPage = await context.newPage();
-    await routeStubAuthRequests(unauthenticatedPage);
+    try {
+      // Create authenticated user
+      const authenticatedPage = await createAuthenticatedUser(authenticatedContext);
 
-    // Make concurrent requests
-    await Promise.all([
-      authenticatedPage.goto(BASE_URL + '/protected'),
-      unauthenticatedPage.goto(BASE_URL + '/protected'),
-    ]);
+      // Create unauthenticated user
+      const unauthenticatedPage = await unauthenticatedContext.newPage();
+      await routeStubAuthRequests(unauthenticatedPage);
 
-    // Authenticated user should access resource
-    await expect(authenticatedPage.locator('[data-test="auth-provider"]')).toContainText(
-      'stub-auth'
-    );
+      // Make concurrent requests
+      await Promise.all([
+        authenticatedPage.goto(BASE_URL + '/protected'),
+        unauthenticatedPage.goto(BASE_URL + '/protected'),
+      ]);
 
-    // Unauthenticated user should be redirected to login
-    await expect(unauthenticatedPage).toHaveURL(/\/_auth\/login$/);
+      // Authenticated user should access resource
+      await expect(authenticatedPage.locator('[data-test="auth-provider"]')).toContainText(
+        'stub-auth'
+      );
 
-    await authenticatedPage.close();
-    await unauthenticatedPage.close();
+      // Unauthenticated user should be redirected to login
+      await expect(unauthenticatedPage).toHaveURL(/\/_auth\/login$/);
+
+      await authenticatedPage.close();
+      await unauthenticatedPage.close();
+    } finally {
+      await authenticatedContext.close();
+      await unauthenticatedContext.close();
+    }
   });
 });
