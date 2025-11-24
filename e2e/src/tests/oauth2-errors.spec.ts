@@ -199,70 +199,75 @@ test.describe('OAuth2 error handling', () => {
     await expect(page.locator('body')).toBeVisible();
   });
 
-  test('concurrent OAuth2 flows do not interfere', async ({ page, context }) => {
-    // Create second page (simulates second browser tab in same session)
-    const page2 = await context.newPage();
-    await routeStubAuthRequests(page2);
+  test('concurrent OAuth2 flows do not interfere', async ({ browser }) => {
+    // Create two separate browser contexts (independent OAuth2 flows)
+    const context1 = await browser!.newContext();
+    const context2 = await browser!.newContext();
 
-    // Start OAuth2 flow in first page
-    await page.goto(BASE_URL + '/test1');
-    await expect(page).toHaveURL(/\/_auth\/login$/);
-    await page.getByRole('link', { name: 'stub-auth' }).click();
-
-    // Complete authentication in first page
-    await expect(page).toHaveURL(/localhost:3001\/login/);
-    await page.locator('[data-test="login-email"]').fill(TEST_EMAIL);
-    await page.locator('[data-test="login-password"]').fill(TEST_PASSWORD);
-    await page.locator('[data-test="login-submit"]').click();
-    await expect(page).toHaveURL(/localhost:3001\/oauth\/authorize/);
-    await page.locator('[data-test="authorize-allow"]').click();
-
-    // First page should be authenticated
-    await expect(page).toHaveURL(new RegExp(BASE_URL.replace('http://', '')));
-    await expect(page.locator('[data-test="auth-provider"]')).toContainText('stub-auth');
-
-    // Now start OAuth2 flow in second page (after first completes)
-    // Second page will benefit from stub-auth session established by first page
-    await page2.goto(BASE_URL + '/test2');
-    await expect(page2).toHaveURL(/\/_auth\/login$/);
-    await page2.getByRole('link', { name: 'stub-auth' }).click();
-
-    // Should go directly to authorize page (already logged in at stub-auth)
-    // Wait with timeout for either login or authorize page
     try {
-      await page2.waitForURL(/localhost:3001\/(login|oauth\/authorize)/, { timeout: 5000 });
-    } catch {
-      // If timeout, check current URL
-      console.log('Current URL:', page2.url());
-    }
+      const page1 = await context1.newPage();
+      const page2 = await context2.newPage();
+      await routeStubAuthRequests(page1);
+      await routeStubAuthRequests(page2);
 
-    const currentUrl = page2.url();
-    if (currentUrl.includes('/oauth/authorize')) {
-      // Already at authorize - just click allow
+      // Start OAuth2 flows in both contexts concurrently
+      await Promise.all([
+        page1.goto(BASE_URL + '/test1'),
+        page2.goto(BASE_URL + '/test2'),
+      ]);
+
+      // Both should redirect to login
+      await expect(page1).toHaveURL(/\/_auth\/login$/);
+      await expect(page2).toHaveURL(/\/_auth\/login$/);
+
+      // Start OAuth2 in both
+      await Promise.all([
+        page1.getByRole('link', { name: 'stub-auth' }).click(),
+        page2.getByRole('link', { name: 'stub-auth' }).click(),
+      ]);
+
+      // Complete authentication in first context
+      await expect(page1).toHaveURL(/localhost:3001\/login/);
+      await page1.locator('[data-test="login-email"]').fill(TEST_EMAIL);
+      await page1.locator('[data-test="login-password"]').fill(TEST_PASSWORD);
+      await page1.locator('[data-test="login-submit"]').click();
+      await expect(page1).toHaveURL(/localhost:3001\/oauth\/authorize/);
+      await page1.locator('[data-test="authorize-allow"]').click();
+
+      // First context should be authenticated
+      await expect(page1).toHaveURL(new RegExp(BASE_URL.replace('http://', '')));
+      await expect(page1.locator('[data-test="auth-provider"]')).toContainText('stub-auth');
+
+      // Complete authentication in second context (may already be at authorize if stub-auth session shared)
+      await expect(page2).toHaveURL(/localhost:3001\/(login|oauth\/authorize)/);
+
+      const page2Url = page2.url();
+      if (page2Url.includes('/login')) {
+        await page2.locator('[data-test="login-email"]').fill(TEST_EMAIL);
+        await page2.locator('[data-test="login-password"]').fill(TEST_PASSWORD);
+        await page2.locator('[data-test="login-submit"]').click();
+        await expect(page2).toHaveURL(/localhost:3001\/oauth\/authorize/);
+      }
+
       await page2.locator('[data-test="authorize-allow"]').click();
-    } else if (currentUrl.includes('/login')) {
-      // Need to login again (session might have expired)
-      await page2.locator('[data-test="login-email"]').fill(TEST_EMAIL);
-      await page2.locator('[data-test="login-password"]').fill(TEST_PASSWORD);
-      await page2.locator('[data-test="login-submit"]').click();
-      await expect(page2).toHaveURL(/localhost:3001\/oauth\/authorize/);
-      await page2.locator('[data-test="authorize-allow"]').click();
-    } else {
-      throw new Error(`Unexpected URL: ${currentUrl}`);
+
+      // Second context should also be authenticated
+      await expect(page2).toHaveURL(new RegExp(BASE_URL.replace('http://', '')));
+      await expect(page2.locator('[data-test="auth-provider"]')).toContainText('stub-auth');
+
+      // Both contexts should remain authenticated independently
+      await page1.goto(BASE_URL + '/');
+      await expect(page1.locator('[data-test="auth-provider"]')).toContainText('stub-auth');
+
+      await page2.goto(BASE_URL + '/');
+      await expect(page2.locator('[data-test="auth-provider"]')).toContainText('stub-auth');
+
+      await page1.close();
+      await page2.close();
+    } finally {
+      await context1.close();
+      await context2.close();
     }
-
-    // Second page should also be authenticated
-    await expect(page2).toHaveURL(new RegExp(BASE_URL.replace('http://', '')));
-    await expect(page2.locator('[data-test="auth-provider"]')).toContainText('stub-auth');
-
-    // Both pages should remain authenticated (sharing the ChatbotGate session)
-    await page.goto(BASE_URL + '/');
-    await expect(page.locator('[data-test="auth-provider"]')).toContainText('stub-auth');
-
-    await page2.goto(BASE_URL + '/');
-    await expect(page2.locator('[data-test="auth-provider"]')).toContainText('stub-auth');
-
-    await page2.close();
   });
 
   test('OAuth2 error preserves redirect URL', async ({ page }) => {
