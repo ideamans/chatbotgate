@@ -227,7 +227,10 @@ test.describe('OAuth2 error handling', () => {
     await expect(page.locator('[data-test="auth-provider"]')).toContainText('stub-auth');
 
     // Complete authentication in second page
-    // Note: May already be logged in at stub-auth from first page (same context)
+    // Note: Same context means stub-auth session is shared
+    // Wait for any navigation to complete first
+    await page2.waitForLoadState('load');
+
     const page2Url = page2.url();
     if (page2Url.includes('/login')) {
       // Still at login page - need to login
@@ -237,10 +240,25 @@ test.describe('OAuth2 error handling', () => {
         page2.waitForURL(/localhost:3001\/oauth\/authorize/),
         page2.locator('[data-test="login-submit"]').click(),
       ]);
-    } else {
+    } else if (page2Url.includes('/oauth/authorize')) {
       // Already at authorize page (logged in from first page)
-      await expect(page2).toHaveURL(/localhost:3001\/oauth\/authorize/);
+      // Just continue
+    } else {
+      // Some other state, wait for navigation
+      await expect(page2).toHaveURL(/localhost:3001\/(login|oauth\/authorize)/);
+      const finalUrl = page2.url();
+      if (finalUrl.includes('/login')) {
+        await page2.locator('[data-test="login-email"]').fill(TEST_EMAIL);
+        await page2.locator('[data-test="login-password"]').fill(TEST_PASSWORD);
+        await Promise.all([
+          page2.waitForURL(/localhost:3001\/oauth\/authorize/),
+          page2.locator('[data-test="login-submit"]').click(),
+        ]);
+      }
     }
+
+    // Ensure we're at authorize page before clicking
+    await expect(page2).toHaveURL(/localhost:3001\/oauth\/authorize/);
     await page2.locator('[data-test="authorize-allow"]').click();
 
     // Second page should also be authenticated
