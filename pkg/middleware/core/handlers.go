@@ -354,6 +354,20 @@ type HealthResponse struct {
 // Supports both readiness check (default) and liveness check (?probe=live)
 // See: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/
 func (m *Middleware) handleHealth(w http.ResponseWriter, r *http.Request) {
+	// IMPORTANT: Health checks must only accept GET and HEAD methods
+	// This follows HTTP spec and Kubernetes/Docker health check conventions
+	// Health checks are read-only operations and should use safe, idempotent methods
+	if r.Method != http.MethodGet && r.Method != http.MethodHead {
+		w.Header().Set("Allow", "GET, HEAD")
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		_ = json.NewEncoder(w).Encode(map[string]string{
+			"error":  "Method Not Allowed",
+			"detail": "Health check endpoint only accepts GET and HEAD methods",
+		})
+		return
+	}
+
 	probe := r.URL.Query().Get("probe")
 
 	// Liveness probe: just check if process is alive (no dependency checks)

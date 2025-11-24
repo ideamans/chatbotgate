@@ -250,19 +250,37 @@ test.describe('Health check endpoints', () => {
     expect(responseTime).toBeLessThan(500);
   });
 
-  test('health check works with different HTTP methods', async ({ request }) => {
-    // GET should work
+  test('health check only accepts GET and HEAD methods', async ({ request }) => {
+    // GET should work (standard health check method)
     const getResponse = await request.get(BASE_URL + HEALTH_ENDPOINT);
     expect(getResponse.status()).toBe(200);
 
-    // HEAD should work
+    // HEAD should work (load balancers often use HEAD for efficiency)
     const headResponse = await request.head(BASE_URL + HEALTH_ENDPOINT);
     expect(headResponse.status()).toBe(200);
 
-    // POST, PUT, DELETE should also work (health check is permissive)
-    // This ensures load balancers with various configurations can use it
-    const postResponse = await request.post(BASE_URL + HEALTH_ENDPOINT);
-    expect(postResponse.status()).toBe(200);
+    // CRITICAL: POST, PUT, DELETE, PATCH should be REJECTED with 405 Method Not Allowed
+    // Health checks must be read-only operations (GET/HEAD only)
+    // This follows HTTP spec and Kubernetes/Docker health check conventions
+    const postResponse = await request.post(BASE_URL + HEALTH_ENDPOINT, {
+      failOnStatusCode: false
+    });
+    expect(postResponse.status()).toBe(405);
+
+    const putResponse = await request.put(BASE_URL + HEALTH_ENDPOINT, {
+      failOnStatusCode: false
+    });
+    expect(putResponse.status()).toBe(405);
+
+    const deleteResponse = await request.delete(BASE_URL + HEALTH_ENDPOINT, {
+      failOnStatusCode: false
+    });
+    expect(deleteResponse.status()).toBe(405);
+
+    const patchResponse = await request.patch(BASE_URL + HEALTH_ENDPOINT, {
+      failOnStatusCode: false
+    });
+    expect(patchResponse.status()).toBe(405);
   });
 
   test('health check with invalid probe parameter returns readiness', async ({ request }) => {
