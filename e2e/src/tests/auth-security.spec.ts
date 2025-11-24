@@ -186,14 +186,24 @@ test.describe('Authentication security', () => {
     await page.locator('[data-test="authorize-allow"]').click();
     await page.waitForURL(/localhost:4180\/?$/);
 
-    // Try to access session cookie from JavaScript (should fail due to HttpOnly)
+    // CRITICAL: Verify cookie flags using context API
+    const cookies = await page.context().cookies();
+    const sessionCookie = cookies.find(c => c.name === 'mop-e2e');
+
+    // Verify cookie exists and has proper security flags
+    expect(sessionCookie).toBeDefined();
+    expect(sessionCookie?.httpOnly).toBe(true);  // CRITICAL: HttpOnly flag must be set
+    expect(sessionCookie?.sameSite).toBe('Lax'); // CRITICAL: SameSite protection
+    expect(sessionCookie?.secure).toBe(false);   // Expected false in localhost E2E tests
+
+    // Additional check: Verify cookie is NOT accessible from JavaScript (confirms HttpOnly works)
     const canAccessCookie = await page.evaluate(() => {
       // Try to find session cookie in document.cookie
       const cookies = document.cookie;
       return cookies.includes('mop-e2e');
     });
 
-    // Session cookie should NOT be accessible from JavaScript
+    // Session cookie should NOT be accessible from JavaScript due to HttpOnly flag
     expect(canAccessCookie).toBe(false);
   });
 
