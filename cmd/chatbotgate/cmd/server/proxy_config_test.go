@@ -407,7 +407,7 @@ func TestProxyManagerHandler(t *testing.T) {
 	// Create a test upstream server
 	testServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("test response"))
+		_, _ = w.Write([]byte("test response"))
 	}))
 	defer testServer.Close()
 

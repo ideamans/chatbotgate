@@ -68,7 +68,7 @@ func TestGoogleProvider_TokenExchangeErrors(t *testing.T) {
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.Header().Set("Content-Type", "application/json")
 				w.WriteHeader(tt.statusCode)
-				w.Write([]byte(tt.responseBody))
+				_, _ = w.Write([]byte(tt.responseBody))
 			}))
 			defer server.Close()
 
@@ -107,7 +107,7 @@ func TestGoogleProvider_InvalidJSONResponse(t *testing.T) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		// Return invalid JSON
-		w.Write([]byte("This is not valid JSON {{{"))
+		_, _ = w.Write([]byte("This is not valid JSON {{{"))
 	}))
 	defer server.Close()
 
@@ -144,7 +144,7 @@ func TestGoogleProvider_ContextTimeout(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		time.Sleep(2 * time.Second) // Delay
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"access_token":"token"}`))
+		_, _ = w.Write([]byte(`{"access_token":"token"}`))
 	}))
 	defer server.Close()
 
@@ -181,7 +181,7 @@ func TestGoogleProvider_ContextTimeout(t *testing.T) {
 func TestGoogleProvider_ContextCancellation(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"access_token":"token"}`))
+		_, _ = w.Write([]byte(`{"access_token":"token"}`))
 	}))
 	defer server.Close()
 
@@ -243,7 +243,7 @@ func TestGitHubProvider_TokenExchangeErrors(t *testing.T) {
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.Header().Set("Content-Type", "application/json")
 				w.WriteHeader(tt.statusCode)
-				w.Write([]byte(tt.responseBody))
+				_, _ = w.Write([]byte(tt.responseBody))
 			}))
 			defer server.Close()
 
@@ -296,7 +296,7 @@ func TestMicrosoftProvider_TokenExchangeErrors(t *testing.T) {
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.Header().Set("Content-Type", "application/json")
 				w.WriteHeader(tt.statusCode)
-				w.Write([]byte(tt.responseBody))
+				_, _ = w.Write([]byte(tt.responseBody))
 			}))
 			defer server.Close()
 
@@ -327,7 +327,7 @@ func TestCustomProvider_TokenExchangeErrors(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte(`{"error":"unsupported_grant_type"}`))
+		_, _ = w.Write([]byte(`{"error":"unsupported_grant_type"}`))
 	}))
 	defer server.Close()
 
@@ -359,7 +359,7 @@ func TestProvider_EmptyAccessToken(t *testing.T) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		// Return response without access_token
-		w.Write([]byte(`{"token_type":"bearer","expires_in":3600}`))
+		_, _ = w.Write([]byte(`{"token_type":"bearer","expires_in":3600}`))
 	}))
 	defer server.Close()
 

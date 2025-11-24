@@ -17,7 +17,6 @@ type mockSMTPServer struct {
 	receivedMail []string
 	shouldFail   bool
 	requireAuth  bool
-	useTLS       bool
 }
 
 func newMockSMTPServer(t *testing.T) *mockSMTPServer {

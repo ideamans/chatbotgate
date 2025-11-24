@@ -23,7 +23,6 @@ import (
 type mockOAuth2Provider struct {
 	name          string
 	displayName   string
-	iconURL       string
 	emailToReturn string
 	nameToReturn  string
 	extraData     map[string]interface{}

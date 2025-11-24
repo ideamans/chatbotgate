@@ -186,6 +186,9 @@ func TestMiddleware_Authorization_NoWhitelist(t *testing.T) {
 		translator,
 		logger,
 	)
+	if err != nil {
+		t.Fatalf("Failed to create middleware: %v", err)
+	}
 
 	// When no whitelist is configured, RequiresEmail should return false
 	if middleware.authzChecker.RequiresEmail() {
@@ -289,6 +292,9 @@ func TestMiddleware_Authorization_WithWhitelist(t *testing.T) {
 		translator,
 		logger,
 	)
+	if err != nil {
+		t.Fatalf("Failed to create middleware: %v", err)
+	}
 
 	// When whitelist is configured, RequiresEmail should return true
 	if !middleware.authzChecker.RequiresEmail() {

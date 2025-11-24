@@ -61,6 +61,7 @@ func (l *Limiter) Allow(key string) bool {
 		}
 		// Store the new bucket
 		if jsonData, err := json.Marshal(b); err == nil {
+			//nolint:staticcheck // SA9003: Empty branch is intentional for fail-safe behavior
 			if setErr := l.kvs.Set(ctx, key, jsonData, 0); setErr != nil {
 				// KVS write failed, but we still allow the request
 				// The bucket won't persist, so next request will be treated as first request
@@ -78,6 +79,7 @@ func (l *Limiter) Allow(key string) bool {
 			LastRefill: time.Now(),
 		}
 		if jsonData, err := json.Marshal(b); err == nil {
+			//nolint:staticcheck // SA9003: Empty branch is intentional for fail-safe behavior
 			if setErr := l.kvs.Set(ctx, key, jsonData, 0); setErr != nil {
 				// Same fail-safe behavior as above
 			}
@@ -101,6 +103,7 @@ func (l *Limiter) Allow(key string) bool {
 		b.Tokens--
 		// Update bucket
 		if jsonData, err := json.Marshal(b); err == nil {
+			//nolint:staticcheck // SA9003: Empty branch is intentional for fail-safe behavior
 			if setErr := l.kvs.Set(ctx, key, jsonData, 0); setErr != nil {
 				// Write failed. The token was already consumed in memory,
 				// so we return true to allow the request.

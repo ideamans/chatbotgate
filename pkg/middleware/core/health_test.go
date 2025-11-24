@@ -279,7 +279,7 @@ func TestHealthCheck_SinceTimestamp(t *testing.T) {
 
 	logger := logging.NewSimpleLogger("test", logging.LevelError, false)
 	beforeCreate := time.Now().UTC()
-	mw, err := New(cfg, nil, nil, nil, nil, nil, nil, nil, nil, logger)
+	mw, _ := New(cfg, nil, nil, nil, nil, nil, nil, nil, nil, logger)
 	afterCreate := time.Now().UTC().Add(1 * time.Second) // Add 1 second buffer
 
 	// Create test request
