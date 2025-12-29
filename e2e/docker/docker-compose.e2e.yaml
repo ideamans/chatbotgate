@@ -142,6 +142,25 @@ services:
       timeout: 3s
       retries: 10
 
+  proxy-app-dummy-upstream:
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+    container_name: e2e-proxy-app-dummy-upstream
+    # No config file - uses default configuration with dummy upstream server
+    command: ["serve", "--host", "0.0.0.0", "--port", "4180"]
+    ports:
+      - "4186:4180"  # Map external 4186 to internal 4180
+    environment:
+      - LANGUAGE=en
+    networks:
+      - e2e-net
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:4180/_auth/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
   target-app:
     build:
       context: ..
