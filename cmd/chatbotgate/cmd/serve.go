@@ -38,13 +38,22 @@ func runServe(cmd *cobra.Command, args []string) error {
 	if cfgFile != "" {
 		data, err := os.ReadFile(cfgFile)
 		if err != nil {
-			return fmt.Errorf("failed to read config file: %w", err)
+			if !os.IsNotExist(err) {
+				return fmt.Errorf("failed to read config file: %w", err)
+			}
+			// Config file not found - will use default config in server.Run()
+			// Use default logging settings
+			appConfig = *server.DefaultMiddlewareConfig()
+		} else {
+			// Expand environment variables in config file
+			data = sharedconfig.ExpandEnvBytes(data)
+			if err := yaml.Unmarshal(data, &appConfig); err != nil {
+				return fmt.Errorf("failed to parse config file: %w", err)
+			}
 		}
-		// Expand environment variables in config file
-		data = sharedconfig.ExpandEnvBytes(data)
-		if err := yaml.Unmarshal(data, &appConfig); err != nil {
-			return fmt.Errorf("failed to parse config file: %w", err)
-		}
+	} else {
+		// No config file specified - use default config
+		appConfig = *server.DefaultMiddlewareConfig()
 	}
 
 	// Setup logger with file output if configured
