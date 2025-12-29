@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/ideamans/chatbotgate/pkg/middleware/config"
+	proxy "github.com/ideamans/chatbotgate/pkg/proxy/core"
 	"github.com/ideamans/chatbotgate/pkg/shared/filewatcher"
 	"github.com/ideamans/chatbotgate/pkg/shared/logging"
 	"gopkg.in/yaml.v3"
@@ -57,41 +58,71 @@ func Run(ctx context.Context, cfg Config) error {
 
 	logger.Info("Starting chatbotgate", "version", cfg.Version)
 
+	// Check if config file exists and determine if we should use defaults
+	useDefaultConfig := false
+	configPath := cfg.ConfigPath
+	if configPath != "" {
+		if _, err := os.Stat(configPath); os.IsNotExist(err) {
+			logger.Warn("Config file not found, using default configuration", "path", configPath)
+			logger.Warn("Default configuration uses password authentication with password 'P@ssW0rd'")
+			logger.Warn("Default upstream is http://localhost:8080/")
+			useDefaultConfig = true
+			configPath = "" // Clear config path to signal managers to use defaults
+		}
+	} else {
+		logger.Warn("No config file specified, using default configuration")
+		logger.Warn("Default configuration uses password authentication with password 'P@ssW0rd'")
+		logger.Warn("Default upstream is http://localhost:8080/")
+		useDefaultConfig = true
+	}
+
 	// Resolve final host and port
 	resolved, err := resolveServerConfig(cfg, logger)
 	if err != nil {
 		return fmt.Errorf("failed to resolve server config: %w", err)
 	}
 
-	// Create proxy manager from config file
-	proxyManager, err := NewProxyManager(cfg.ConfigPath, logger)
+	// Get default configs if needed
+	var defaultMiddlewareConfig *config.Config
+	var defaultProxyConfig *proxy.UpstreamConfig
+	if useDefaultConfig {
+		defaultMiddlewareConfig = DefaultMiddlewareConfig()
+		proxyDefaultConfig := DefaultProxyConfig()
+		defaultProxyConfig = &proxyDefaultConfig
+	}
+
+	// Create proxy manager from config file (with default config fallback)
+	proxyManager, err := NewProxyManagerWithDefault(configPath, defaultProxyConfig, logger)
 	if err != nil {
 		return formatConfigError("proxy", err)
 	}
 
 	logger.Info("Proxy manager initialized successfully")
 
-	// Create middleware manager from config file (with proxy as next handler)
-	middlewareManager, err := NewMiddlewareManager(cfg.ConfigPath, resolved.Host, resolved.Port, proxyManager.Handler(), logger)
+	// Create middleware manager from config file (with proxy as next handler and default config fallback)
+	middlewareManager, err := NewMiddlewareManagerWithDefault(configPath, defaultMiddlewareConfig, resolved.Host, resolved.Port, proxyManager.Handler(), logger)
 	if err != nil {
 		return formatConfigError("middleware", err)
 	}
 
 	logger.Info("Middleware manager initialized successfully")
 
-	// Create file watcher for hot reload (100ms debounce)
-	watcher, err := filewatcher.NewWatcher(cfg.ConfigPath, 100*time.Millisecond)
-	if err != nil {
-		logger.Error("Failed to create file watcher", "error", err)
-		return fmt.Errorf("failed to create file watcher: %w", err)
+	// Create file watcher for hot reload (100ms debounce) only if config file exists
+	var watcher *filewatcher.Watcher
+	if !useDefaultConfig && cfg.ConfigPath != "" {
+		watcher, err = filewatcher.NewWatcher(cfg.ConfigPath, 100*time.Millisecond)
+		if err != nil {
+			logger.Error("Failed to create file watcher", "error", err)
+			return fmt.Errorf("failed to create file watcher: %w", err)
+		}
+		defer func() { _ = watcher.Close() }()
+
+		// Register managers as listeners for config file changes
+		watcher.AddListener(middlewareManager)
+		watcher.AddListener(proxyManager)
+
+		logger.Info("File watcher initialized for hot reload", "config_file", cfg.ConfigPath)
 	}
-	defer func() { _ = watcher.Close() }()
-
-	// Register managers as listeners for config file changes
-	watcher.AddListener(middlewareManager)
-	watcher.AddListener(proxyManager)
-
-	logger.Info("File watcher initialized for hot reload", "config_file", cfg.ConfigPath)
 
 	// Create HTTP server
 	addr := fmt.Sprintf("%s:%d", resolved.Host, resolved.Port)
@@ -104,12 +135,14 @@ func Run(ctx context.Context, cfg Config) error {
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
 
-	// Start file watcher in background
-	go func() {
-		if err := watcher.Start(sigCtx); err != nil && err != context.Canceled {
-			logger.Error("File watcher error", "error", err)
-		}
-	}()
+	// Start file watcher in background (only if watcher was created)
+	if watcher != nil {
+		go func() {
+			if err := watcher.Start(sigCtx); err != nil && err != context.Canceled {
+				logger.Error("File watcher error", "error", err)
+			}
+		}()
+	}
 
 	// Create and start HTTP server
 	server := &http.Server{
