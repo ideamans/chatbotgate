@@ -2,7 +2,6 @@ package server
 
 import (
 	"github.com/ideamans/chatbotgate/pkg/middleware/config"
-	proxy "github.com/ideamans/chatbotgate/pkg/proxy/core"
 	"github.com/ideamans/chatbotgate/pkg/shared/kvs"
 )
 
@@ -16,16 +15,21 @@ func DefaultMiddlewareConfig() *config.Config {
 		},
 		Server: config.ServerConfig{
 			AuthPathPrefix: "/_auth",
+			Development:    true, // Enable development mode for default config (relaxes CSP)
 		},
 		Session: config.SessionConfig{
 			Cookie: config.CookieConfig{
 				Name:     "_chatbotgate_session",
-				Secret:   "", // Will be generated if empty
+				Secret:   "default-secret-for-development-use-only-32chars", // Default secret for development
 				Expire:   "168h",
 				Secure:   false,
 				HTTPOnly: true,
 				SameSite: "lax",
 			},
+		},
+		PasswordAuth: config.PasswordAuthConfig{
+			Enabled:  true,
+			Password: "P@ssW0rd", // Default password for development/testing
 		},
 		Logging: config.LoggingConfig{
 			Level: "info",
@@ -35,13 +39,5 @@ func DefaultMiddlewareConfig() *config.Config {
 				Type: "memory",
 			},
 		},
-	}
-}
-
-// DefaultProxyConfig returns a default proxy configuration
-// for running without a config file
-func DefaultProxyConfig() proxy.UpstreamConfig {
-	return proxy.UpstreamConfig{
-		URL: "http://localhost:8080",
 	}
 }
