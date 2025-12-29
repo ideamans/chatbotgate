@@ -64,15 +64,13 @@ func Run(ctx context.Context, cfg Config) error {
 	if configPath != "" {
 		if _, err := os.Stat(configPath); os.IsNotExist(err) {
 			logger.Warn("Config file not found, using default configuration", "path", configPath)
-			logger.Warn("Default configuration uses password authentication with password 'P@ssW0rd'")
-			logger.Warn("Default upstream is http://localhost:8080/")
+			logDefaultConfigWarnings(logger)
 			useDefaultConfig = true
 			configPath = "" // Clear config path to signal managers to use defaults
 		}
 	} else {
 		logger.Warn("No config file specified, using default configuration")
-		logger.Warn("Default configuration uses password authentication with password 'P@ssW0rd'")
-		logger.Warn("Default upstream is http://localhost:8080/")
+		logDefaultConfigWarnings(logger)
 		useDefaultConfig = true
 	}
 
@@ -85,10 +83,21 @@ func Run(ctx context.Context, cfg Config) error {
 	// Get default configs if needed
 	var defaultMiddlewareConfig *config.Config
 	var defaultProxyConfig *proxy.UpstreamConfig
+	var dummyUpstream *DummyUpstream
 	if useDefaultConfig {
 		defaultMiddlewareConfig = DefaultMiddlewareConfig()
-		proxyDefaultConfig := DefaultProxyConfig()
-		defaultProxyConfig = &proxyDefaultConfig
+
+		// Start dummy upstream server when no config is provided
+		dummyUpstream = NewDummyUpstream(logger)
+		if dummyUpstream != nil {
+			// Use dummy upstream URL
+			defaultProxyConfig = &proxy.UpstreamConfig{
+				URL: dummyUpstream.URL(),
+			}
+			logger.Warn("Using DUMMY upstream server (for development only)", "url", dummyUpstream.URL())
+		} else {
+			return fmt.Errorf("failed to start dummy upstream server")
+		}
 	}
 
 	// Create proxy manager from config file (with default config fallback)
@@ -178,13 +187,26 @@ func Run(ctx context.Context, cfg Config) error {
 		// Wait for server to finish
 		if err := <-errChan; err != nil {
 			logger.Error("Server stopped with error", "error", err)
+			// Stop dummy upstream before returning
+			if dummyUpstream != nil {
+				dummyUpstream.Stop()
+			}
 			return err
 		}
 	case err := <-errChan:
 		if err != nil {
 			logger.Error("Server stopped with error", "error", err)
+			// Stop dummy upstream before returning
+			if dummyUpstream != nil {
+				dummyUpstream.Stop()
+			}
 			return err
 		}
+	}
+
+	// Stop dummy upstream server if it was started
+	if dummyUpstream != nil {
+		dummyUpstream.Stop()
 	}
 
 	logger.Info("Server stopped successfully")
@@ -292,4 +314,18 @@ func formatConfigError(component string, err error) error {
 
 	// Generic error
 	return fmt.Errorf("failed to initialize %s: %v", component, err)
+}
+
+// logDefaultConfigWarnings logs warnings about default configuration values
+// These warnings are important to remind users that default values are for development only
+func logDefaultConfigWarnings(logger logging.Logger) {
+	logger.Warn("========================================")
+	logger.Warn("WARNING: Using default configuration")
+	logger.Warn("DO NOT USE IN PRODUCTION")
+	logger.Warn("========================================")
+	logger.Warn("Default values in use:")
+	logger.Warn("  - Cookie Secret: fixed dummy value")
+	logger.Warn("  - Password Auth: enabled with password 'P@ssW0rd'")
+	logger.Warn("  - Upstream: dummy server (auto-started)")
+	logger.Warn("========================================")
 }
