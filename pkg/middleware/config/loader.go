@@ -67,6 +67,26 @@ func (l *FileLoader) Load() (*Config, error) {
 	return &cfg, nil
 }
 
+// StaticLoader loads configuration from a pre-defined Config struct
+type StaticLoader struct {
+	config *Config
+}
+
+// NewStaticLoader creates a new StaticLoader with the given config
+func NewStaticLoader(cfg *Config) *StaticLoader {
+	return &StaticLoader{config: cfg}
+}
+
+// Load returns the pre-defined configuration
+func (l *StaticLoader) Load() (*Config, error) {
+	cfg := *l.config // Copy the config to avoid mutation
+
+	// Apply defaults
+	applyDefaults(&cfg)
+
+	return &cfg, nil
+}
+
 // applyDefaults sets default values for optional fields
 func applyDefaults(cfg *Config) {
 	if cfg.Session.Cookie.Name == "" {
