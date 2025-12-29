@@ -2,6 +2,7 @@ package server
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -35,20 +36,28 @@ type ProxyServerConfig struct {
 
 // SimpleProxyManager is a simple implementation of ProxyManager with hot reload support
 type SimpleProxyManager struct {
-	handler    atomic.Value // Stores *proxy.Handler
-	configPath string
-	logger     logging.Logger
+	handler       atomic.Value // Stores *proxy.Handler
+	configPath    string
+	defaultConfig *proxy.UpstreamConfig // Default config to use when file not found
+	logger        logging.Logger
 }
 
 // NewProxyManager creates a new SimpleProxyManager from config file
 func NewProxyManager(configPath string, logger logging.Logger) (*SimpleProxyManager, error) {
+	return NewProxyManagerWithDefault(configPath, nil, logger)
+}
+
+// NewProxyManagerWithDefault creates a new SimpleProxyManager from config file
+// with fallback to default config when the file is not found
+func NewProxyManagerWithDefault(configPath string, defaultConfig *proxy.UpstreamConfig, logger logging.Logger) (*SimpleProxyManager, error) {
 	if logger == nil {
 		logger = logging.NewSimpleLogger("proxy-manager", logging.LevelInfo, true)
 	}
 
 	m := &SimpleProxyManager{
-		configPath: configPath,
-		logger:     logger,
+		configPath:    configPath,
+		defaultConfig: defaultConfig,
+		logger:        logger,
 	}
 
 	// Build initial proxy handler
@@ -60,7 +69,11 @@ func NewProxyManager(configPath string, logger logging.Logger) (*SimpleProxyMana
 	// Store initial handler atomically
 	m.handler.Store(handler)
 
-	logger.Info("Proxy manager initialized", "config_path", configPath)
+	if defaultConfig != nil && configPath == "" {
+		logger.Info("Proxy manager initialized with default config")
+	} else {
+		logger.Info("Proxy manager initialized", "config_path", configPath)
+	}
 
 	return m, nil
 }
@@ -70,10 +83,16 @@ func (m *SimpleProxyManager) buildProxyHandler(configPath string) (*proxy.Handle
 	// Load proxy configuration from YAML
 	upstreamCfg, err := loadProxyConfig(configPath)
 	if err != nil {
-		return nil, fmt.Errorf("failed to load proxy config: %w", err)
+		// If config file not found and we have default config, use it
+		if errors.Is(err, os.ErrNotExist) && m.defaultConfig != nil {
+			upstreamCfg = *m.defaultConfig
+			m.logger.Debug("Using default proxy configuration", "upstream", upstreamCfg.URL)
+		} else {
+			return nil, fmt.Errorf("failed to load proxy config: %w", err)
+		}
+	} else {
+		m.logger.Debug("Proxy configuration loaded and validated", "config_path", configPath, "upstream", upstreamCfg.URL)
 	}
-
-	m.logger.Debug("Proxy configuration loaded and validated", "config_path", configPath, "upstream", upstreamCfg.URL)
 
 	// Create proxy handler
 	handler, err := proxy.NewHandlerWithConfig(upstreamCfg)

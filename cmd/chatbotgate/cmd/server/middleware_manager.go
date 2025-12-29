@@ -1,8 +1,10 @@
 package server
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
+	"os"
 	"sync/atomic"
 
 	"github.com/ideamans/chatbotgate/pkg/middleware/config"
@@ -23,26 +25,34 @@ type MiddlewareManager interface {
 
 // SimpleMiddlewareManager is a simple implementation of MiddlewareManager with hot reload support
 type SimpleMiddlewareManager struct {
-	middleware atomic.Value // Stores *middleware.Middleware
-	configPath string
-	host       string
-	port       int
-	next       http.Handler
-	logger     logging.Logger
+	middleware    atomic.Value // Stores *middleware.Middleware
+	configPath    string
+	defaultConfig *config.Config // Default config to use when file not found
+	host          string
+	port          int
+	next          http.Handler
+	logger        logging.Logger
 }
 
 // NewMiddlewareManager creates a new SimpleMiddlewareManager from config file
 func NewMiddlewareManager(configPath string, host string, port int, next http.Handler, logger logging.Logger) (*SimpleMiddlewareManager, error) {
+	return NewMiddlewareManagerWithDefault(configPath, nil, host, port, next, logger)
+}
+
+// NewMiddlewareManagerWithDefault creates a new SimpleMiddlewareManager from config file
+// with fallback to default config when the file is not found
+func NewMiddlewareManagerWithDefault(configPath string, defaultConfig *config.Config, host string, port int, next http.Handler, logger logging.Logger) (*SimpleMiddlewareManager, error) {
 	if logger == nil {
 		logger = logging.NewSimpleLogger("middleware-manager", logging.LevelInfo, true)
 	}
 
 	m := &SimpleMiddlewareManager{
-		configPath: configPath,
-		host:       host,
-		port:       port,
-		next:       next,
-		logger:     logger,
+		configPath:    configPath,
+		defaultConfig: defaultConfig,
+		host:          host,
+		port:          port,
+		next:          next,
+		logger:        logger,
 	}
 
 	// Build initial middleware
@@ -57,7 +67,11 @@ func NewMiddlewareManager(configPath string, host string, port int, next http.Ha
 	// Mark middleware as ready to accept traffic
 	mw.SetReady()
 
-	logger.Info("Middleware manager initialized", "config_path", configPath)
+	if defaultConfig != nil && configPath == "" {
+		logger.Info("Middleware manager initialized with default config")
+	} else {
+		logger.Info("Middleware manager initialized", "config_path", configPath)
+	}
 
 	return m, nil
 }
@@ -65,17 +79,42 @@ func NewMiddlewareManager(configPath string, host string, port int, next http.Ha
 // buildMiddleware builds middleware from configuration file
 func (m *SimpleMiddlewareManager) buildMiddleware(configPath string) (*middleware.Middleware, error) {
 	// Load middleware configuration from YAML
-	cfg, err := config.NewFileLoader(configPath).Load()
+	var cfg *config.Config
+	var err error
+
+	if configPath != "" {
+		cfg, err = config.NewFileLoader(configPath).Load()
+	} else if m.defaultConfig != nil {
+		cfg, err = config.NewStaticLoader(m.defaultConfig).Load()
+	} else {
+		return nil, fmt.Errorf("no config file path or default config provided")
+	}
+
 	if err != nil {
-		return nil, fmt.Errorf("failed to load middleware config: %w", err)
+		// If config file not found and we have default config, use it
+		if errors.Is(err, os.ErrNotExist) && m.defaultConfig != nil {
+			cfg, err = config.NewStaticLoader(m.defaultConfig).Load()
+			if err != nil {
+				return nil, fmt.Errorf("failed to load default middleware config: %w", err)
+			}
+			m.logger.Debug("Using default middleware configuration")
+		} else if errors.Is(err, config.ErrConfigFileNotFound) && m.defaultConfig != nil {
+			cfg, err = config.NewStaticLoader(m.defaultConfig).Load()
+			if err != nil {
+				return nil, fmt.Errorf("failed to load default middleware config: %w", err)
+			}
+			m.logger.Debug("Using default middleware configuration")
+		} else {
+			return nil, fmt.Errorf("failed to load middleware config: %w", err)
+		}
+	} else {
+		m.logger.Debug("Middleware configuration loaded and validated", "config_path", configPath)
 	}
 
 	// Validate configuration
 	if err := cfg.Validate(); err != nil {
 		return nil, fmt.Errorf("middleware config validation failed: %w", err)
 	}
-
-	m.logger.Debug("Middleware configuration loaded and validated", "config_path", configPath)
 
 	// Create factory for building middleware components
 	f := factory.NewDefaultFactory(m.host, m.port, m.logger)
