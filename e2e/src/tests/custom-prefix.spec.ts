@@ -1,8 +1,12 @@
 import { test, expect } from '@playwright/test';
 import { routeStubAuthRequests } from '../support/stub-auth-route';
+import { waitForMessage, getMessage } from '../support/mailpit-helper';
 
-const TEST_EMAIL = 'someone@example.com';
+// OAuth2 tests use someone@example.com (registered in stub-auth)
+const OAUTH2_EMAIL = 'someone@example.com';
 const TEST_PASSWORD = 'password';
+// Email auth tests use unique email (chatbotgate's email auth doesn't need stub-auth)
+const EMAIL_AUTH_EMAIL = 'custom-prefix-email@example.com';
 const BASE_URL = 'http://localhost:4185';
 const AUTH_PREFIX = '/_oauth2_proxy';
 
@@ -21,7 +25,7 @@ test.describe('Custom auth prefix (/_oauth2_proxy)', () => {
 
     const emailInput = page.locator('[data-test="login-email"]');
     await expect(emailInput).toBeVisible();
-    await emailInput.fill(TEST_EMAIL);
+    await emailInput.fill(OAUTH2_EMAIL);
 
     const passwordInput = page.locator('[data-test="login-password"]');
     await passwordInput.fill(TEST_PASSWORD);
@@ -61,7 +65,7 @@ test.describe('Custom auth prefix (/_oauth2_proxy)', () => {
     await expect(page).toHaveURL(/localhost:3001\/login/);
 
     const emailInput = page.locator('[data-test="login-email"]');
-    await emailInput.fill(TEST_EMAIL);
+    await emailInput.fill(OAUTH2_EMAIL);
 
     const passwordInput = page.locator('[data-test="login-password"]');
     await passwordInput.fill(TEST_PASSWORD);
@@ -80,7 +84,7 @@ test.describe('Custom auth prefix (/_oauth2_proxy)', () => {
     await expect(page).toHaveURL(/\/protected-path$/);
   });
 
-  test('should handle email verification with original URL redirect', async ({ page, request }) => {
+  test('should handle email verification with original URL redirect', async ({ page }) => {
     const protectedPath = '/some-protected-resource';
 
     // Try to access protected path
@@ -88,7 +92,7 @@ test.describe('Custom auth prefix (/_oauth2_proxy)', () => {
     await expect(page).toHaveURL(new RegExp(`${AUTH_PREFIX}/login$`));
 
     // Fill in email and submit directly on login page
-    await page.getByLabel('Email Address').fill(TEST_EMAIL);
+    await page.getByLabel('Email Address').fill(EMAIL_AUTH_EMAIL);
     await Promise.all([
       page.waitForURL(new RegExp(`${AUTH_PREFIX}/email/sent`)),
       page.getByRole('button', { name: 'Send Login Link' }).click(),
@@ -97,17 +101,13 @@ test.describe('Custom auth prefix (/_oauth2_proxy)', () => {
     // Wait for success message
     await expect(page.locator('body')).toContainText(/Check Your Email|メールを確認してください/i);
 
-    // Fetch verification link from Mailpit
-    const mailpitResponse = await request.get('http://localhost:8025/api/v1/messages');
-    const mailpitData = await mailpitResponse.json();
-    const latestMessage = mailpitData.messages?.[0];
-
-    const messageResponse = await request.get(`http://localhost:8025/api/v1/message/${latestMessage.ID}`);
-    const messageData = await messageResponse.json();
+    // Fetch verification link from Mailpit using helper with retry logic
+    const message = await waitForMessage(EMAIL_AUTH_EMAIL, { timeoutMs: 30_000, pollIntervalMs: 500 });
+    const messageDetail = await getMessage(message.ID);
 
     // Extract and visit verification URL
     // Look for full URL starting with http:// or https://
-    const htmlContent = messageData.HTML;
+    const htmlContent = messageDetail.HTML;
     const urlMatch = htmlContent.match(/href="(https?:\/\/[^"]*\/_oauth2_proxy\/email\/verify[^"]*)"/);
     const verifyUrl = urlMatch![1];
 
@@ -128,7 +128,7 @@ test.describe('Custom auth prefix (/_oauth2_proxy)', () => {
     await expect(page).toHaveURL(/localhost:3001\/login/);
 
     const emailInput = page.locator('[data-test="login-email"]');
-    await emailInput.fill(TEST_EMAIL);
+    await emailInput.fill(OAUTH2_EMAIL);
 
     const passwordInput = page.locator('[data-test="login-password"]');
     await passwordInput.fill(TEST_PASSWORD);

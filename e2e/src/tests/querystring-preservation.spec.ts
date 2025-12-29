@@ -2,10 +2,13 @@ import { test, expect } from '@playwright/test';
 import { waitForLoginEmail, clearAllMessages } from '../support/mailpit-helper';
 import { routeStubAuthRequests } from '../support/stub-auth-route';
 
-// Test user credentials
-const TEST_EMAIL = 'someone@example.com';
+// OAuth2 tests use someone@example.com (registered in stub-auth)
+const OAUTH2_EMAIL = 'someone@example.com';
 const TEST_PASSWORD = 'password';
 const TEST_USERNAME = 'Test User';
+// Email auth tests use unique emails to avoid token conflicts (chatbotgate's email auth)
+const EMAIL_AUTH_NO_FWD = 'qs-email-nofwd@example.com';
+const EMAIL_AUTH_WITH_FWD = 'qs-email-fwd@example.com';
 
 // Base URLs
 const PROXY_BASE_URL = 'http://localhost:4180';
@@ -29,7 +32,7 @@ test.describe('QueryString preservation without forwarding (:4180)', () => {
     await page.getByRole('link', { name: 'stub-auth' }).click();
     await expect(page).toHaveURL(/localhost:3001\/login/);
 
-    await page.locator('[data-test="login-email"]').fill(TEST_EMAIL);
+    await page.locator('[data-test="login-email"]').fill(OAUTH2_EMAIL);
     await page.locator('[data-test="login-password"]').fill(TEST_PASSWORD);
 
     await Promise.all([
@@ -64,7 +67,7 @@ test.describe('QueryString preservation without forwarding (:4180)', () => {
     await expect(page).toHaveURL(/\/_auth\/login$/);
 
     // Fill email address for passwordless login
-    await page.getByLabel('Email Address').fill(TEST_EMAIL);
+    await page.getByLabel('Email Address').fill(EMAIL_AUTH_NO_FWD);
 
     await Promise.all([
       page.waitForURL(/\/_auth\/email\/sent/),
@@ -72,8 +75,8 @@ test.describe('QueryString preservation without forwarding (:4180)', () => {
     ]);
 
     // Wait for email and get login URL
-    console.log(`Waiting for email to ${TEST_EMAIL}...`);
-    const loginUrl = await waitForLoginEmail(TEST_EMAIL, {
+    console.log(`Waiting for email to ${EMAIL_AUTH_NO_FWD}...`);
+    const loginUrl = await waitForLoginEmail(EMAIL_AUTH_NO_FWD, {
       timeoutMs: 30_000,
       pollIntervalMs: 500,
     });
@@ -117,7 +120,7 @@ test.describe('QueryString merging with forwarding (:4182)', () => {
     await page.getByRole('link', { name: 'stub-auth' }).click();
     await expect(page).toHaveURL(/localhost:3001\/login/);
 
-    await page.locator('[data-test="login-email"]').fill(TEST_EMAIL);
+    await page.locator('[data-test="login-email"]').fill(OAUTH2_EMAIL);
     await page.locator('[data-test="login-password"]').fill(TEST_PASSWORD);
 
     await Promise.all([
@@ -144,13 +147,13 @@ test.describe('QueryString merging with forwarding (:4182)', () => {
     // Verify the page can decode both original and forwarding parameters
     await expect(page.locator('[data-test="auth-status"]')).toContainText('true');
     await expect(page.locator('[data-test="forwarding-qs-username"]')).toContainText(TEST_USERNAME);
-    await expect(page.locator('[data-test="forwarding-qs-email"]')).toContainText(TEST_EMAIL);
+    await expect(page.locator('[data-test="forwarding-qs-email"]')).toContainText(OAUTH2_EMAIL);
 
     console.log('✓ Original parameters preserved and chatbotgate.* parameters added');
   });
 
   test('should merge original parameters with chatbotgate.* after email authentication', async ({ page }) => {
-    const expectedUsername = 'someone'; // Email local part (before @) from TEST_EMAIL
+    const expectedUsername = 'qs-email-fwd'; // Email local part (before @) from EMAIL_AUTH_WITH_FWD
 
     // Access URL with query parameters
     const originalParams = 'foo=bar&baz=qux&test=abc';
@@ -160,7 +163,7 @@ test.describe('QueryString merging with forwarding (:4182)', () => {
     await expect(page).toHaveURL(/\/_auth\/login$/);
 
     // Fill email address for passwordless login
-    await page.getByLabel('Email Address').fill(TEST_EMAIL);
+    await page.getByLabel('Email Address').fill(EMAIL_AUTH_WITH_FWD);
 
     await Promise.all([
       page.waitForURL(/\/_auth\/email\/sent/),
@@ -168,8 +171,8 @@ test.describe('QueryString merging with forwarding (:4182)', () => {
     ]);
 
     // Wait for email and get login URL
-    console.log(`Waiting for email to ${TEST_EMAIL}...`);
-    const loginUrl = await waitForLoginEmail(TEST_EMAIL, {
+    console.log(`Waiting for email to ${EMAIL_AUTH_WITH_FWD}...`);
+    const loginUrl = await waitForLoginEmail(EMAIL_AUTH_WITH_FWD, {
       timeoutMs: 30_000,
       pollIntervalMs: 500,
     });
@@ -197,7 +200,7 @@ test.describe('QueryString merging with forwarding (:4182)', () => {
 
     // Verify the page can decode both original and forwarding parameters
     await expect(page.locator('[data-test="auth-status"]')).toContainText('true');
-    await expect(page.locator('[data-test="forwarding-qs-email"]')).toContainText(TEST_EMAIL);
+    await expect(page.locator('[data-test="forwarding-qs-email"]')).toContainText(EMAIL_AUTH_WITH_FWD);
 
     // Username should be userpart (email local part) for email auth
     await expect(page.locator('[data-test="forwarding-qs-username"]')).toContainText(expectedUsername);
@@ -230,7 +233,7 @@ test.describe('QueryString merging with forwarding (:4182)', () => {
     await page.getByRole('link', { name: 'stub-auth' }).click();
     await expect(page).toHaveURL(/localhost:3001\/login/);
 
-    await page.locator('[data-test="login-email"]').fill(TEST_EMAIL);
+    await page.locator('[data-test="login-email"]').fill(OAUTH2_EMAIL);
     await page.locator('[data-test="login-password"]').fill(TEST_PASSWORD);
 
     await Promise.all([
