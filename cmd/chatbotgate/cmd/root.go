@@ -41,7 +41,9 @@ func Execute() {
 
 func init() {
 	// Persistent flags available to all commands
-	rootCmd.PersistentFlags().StringVarP(&cfgFile, "config", "c", "proxyserver.yaml", "Path to configuration file")
+	// Default config path is /etc/chatbotgate/config.yaml (standard location for Docker/system installs)
+	// If the file doesn't exist, default configuration will be used
+	rootCmd.PersistentFlags().StringVarP(&cfgFile, "config", "c", "/etc/chatbotgate/config.yaml", "Path to configuration file")
 	rootCmd.PersistentFlags().StringVar(&host, "host", "0.0.0.0", "Server host address")
 	rootCmd.PersistentFlags().IntVarP(&port, "port", "p", 4180, "Server port number")
 }

@@ -52,8 +52,9 @@ COPY --from=builder /build/examples /app/examples
 RUN mkdir -p /etc/chatbotgate /app/config /var/lib/chatbotgate/kvs && \
     chown -R app:app /app /etc/chatbotgate /var/lib/chatbotgate
 
-# Copy default configuration from examples
-COPY --from=builder --chown=app:app /build/examples/docker/chatbotgate/config.yaml /etc/chatbotgate/config.yaml
+# Note: No default config file is copied
+# Mount your config to /etc/chatbotgate/config.yaml or use default configuration
+# Default config path is /etc/chatbotgate/config.yaml (checked automatically)
 
 # Switch to non-root user
 USER app
@@ -68,6 +69,7 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
 # Set entrypoint
 ENTRYPOINT ["/app/chatbotgate"]
 
-# Default command: use /etc/chatbotgate/config.yaml
-# Can be overridden with: docker run ... chatbotgate -config /path/to/config.yaml
-CMD ["-config", "/etc/chatbotgate/config.yaml"]
+# Default command: serve
+# Config is automatically loaded from /etc/chatbotgate/config.yaml if exists
+# Otherwise, default configuration is used (dummy upstream, password auth with 'P@ssW0rd')
+CMD ["serve"]
