@@ -1332,10 +1332,14 @@ body.in-iframe .auth-credit {
 
       if (theme === 'dark') {
         html.classList.add('dark');
+        html.style.colorScheme = 'dark';
       } else if (theme === 'light') {
         html.classList.add('light');
+        html.style.colorScheme = 'light';
+      } else {
+        // Auto mode: remove inline style to let CSS handle it
+        html.style.colorScheme = '';
       }
-      // Auto mode: don't add any class, let CSS media query handle it
     }
 
     function changeLang(lang) {

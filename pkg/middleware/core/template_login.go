@@ -160,16 +160,22 @@ function changeTheme(theme) {
 
 	// Apply theme immediately without reload
 	var html = document.documentElement;
+
+	// Remove all theme classes first
+	html.classList.remove("dark", "light");
+
 	if (theme === "dark") {
 		html.classList.add("dark");
+		html.style.colorScheme = "dark";
 	} else if (theme === "light") {
-		html.classList.remove("dark");
+		html.classList.add("light");
+		html.style.colorScheme = "light";
 	} else {
-		// Auto - check system preference
+		// Auto - remove inline color-scheme to let CSS handle it
+		html.style.colorScheme = "";
+		// Then apply based on system preference
 		if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
 			html.classList.add("dark");
-		} else {
-			html.classList.remove("dark");
 		}
 	}
 }
@@ -184,7 +190,11 @@ if (window.matchMedia) {
 	window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function(e) {
 		var savedTheme = getCookie("theme");
 		if (!savedTheme || savedTheme === "auto") {
-			document.documentElement.classList.toggle("dark", e.matches);
+			var html = document.documentElement;
+			html.classList.remove("dark", "light");
+			if (e.matches) {
+				html.classList.add("dark");
+			}
 		}
 	});
 }
